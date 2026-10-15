@@ -134,15 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Admin Switcher Shortcut */}
-            <button
-              onClick={() => onNavigate('/admin')}
-              className="hidden md:inline-flex items-center gap-1 ml-2 px-2.5 py-1 text-[11px] font-sans font-semibold uppercase tracking-wider bg-[#5E091B] text-[#F2BE72] border border-[#B88A44]/50 rounded hover:bg-[#4a0715] transition-colors"
-              title="Open Admin Panel"
-            >
-              <span className="material-symbols-outlined text-[14px]">shield_person</span>
-              <span>Admin</span>
-            </button>
+
           </div>
         </div>
 
@@ -345,21 +337,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-[#E8DDD6]">
-            <button
-              onClick={() => {
-                onNavigate('/admin');
-                setDrawerOpen(false);
-              }}
-              className="w-full text-left px-3 py-2.5 rounded bg-[#780D24] text-white font-medium flex items-center justify-between shadow-xs"
-            >
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#F2BE72] text-[18px]">admin_panel_settings</span>
-                <span>Switch to Admin Panel</span>
-              </div>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
-          </div>
+
         </nav>
 
         <div className="pt-4 border-t border-[#E8DDD6] text-center text-[12px] text-[#5F5552]">

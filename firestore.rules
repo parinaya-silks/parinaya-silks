@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function administrator() {
+      return signedIn()
+        && request.auth.token.admin == true
+        && exists(/databases/$(database)/documents/adminAccess/$(request.auth.uid))
+        && get(/databases/$(database)/documents/adminAccess/$(request.auth.uid)).data.enabled == true;
+    }
+    // The trusted provisioning script alone manages these records.
+    // A user may check/listen to only their own permission status.
+    match /adminAccess/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    // Business repositories are not connected in this milestone. Administrator
+    // reads are scoped to these areas; ALL browser writes remain disabled.
+    match /{collection}/{document=**} {
+      allow read: if collection in [
+        'products', 'categories', 'collections', 'orders', 'customers',
+        'coupons', 'loyalty', 'settings', 'banners', 'inventory'
+      ] && administrator();
+      allow write: if false;
+    }
+  }
+}

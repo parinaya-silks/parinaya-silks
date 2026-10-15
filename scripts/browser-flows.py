@@ -50,10 +50,12 @@ with sync_playwright() as p:
     assert not errors, errors
     context = browser.new_context()
     production = context.new_page()
-    for route in ['/admin/orders', '/login', '/checkout']:
+    for route in ['/login', '/checkout']:
         production.goto('http://127.0.0.1:4173/#' + route)
         production.get_by_text('Our online store is being prepared.', exact=False).wait_for()
         assert production.locator('input').count() == 0
         assert production.evaluate('localStorage.length') == 0
-    print('Production build exposes no demo admin, login or checkout')
+    production.goto('http://127.0.0.1:4173/admin/orders')
+    production.get_by_role('heading', name='Administrator Sign In').wait_for()
+    print('Production admin requires real authentication; customer login and checkout remain unavailable')
     browser.close()

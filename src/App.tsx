@@ -40,18 +40,33 @@ import { ContactView } from './views/ContactView.tsx';
 import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
 
-// Admin Shell & Views
-import { AdminLayout } from './admin/AdminLayout.tsx';
-import { AdminDashboard } from './admin/AdminDashboard.tsx';
-import { AdminOrders } from './admin/AdminOrders.tsx';
-import { AdminOrderDetail } from './admin/AdminOrderDetail.tsx';
-import { AdminProducts } from './admin/AdminProducts.tsx';
-import { AdminProductForm } from './admin/AdminProductForm.tsx';
-import { AdminCustomers } from './admin/AdminCustomers.tsx';
-import { AdminCoupons } from './admin/AdminCoupons.tsx';
-import { AdminSettings } from './admin/AdminSettings.tsx';
+import { isAdminLocation, safeAdminDestination } from './admin/accessPolicy.ts';
+const SecureAdmin = React.lazy(() => import('./admin/AdminAccess.tsx'));
+
+function currentAdminPath() {
+  if (isAdminLocation(window.location.pathname)) {
+    if (window.location.pathname === '/admin/login') return safeAdminDestination(new URLSearchParams(window.location.search).get('returnTo') || '/admin/dashboard');
+    return window.location.pathname;
+  }
+  const hashPath = window.location.hash.replace(/^#/, '').split('?')[0];
+  return isAdminLocation(hashPath) ? safeAdminDestination(hashPath) : '';
+}
 
 export default function App() {
+  const [adminPath, setAdminPath] = useState(currentAdminPath);
+  useEffect(() => {
+    const update = () => setAdminPath(currentAdminPath());
+    window.addEventListener('popstate', update);
+    window.addEventListener('hashchange', update);
+    const legacy = window.location.hash.replace(/^#/, '').split('?')[0];
+    if (!isAdminLocation(window.location.pathname) && isAdminLocation(legacy)) {
+      window.history.replaceState(null, '', safeAdminDestination(legacy));
+      update();
+    }
+    return () => { window.removeEventListener('popstate', update); window.removeEventListener('hashchange', update); };
+  }, []);
+  if (adminPath) return <React.Suspense fallback={<main className="min-h-screen bg-[#FBF7F0] p-8" role="status">Loading administrator access…</main>}><SecureAdmin requestedPath={adminPath} /></React.Suspense>;
+
   if (!demoEnabled) {
     return <div className="min-h-screen bg-[#FBF7F0] text-[#231919] grid place-items-center px-6">
       <main className="max-w-lg text-center space-y-4">
@@ -172,123 +187,6 @@ function DemoApp() {
   // Derived Counts
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlist.length;
-
-  const isAdminRoute = currentPath.startsWith('/admin');
-
-  // Render Admin Layout and Views
-  if (isAdminRoute) {
-    let adminContent: React.ReactNode = null;
-
-    if (currentPath === '/admin' || currentPath === '/admin/dashboard') {
-      adminContent = (
-        <AdminDashboard
-          orders={orders}
-          products={products}
-          onNavigate={navigate}
-          onAdjustStock={(product, delta) => {
-            storeService.updateProductStock(product.id, product.stockCount + delta);
-          }}
-        />
-      );
-    } else if (currentPath === '/admin/orders') {
-      adminContent = (
-        <AdminOrders
-          orders={orders}
-          onNavigate={navigate}
-          onUpdateStatus={(orderId, status, courier, tracking) => {
-            storeService.updateOrderFulfilment(orderId, status, courier, tracking);
-          }}
-          onBulkUpdateStatus={(orderIds, status) => {
-            return storeService.bulkUpdateFulfilment(orderIds, status);
-          }}
-        />
-      );
-    } else if (currentPath.startsWith('/admin/orders/')) {
-      const orderId = currentPath.replace('/admin/orders/', '');
-      const order = orders.find((o) => o.id === orderId);
-      adminContent = (
-        <AdminOrderDetail
-          order={order}
-          onNavigate={navigate}
-          onUpdateOrder={(orderId, status, courier, tracking, notes) => {
-            storeService.updateOrderFulfilment(orderId, status, courier, tracking, notes);
-          }}
-        />
-      );
-    } else if (currentPath === '/admin/products') {
-      adminContent = (
-        <AdminProducts
-          products={products}
-          onNavigate={navigate}
-          onAdjustStock={(product, delta) => {
-            storeService.updateProductStock(product.id, product.stockCount + delta);
-          }}
-          onToggleStatus={(product) => {
-            const nextStatus = product.status === 'Published' ? 'Draft' : 'Published';
-            storeService.updateProductStatus(product.id, nextStatus);
-          }}
-        />
-      );
-    } else if (currentPath === '/admin/products/new') {
-      adminContent = (
-        <AdminProductForm
-          onNavigate={navigate}
-          onSave={(newProduct) => storeService.saveProduct(newProduct)}
-        />
-      );
-    } else if (currentPath.startsWith('/admin/products/edit/')) {
-      const prodId = currentPath.replace('/admin/products/edit/', '');
-      const productToEdit = products.find((p) => p.id === prodId);
-      adminContent = (
-        <AdminProductForm
-          product={productToEdit}
-          onNavigate={navigate}
-          onSave={(updatedProduct) => storeService.saveProduct(updatedProduct)}
-        />
-      );
-    } else if (currentPath === '/admin/customers') {
-      adminContent = (
-        <AdminCustomers
-          customers={customersList}
-          orders={orders}
-          onNavigate={navigate}
-        />
-      );
-    } else if (currentPath === '/admin/coupons') {
-      adminContent = (
-        <AdminCoupons
-          coupons={coupons}
-          onSaveCoupon={(coupon) => storeService.saveCoupon(coupon)}
-          onToggleStatus={(code) => storeService.toggleCouponStatus(code)}
-        />
-      );
-    } else if (currentPath === '/admin/settings') {
-      adminContent = (
-        <AdminSettings
-          settings={settings}
-          onUpdateSettings={(newSettings) => storeService.updateSettings(newSettings)}
-          onResetDemo={() => storeService.resetToDefaultDemo()}
-        />
-      );
-    } else {
-      adminContent = (
-        <AdminDashboard
-          orders={orders}
-          products={products}
-          onNavigate={navigate}
-          onAdjustStock={(product, delta) => {
-            storeService.updateProductStock(product.id, product.stockCount + delta);
-          }}
-        />
-      );
-    }
-
-    return (
-      <AdminLayout key={currentPath} currentPath={currentPath} onNavigate={navigate}>
-        {adminContent}
-      </AdminLayout>
-    );
-  }
 
   // Render Customer Storefront Views
   let customerView: React.ReactNode = null;
@@ -537,24 +435,6 @@ function DemoApp() {
         {customerView}
       </main>
 
-      {/* Floating Mode Switcher (Seamless evaluation between Storefront and Admin Console) */}
-      {!['/bag', '/checkout'].includes(currentPath) && !currentPath.startsWith('/product/') && <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40">
-        <button
-          onClick={() => navigate('/admin/dashboard')}
-          className="group flex items-center gap-2 bg-[#231919] hover:bg-[#780D24] text-white px-3.5 py-2.5 rounded-full shadow-lg border border-[#B88A44] transition-all hover:scale-105"
-          title="Open Parinaya Silks Demo Admin Console"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-sans text-[12px] font-bold tracking-wide">
-            Demo Admin
-          </span>
-          <span className="material-symbols-outlined text-[16px] text-[#B88A44] group-hover:translate-x-0.5 transition-transform">
-            arrow_forward
-          </span>
-        </button>
-      </div>
-
-      }
       {/* Storefront Footer */}
       <Footer onNavigate={navigate} />
 

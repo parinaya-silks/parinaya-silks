@@ -4,21 +4,22 @@ interface AdminLayoutProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   children: React.ReactNode;
+  email: string;
+  onSignOut: () => void;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
   currentPath,
   onNavigate,
   children,
+  email,
+  onSignOut,
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [isAdminRole, setIsAdminRole] = useState(true);
-  const [dateRange, setDateRange] = useState('Last 30 Days');
-  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
 
-  const navItems = [
+  const navItems: Array<{ path: string; label: string; icon: string; badge?: string }> = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { path: '/admin/orders', label: 'Orders', icon: 'local_mall', badge: '46' },
+    { path: '/admin/orders', label: 'Orders', icon: 'local_mall' },
     { path: '/admin/products', label: 'Products & Inventory', icon: 'inventory_2' },
     { path: '/admin/customers', label: 'Customers', icon: 'group' },
     { path: '/admin/coupons', label: 'Coupons & Loyalty', icon: 'loyalty' },
@@ -41,7 +42,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[9px] uppercase tracking-widest text-[#5F5552] font-semibold">
-                  Atelier Console
+                  Admin Console
                 </span>
                 <span className="bg-[#B88A44]/20 text-[#780D24] text-[9px] font-bold px-1 rounded border border-[#B88A44]/40">
                   ADMIN
@@ -102,7 +103,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </button>
 
           <button
-            onClick={() => onNavigate('/login')}
+            onClick={onSignOut}
             className="w-full flex items-center gap-2 px-3 py-2 text-[#BA1A1A] hover:bg-red-50 rounded text-[13px] font-medium transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -113,9 +114,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             <span className="material-symbols-outlined text-[#B88A44] text-[18px]">verified</span>
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold text-[#780D24] tracking-wider">
-                100% Heirloom Silks
+                Administrator access
               </span>
-              <span className="text-[9px] text-[#5F5552]">Silk Mark Certified Registry</span>
+              <span className="text-[9px] text-[#5F5552]">Firebase Authentication</span>
             </div>
           </div>
         </div>
@@ -137,10 +138,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                   </span>
                   <div>
                     <h3 className="font-serif text-[15px] font-bold text-[#780D24]">PARINAYA SILKS</h3>
-                    <p className="text-[9px] uppercase tracking-wider text-[#5F5552]">Atelier Console</p>
+                    <p className="text-[9px] uppercase tracking-wider text-[#5F5552]">Admin Console</p>
                   </div>
                 </div>
-                <button onClick={() => setMobileDrawerOpen(false)}>
+                <button aria-label="Close admin menu" className="min-w-11 min-h-11" onClick={() => setMobileDrawerOpen(false)}>
                   <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
               </div>
@@ -175,7 +176,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               </button>
               <button
                 onClick={() => {
-                  onNavigate('/login');
+                  onSignOut();
                   setMobileDrawerOpen(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-[#BA1A1A]"
@@ -194,8 +195,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E8DDD6] h-16 px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setMobileDrawerOpen(true)}
-              className="md:hidden p-2 text-[#231919] hover:text-[#780D24]"
+              aria-label="Open admin menu" onClick={() => setMobileDrawerOpen(true)}
+              className="md:hidden min-w-11 min-h-11 p-2 text-[#231919] hover:text-[#780D24]"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
@@ -204,99 +205,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 Administration
               </span>
               <span className="hidden lg:inline text-[12px] font-sans text-[#5F5552]">
-                | Hyderabad Central Loom
+                | Hyderabad, India
               </span>
             </div>
           </div>
 
           {/* Right Action Cluster */}
           <div className="flex items-center gap-2.5">
-            {/* Access Role Toggle Button */}
-            <button
-              onClick={() => setIsAdminRole(!isAdminRole)}
-              className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#E8DDD6] rounded bg-[#FBF7F0] text-[#231919] text-[12px] font-sans font-medium hover:border-[#B88A44] transition-colors"
-              title="Toggle View Simulation"
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${isAdminRole ? 'bg-emerald-600' : 'bg-amber-500'}`}
-              />
-              <span>{isAdminRole ? 'Admin View' : 'Restricted View'}</span>
-              <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
-            </button>
+            <span className="hidden sm:inline text-xs text-[#5F5552] truncate max-w-[110px] sm:max-w-[200px]" title={email}>{email}</span>
+            <button onClick={onSignOut} className="min-h-11 px-2 text-xs text-[#780D24] underline md:hidden">Sign out</button>
 
-            {/* Date Range Selector */}
-            <div className="relative hidden lg:block">
-              <button
-                onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
-                className="h-9 px-3 flex items-center gap-1.5 border border-[#E8DDD6] bg-white rounded text-[12px] font-sans font-medium hover:border-[#B88A44] transition-colors"
-              >
-                <span className="material-symbols-outlined text-[16px] text-[#B88A44]">
-                  calendar_today
-                </span>
-                <span className="hidden sm:inline">{dateRange}</span>
-                <span className="material-symbols-outlined text-[16px]">expand_more</span>
-              </button>
-
-              {dateDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-[#E8DDD6] shadow-lg rounded-lg py-1 z-50 text-[12px] font-sans">
-                  {['Today', 'This Week', 'This Month', 'Last 30 Days'].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => {
-                        setDateRange(d);
-                        setDateDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 hover:bg-[#F4EEE5] ${
-                        dateRange === d ? 'text-[#780D24] font-bold bg-[#F4EEE5]' : 'text-[#231919]'
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Notification Bell */}
-            <button
-              onClick={() => alert('Atelier Notification: 3 new bridal orders waiting for packaging verification.')}
-              className="w-9 h-9 flex items-center justify-center rounded border border-[#E8DDD6] hover:bg-[#F4EEE5] text-[#231919] relative"
-              title="Notifications"
-            >
-              <span className="material-symbols-outlined text-[20px]">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#780D24]" />
-            </button>
-
-            {/* Admin Avatar Pill */}
-            <div className="flex items-center pl-2 border-l border-[#E8DDD6] gap-2">
-              <div className="w-8 h-8 rounded-full border border-[#B88A44] bg-[#F4EEE5] text-[#780D24] font-serif font-bold text-[12px] flex items-center justify-center shrink-0">
-                GV
-              </div>
-              <div className="hidden xl:flex flex-col text-left font-sans leading-none">
-                <span className="text-[13px] font-semibold text-[#231919]">Gayatri V.</span>
-                <span className="text-[10px] text-[#5F5552] mt-0.5">Store Manager</span>
-              </div>
-            </div>
           </div>
         </header>
-
-        {/* Restricted View Notice Banner if active */}
-        {!isAdminRole && (
-          <div className="bg-amber-50 border-b border-amber-300 p-3 px-6 flex items-center justify-between text-[13px] font-sans text-amber-900">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-amber-700">lock</span>
-              <span>
-                <strong>Restricted Simulation:</strong> Price editing and dispatch authorizations are locked in this preview mode.
-              </span>
-            </div>
-            <button
-              onClick={() => setIsAdminRole(true)}
-              className="text-[#780D24] font-bold underline text-[12px]"
-            >
-              Restore Admin View
-            </button>
-          </div>
-        )}
 
         {/* Page Content */}
         <div className="p-4 sm:p-6 lg:p-8 flex-1 max-w-[1440px] w-full mx-auto">

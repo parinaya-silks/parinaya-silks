@@ -7,8 +7,12 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "build:demo": "vite build --mode demo",
-    "test": "node --import tsx --test src/utils/pricing.test.ts src/utils/fulfilment.test.ts src/utils/routing.test.ts",
+    "test": "node --import tsx --test src/utils/pricing.test.ts src/utils/fulfilment.test.ts src/utils/routing.test.ts src/services/firebase/config.test.ts src/services/firebase/verification.test.ts src/admin/accessPolicy.test.ts",
+    "test:admin": "node scripts/test-admin.mjs",
+    "admin:provision": "node --import tsx scripts/provision-admin.ts",
     "preview": "vite preview",
+    "firebase:check": "node --import tsx scripts/firebase-check.ts",
+    "firebase:verify-build": "node --import tsx scripts/firebase-verify-build.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -16,22 +20,30 @@
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "firebase": "12.19.0",
     "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^8.3.0",
-    "express": "^4.21.2",
-    "dotenv": "^17.2.3",
-    "motion": "^12.23.24"
+    "vite": "^8.3.0"
+  },
+  "overrides": {
+    "@firebase/app": "0.16.2",
+    "@firebase/app-compat": "0.5.18"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.34.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^7.0.2",
-    "@types/express": "^4.17.21"
+    "typescript": "^7.0.2"
   }
 }

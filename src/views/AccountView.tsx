@@ -280,22 +280,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <span className="material-symbols-outlined text-[#5F5552]">chevron_right</span>
             </button>
 
-            {/* Switch to Admin */}
-            <button
-              onClick={() => onNavigate('/admin')}
-              className="w-full p-4 flex items-center justify-between hover:bg-[#F4EEE5] transition-colors text-left"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-lg bg-[#5E091B] text-[#F2BE72] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">admin_panel_settings</span>
-                </div>
-                <div>
-                  <h3 className="font-serif text-[15px] font-semibold text-[#780D24]">Switch to Admin Panel</h3>
-                  <p className="font-sans text-[12px] text-[#5F5552]">Explore store management workflows</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-[#5F5552]">chevron_right</span>
-            </button>
+
           </div>
         </div>
       )}
