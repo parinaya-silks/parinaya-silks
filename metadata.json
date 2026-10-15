@@ -1,0 +1,8 @@
+{
+  "name": "Parinaya Silks",
+  "description": "Premium Indian saree store celebrating authentic handloom heritage, pure Kanjeevarams, and bridal weaves with connected customer and admin workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
