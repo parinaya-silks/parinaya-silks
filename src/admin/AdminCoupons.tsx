@@ -18,11 +18,12 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({
     code: '',
     discountType: 'percentage',
     discountValue: 10,
-    minOrderAmount: 25000,
+    minOrderValue: 25000,
     maxDiscountCap: 5000,
     description: '',
     expiryDate: '2026-12-31',
     active: true,
+    usageCount: 0,
   });
 
   const handleCreate = (e: React.FormEvent) => {
@@ -37,11 +38,12 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({
       code: '',
       discountType: 'percentage',
       discountValue: 10,
-      minOrderAmount: 25000,
+      minOrderValue: 25000,
       maxDiscountCap: 5000,
       description: '',
       expiryDate: '2026-12-31',
       active: true,
+    usageCount: 0,
     });
   };
 
@@ -134,7 +136,7 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({
             <div className="pt-3 border-t border-[#F4EEE5] text-[11px] text-[#817567] space-y-1">
               <div className="flex justify-between">
                 <span>Min Order Spend:</span>
-                <strong className="text-[#231919]">{formatINR(coupon.minOrderAmount)}</strong>
+                <strong className="text-[#231919]">{formatINR(coupon.minOrderValue)}</strong>
               </div>
               {coupon.maxDiscountCap && (
                 <div className="flex justify-between">
@@ -185,13 +187,13 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({
                     onChange={(e) =>
                       setNewCoupon({
                         ...newCoupon,
-                        discountType: e.target.value as 'percentage' | 'flat',
+                        discountType: e.target.value as 'percentage' | 'fixed',
                       })
                     }
                     className="w-full h-9 px-2 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0]"
                   >
                     <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Cash (₹)</option>
+                    <option value="fixed">Flat Cash (₹)</option>
                   </select>
                 </div>
 
@@ -214,9 +216,9 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({
                   <label className="font-semibold text-[#231919] block mb-1">Min Order (₹)</label>
                   <input
                     type="number"
-                    value={newCoupon.minOrderAmount}
+                    value={newCoupon.minOrderValue}
                     onChange={(e) =>
-                      setNewCoupon({ ...newCoupon, minOrderAmount: Number(e.target.value) })
+                      setNewCoupon({ ...newCoupon, minOrderValue: Number(e.target.value) })
                     }
                     className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0]"
                   />

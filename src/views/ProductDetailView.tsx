@@ -25,9 +25,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const [selectedColor, setSelectedColor] = useState(product.colorName);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('500034');
-  const [deliveryResult, setDeliveryResult] = useState<string | null>(
-    'Delivering to Banjara Hills, Hyderabad (500034) · Estimated in 3-4 days'
-  );
+  const [deliveryResult, setDeliveryResult] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const imagesList = [
@@ -41,14 +39,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   const colorVariants = [
     { name: product.colorName, hex: product.colorHex },
-    { name: 'Deep Vermillion & Gold', hex: '#8A1F1D' },
-    { name: 'Emerald Green & Gold', hex: '#113B2E' },
   ];
 
   const handleCheckPincode = () => {
-    if (pincode.length === 6 && !isNaN(Number(pincode))) {
+    if (/^[1-9][0-9]{5}$/.test(pincode)) {
       setDeliveryResult(
-        `Delivering to Pin ${pincode} · Estimated 3-4 business days via Blue Dart Express`
+        `PIN ${pincode} has a valid format. Delivery serviceability and estimates are not connected.`
       );
     } else {
       setDeliveryResult('Please enter a valid 6-digit India postal PIN code.');
@@ -77,7 +73,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const wishlisted = isWishlisted(product.id);
 
   return (
-    <div className="pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+    <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
       {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#780D24] text-white px-5 py-2.5 rounded-lg shadow-xl flex items-center gap-2 border border-[#B88A44]/50 animate-bounce">
@@ -592,7 +588,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       )}
 
       {/* Sticky Mobile Commerce Action Bar */}
-      <aside className="fixed bottom-0 left-0 w-full z-40 bg-white/95 backdrop-blur-md border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)] pb-safe">
+      <aside className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 w-full z-40 bg-white/95 backdrop-blur-md border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)] pb-safe">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           <button
             onClick={handleAdd}

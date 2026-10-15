@@ -153,14 +153,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <span className="font-semibold text-[#F2BE72] uppercase tracking-wider block">
                 100% Online Payments Only
               </span>
-              <p>To ensure insured courier transit, we accept UPI, Cards, and Net Banking (No COD).</p>
+              <p>Online payments only. Cash on delivery is not available. Payment integration is being prepared.</p>
             </div>
           </div>
         </div>
 
         <div className="pt-6 flex flex-col sm:flex-row justify-between items-center text-[12px] text-[#9E9086] gap-3">
           <div>
-            © 2025 PARINAYA SILKS. All rights reserved.
+            © {new Date().getFullYear()} PARINAYA SILKS. All rights reserved.
           </div>
           <div className="flex items-center space-x-4">
             <button

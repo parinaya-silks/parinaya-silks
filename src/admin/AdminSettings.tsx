@@ -84,7 +84,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               <label className="font-semibold text-[#231919] block mb-1">GSTIN Number</label>
               <input
                 type="text"
-                value={formData.gstin}
+                value={formData.gstin || ''}
                 onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0] font-mono"
               />
@@ -94,8 +94,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               <label className="font-semibold text-[#231919] block mb-1">Official WhatsApp</label>
               <input
                 type="text"
-                value={formData.supportWhatsApp}
-                onChange={(e) => setFormData({ ...formData, supportWhatsApp: e.target.value })}
+                value={formData.whatsapp}
+                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0] font-mono"
               />
             </div>
@@ -104,8 +104,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               <label className="font-semibold text-[#231919] block mb-1">Support Email</label>
               <input
                 type="email"
-                value={formData.supportEmail}
-                onChange={(e) => setFormData({ ...formData, supportEmail: e.target.value })}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0]"
               />
             </div>
@@ -114,8 +114,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               <label className="font-semibold text-[#231919] block mb-1">Instagram Handle</label>
               <input
                 type="text"
-                value={formData.instagramHandle}
-                onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
+                value={formData.instagram}
+                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0]"
               />
             </div>
@@ -124,8 +124,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               <label className="font-semibold text-[#231919] block mb-1">Studio Location</label>
               <input
                 type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0]"
               />
             </div>
@@ -146,8 +146,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.bannerEnabled}
-                onChange={(e) => setFormData({ ...formData, bannerEnabled: e.target.checked })}
+                checked={formData.announcementBarActive}
+                onChange={(e) => setFormData({ ...formData, announcementBarActive: e.target.checked })}
                 className="rounded border-[#B88A44] text-[#780D24] focus:ring-[#780D24]"
               />
               <span className="text-xs font-semibold text-[#231919]">Enable Banner</span>
@@ -160,8 +160,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </label>
             <input
               type="text"
-              value={formData.bannerText}
-              onChange={(e) => setFormData({ ...formData, bannerText: e.target.value })}
+              value={formData.announcementBarText}
+              onChange={(e) => setFormData({ ...formData, announcementBarText: e.target.value })}
               className="w-full h-10 px-3 border border-[#E8DDD6] rounded-lg text-xs bg-[#FBF7F0]"
             />
           </div>
@@ -180,9 +180,9 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </label>
               <input
                 type="number"
-                value={formData.freeShippingThreshold}
+                value={formData.complimentaryShippingThreshold}
                 onChange={(e) =>
-                  setFormData({ ...formData, freeShippingThreshold: Number(e.target.value) })
+                  setFormData({ ...formData, complimentaryShippingThreshold: Number(e.target.value) })
                 }
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg bg-[#FBF7F0] font-bold"
               />
@@ -228,7 +228,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </div>
             <div className="p-2.5 bg-white rounded border border-[#E8DDD6]">
               <span className="font-bold text-[#231919] block">Database / Firestore</span>
-              <span className="text-[#817567]">Prepared for Phase 3</span>
+              <span className="text-[#817567]">Not connected</span>
             </div>
             <div className="p-2.5 bg-white rounded border border-[#E8DDD6]">
               <span className="font-bold text-[#231919] block">Online Payment Mock</span>

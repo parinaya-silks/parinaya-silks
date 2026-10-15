@@ -189,7 +189,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       )}
 
       {/* Main Administrative Canvas */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 md:ml-60 flex flex-col min-h-screen">
         {/* Top Header Bar */}
         <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E8DDD6] h-16 px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -201,7 +201,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             </button>
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-[18px] sm:text-[20px] font-semibold text-[#780D24]">
-                Atelier Administration
+                Administration
               </span>
               <span className="hidden lg:inline text-[12px] font-sans text-[#5F5552]">
                 | Hyderabad Central Loom
@@ -214,7 +214,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             {/* Access Role Toggle Button */}
             <button
               onClick={() => setIsAdminRole(!isAdminRole)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#E8DDD6] rounded bg-[#FBF7F0] text-[#231919] text-[12px] font-sans font-medium hover:border-[#B88A44] transition-colors"
+              className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#E8DDD6] rounded bg-[#FBF7F0] text-[#231919] text-[12px] font-sans font-medium hover:border-[#B88A44] transition-colors"
               title="Toggle View Simulation"
             >
               <span
@@ -225,7 +225,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             </button>
 
             {/* Date Range Selector */}
-            <div className="relative">
+            <div className="relative hidden lg:block">
               <button
                 onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
                 className="h-9 px-3 flex items-center gap-1.5 border border-[#E8DDD6] bg-white rounded text-[12px] font-sans font-medium hover:border-[#B88A44] transition-colors"

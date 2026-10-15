@@ -117,3 +117,25 @@ test('calculateOrderTotals respects minimum order requirement for coupons', () =
   assert.equal(result.shipping, 250);
   assert.equal(result.total, 18850);
 });
+
+test('expired coupons do not discount; percentage discounts respect caps', () => {
+  const items = [{ productId: 'prod-1', product: mockProductA, quantity: 1 }];
+  const coupon: Coupon = { code: 'TEST', description: '', active: true, discountType: 'percentage', discountValue: 20, minOrderValue: 0, maxDiscountCap: 500, usageCount: 0, expiryDate: '2000-01-01' };
+  assert.equal(calculateOrderTotals(items, coupon).couponDiscount, 0);
+  assert.equal(calculateOrderTotals(items, { ...coupon, expiryDate: '2999-01-01' }).couponDiscount, 500);
+});
+test('loyalty uses configured rate, actual balance, and payable item value', () => {
+  const items = [{ productId: 'prod-1', product: { ...mockProductA, price: 100 }, quantity: 1 }];
+  const totals = calculateOrderTotals(items, null, 1000, 20000, 250, 2, 30);
+  assert.equal(totals.pointsRedeemed, 30);
+  assert.equal(totals.pointsDiscount, 60);
+  assert.equal(totals.total, 290);
+  assert.equal(calculateOrderTotals(items, null, 1000, 20000, 0, 2, 1000).pointsRedeemed, 50);
+});
+test('empty bags have no shipping charge', () => {
+  assert.equal(calculateOrderTotals([], null, 0, 20000, 250).total, 0);
+});
+test('invalid cart quantities and prices are rejected', () => {
+  for (const quantity of [-1, 0, 1.5, NaN]) assert.throws(() => calculateOrderTotals([{ productId: 'x', product: mockProductA, quantity }]));
+  assert.throws(() => calculateOrderTotals([{ productId: 'x', product: { ...mockProductA, price: NaN }, quantity: 1 }]));
+});

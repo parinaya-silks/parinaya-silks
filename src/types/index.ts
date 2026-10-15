@@ -39,6 +39,7 @@ export interface Product {
   tags: string[];
   description: string;
   careInstructions: string[];
+  origin?: string;
   silkMarkCertified: boolean;
 }
 
@@ -142,6 +143,7 @@ export interface Customer {
 }
 
 export interface Coupon {
+  maxDiscountCap?: number;
   code: string;
   description: string;
   discountType: 'fixed' | 'percentage';
@@ -153,6 +155,7 @@ export interface Coupon {
 }
 
 export interface StoreSettings {
+  gstin?: string;
   storeName: string;
   whatsapp: string;
   email: string;

@@ -8,7 +8,7 @@ interface OrderResultViewProps {
 }
 
 export const OrderResultView: React.FC<OrderResultViewProps> = ({ order, onNavigate }) => {
-  const [simState, setSimState] = useState<'success' | 'verifying' | 'extended' | 'failed' | 'cancelled'>('success');
+  const [simState, setSimState] = useState<'success' | 'verifying' | 'extended' | 'failed' | 'cancelled'>(order?.paymentStatus === 'Paid' ? 'success' : order?.paymentStatus === 'Failed' ? 'failed' : order?.paymentStatus === 'Refunded' ? 'cancelled' : 'verifying');
   const [itemsOpen, setItemsOpen] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
@@ -23,7 +23,7 @@ export const OrderResultView: React.FC<OrderResultViewProps> = ({ order, onNavig
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      setSimState('success');
+      setSimState(order?.paymentStatus === 'Paid' ? 'success' : 'verifying');
     }, 1500);
   };
 

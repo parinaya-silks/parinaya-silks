@@ -9,7 +9,7 @@ interface OrderTrackingViewProps {
 
 export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onNavigate }) => {
   // Prototype simulator state allows previewing all statuses
-  const [activeState, setActiveState] = useState<FulfilmentStatus>(order?.fulfilmentStatus || 'Shipped');
+  const activeState = order?.fulfilmentStatus || 'Unfulfilled';
   const [courierDetailsOpen, setCourierDetailsOpen] = useState(false);
   const [checkpointsOpen, setCheckpointsOpen] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
@@ -17,79 +17,8 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [copyToast, setCopyToast] = useState<string | null>(null);
 
-  const displayOrder: Order = order || {
-    id: 'ord-849204',
-    referenceId: '#PS 849204',
-    createdAt: 'Oct 25, 2025 · 4:18 PM',
-    customerName: 'Ananya Rao',
-    customerEmail: 'ananya.rao@example.com',
-    customerPhone: '+91 98490 12345',
-    shippingAddress: {
-      id: 'addr-banjara',
-      name: 'Ananya Rao',
-      phone: '+91 98490 12345',
-      line1: 'Plot 42, Road No. 10, Banjara Hills',
-      landmark: 'Near Park Hyatt',
-      city: 'Hyderabad',
-      state: 'Telangana',
-      pincode: '500034',
-      type: 'HOME',
-    },
-    items: [
-      {
-        productId: 'prod-mayuri-wine',
-        productName: 'Mayuri Regal Wine Pure Kanjeevaram Saree',
-        subtitle: 'Regal Wine · Pure Zari Korvai Weave',
-        sku: 'PS-KJ-088',
-        price: 22400,
-        quantity: 1,
-        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAwC_BdBwKdUL7PTiDyjLq_ye91Jn4IsMz_fTMEHdM6WR5_O-nDHbNQ4EjPTFOv-eVoIFNqIppVowx6m3B1aQ4sQWkPZqWsU5fjfW-DdP8dTh9v9CsSJypgXcshKnFHpJzbS8U2OZm2WmEkOx-UidOxefgEnxvNk-SKLGzZsevCcm1wSbC3fDHZAp3idenR6J3L_ri679pu8frtfUBgPyQyTeQw6PYtHa89OFFHB16-lSU7eiEKJic',
-        category: 'Kanjeevaram',
-        blouseDetails: 'Unstitched matching blouse fabric (0.8m)',
-      },
-      {
-        productId: 'prod-padmavathi-rust',
-        productName: 'Padmavathi Rust Brocade Banarasi Saree',
-        subtitle: 'Rust Orange · Kadwa Floral Brocade',
-        sku: 'PS-BN-042',
-        price: 18600,
-        quantity: 1,
-        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCIvv73Udfzcbf_FB7zBkxY9T4WNhuvqCS-eXbJdTUyTEpm_5o7jWiQdGbxsEDrmkxFYRDAfGQ8fb_G597V9Up9uLy0Bt_m8RFsuYbG9jiP4zjZ-rvoUriCo058wE7h-scAXhUZ6QiT53CNRGBjD_3cVGt7NCo0C28NAIlIBYSHW4onF1Yz_rBxhK4-BKKUo01K7XgmnWwd8ZbBbyI2qHXTf9EfZXW09bF18jSCINGPn-AltKEXgE0',
-        category: 'Banarasi',
-        blouseDetails: 'Unstitched brocade blouse (0.8m)',
-      },
-    ],
-    subtotal: 41000,
-    couponCode: 'HEIRLOOM10',
-    couponDiscount: 1000,
-    pointsRedeemed: 200,
-    pointsDiscount: 200,
-    shippingFee: 0,
-    totalAmount: 39800,
-    paymentStatus: 'Paid',
-    paymentMethod: 'UPI',
-    paymentGatewayRef: 'UPI/529402194820',
-    fulfilmentStatus: activeState,
-    courierPartner: 'Blue Dart Express',
-    trackingNumber: 'BLD-HYD-98410294',
-    trackingUrl: 'https://www.bluedart.com',
-    estimatedDelivery: 'Oct 28 – Oct 29, 2025',
-    latestStatusNote: 'Departed Hyderabad Sorting Hub',
-    latestStatusTime: 'Updated 42 mins ago (Oct 26, 09:14 AM)',
-    timeline: [
-      { step: 1, title: 'Confirmed', description: 'Order placed & payment verified', timestamp: 'Oct 25, 4:18 PM', completed: true },
-      { step: 2, title: 'Processing', description: 'Pure mulberry silk & zari assay verified', timestamp: 'Oct 25, 7:30 PM', completed: true },
-      { step: 3, title: 'Packed', description: 'Wrapped in muslin & signature box', timestamp: 'Oct 26, 6:45 AM', completed: true },
-      { step: 4, title: 'Shipped', description: 'Departed Hyderabad Sorting Hub', timestamp: 'Oct 26, 9:14 AM', completed: true, active: true },
-      { step: 5, title: 'Out for Delivery', description: 'Courier handover scheduled', timestamp: 'Upcoming', completed: false },
-      { step: 6, title: 'Delivered', description: 'Handover with signature acknowledgment', timestamp: 'Expected Oct 28–29', completed: false },
-    ],
-    courierLogs: [
-      { timestamp: 'Oct 26, 09:14 AM', event: 'In transit: Shamshabad Airport Cargo Gate', location: 'Hyderabad' },
-      { timestamp: 'Oct 26, 07:05 AM', event: 'Processed at Jubilee Hills Handloom Center', location: 'Hyderabad' },
-      { timestamp: 'Oct 26, 06:50 AM', event: 'Manifest created & courier assigned', location: 'Hyderabad' },
-    ],
-  };
+  if (!order) return null;
+  const displayOrder = order;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text);
@@ -137,7 +66,7 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
     },
   };
 
-  const currentStateMeta = stateConfig[activeState] || stateConfig.Shipped;
+  const currentStateMeta = { ...stateConfig[activeState], title: activeState, desc: `Recorded fulfilment status: ${activeState}` };
 
   return (
     <div className="pb-28 bg-[#FBF7F0] min-h-screen">
@@ -148,28 +77,7 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
         </div>
       )}
 
-      {/* Simulator Switcher Ribbon */}
-      <aside
-        aria-label="Order Tracking Simulator"
-        className="bg-[#2A2020] text-white px-4 py-2 text-xs flex items-center justify-between border-b border-[#B88A44]/30"
-      >
-        <span className="font-sans text-[10px] uppercase tracking-wider text-[#F2BE72] font-semibold">
-          Prototype Simulator:
-        </span>
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-sans text-[11px]">
-          {(['Shipped', 'Processing', 'Packed', 'Delivered', 'Cancelled'] as FulfilmentStatus[]).map((st) => (
-            <button
-              key={st}
-              onClick={() => setActiveState(st)}
-              className={`px-2.5 py-1 rounded transition-all ${
-                activeState === st ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </aside>
+
 
       {/* Subheader: Order Details title + actions */}
       <div className="bg-white border-b border-[#E8DDD6] px-4 py-3">
@@ -271,7 +179,7 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
                 {currentStateMeta.title}
               </h2>
               <p className="font-sans text-[13px] text-[#5F5552]">
-                {displayOrder.courierPartner || 'Blue Dart Express'}
+                {displayOrder.courierPartner || 'Not assigned'}
               </p>
             </div>
             <div className="w-11 h-11 rounded-full bg-[#F4EEE5] border border-[#B88A44]/40 flex items-center justify-center text-[#780D24]">
@@ -309,7 +217,8 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
           </div>
 
           <button
-            onClick={() => window.open(displayOrder.trackingUrl || 'https://www.bluedart.com', '_blank')}
+            disabled={!displayOrder.trackingUrl || !/^https?:\/\//i.test(displayOrder.trackingUrl)}
+            onClick={() => window.open(displayOrder.trackingUrl, '_blank', 'noopener,noreferrer')}
             className="w-full h-11 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2 shadow-xs transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">open_in_new</span>

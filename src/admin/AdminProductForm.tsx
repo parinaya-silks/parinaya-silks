@@ -47,41 +47,32 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
 
   const [formData, setFormData] = useState<Product>({
     id: product?.id || `prod-${Date.now()}`,
-    sku: product?.sku || `PS-KJ-${Math.floor(100 + Math.random() * 900)}`,
+    sku: product?.sku || '',
     name: product?.name || '',
-    category: product?.category || 'Kanjeevaram Bridal',
-    weave: product?.weave || 'Korvai Handloom Silk',
-    zariType: product?.zariType || 'Pure Tested Antique Gold Zari',
-    colorName: product?.colorName || 'Regal Wine & Gold',
-    price: product?.price || 42500,
-    originalPrice: product?.originalPrice || 48000,
-    inStock: product ? product.inStock : true,
-    stockCount: product ? product.stockCount : 3,
-    lowStockThreshold: product ? product.lowStockThreshold : 2,
-    silkMark: product ? product.silkMark : true,
-    status: product?.status || 'Published',
-    description:
-      product?.description ||
-      'An exceptional handwoven masterpiece from our master weavers, featuring pure silk warp and weft with authentic zari detailing.',
-    images: product?.images || {
-      full: PRESET_IMAGES[0].full,
-      pallu: PRESET_IMAGES[0].pallu,
-      border: PRESET_IMAGES[0].border,
-      blouse: PRESET_IMAGES[0].blouse,
-    },
-    specs: product?.specs || {
-      fabric: '100% Pure Mulberry Silk',
-      weaveType: 'Interlocked Korvai Technique',
-      length: '6.3 Metres (with blouse piece)',
-      weight: '820 grams',
-      care: 'Strictly dry clean only. Store in pure cotton muslin wrap.',
-      origin: 'Kanchipuram, Tamil Nadu / Hyderabad Studio',
-    },
-    blouseDetails:
-      product?.blouseDetails ||
-      'Includes 80 cm unstitched pure silk blouse piece with coordinated zari sleeve border.',
-    isBestSeller: product ? product.isBestSeller : false,
-    isNewArrival: product ? product.isNewArrival : true,
+    subtitle: product?.subtitle || '',
+    category: product?.category || 'Kanjeevaram',
+    categoryLabel: product?.categoryLabel || '',
+    weaveType: product?.weaveType || '',
+    zariType: product?.zariType || '',
+    colorName: product?.colorName || '',
+    colorHex: product?.colorHex || '#780D24',
+    price: product?.price ?? 0,
+    originalPrice: product?.originalPrice,
+    inStock: product?.inStock ?? false,
+    stockCount: product?.stockCount ?? 0,
+    lowStockThreshold: product?.lowStockThreshold ?? 2,
+    silkMarkCertified: product?.silkMarkCertified ?? false,
+    status: product?.status || 'Draft',
+    description: product?.description || '',
+    images: product?.images || { full: '' },
+    weightGrams: product?.weightGrams ?? 0,
+    sareeLength: product?.sareeLength || '',
+    blouseIncluded: product?.blouseIncluded ?? false,
+    blouseDetails: product?.blouseDetails || '',
+    careInstructions: product?.careInstructions || [],
+    tags: product?.tags || [],
+    origin: product?.origin || '',
+
   });
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -101,7 +92,7 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
       return;
     }
 
-    onSave(formData);
+    onSave({ ...formData, categoryLabel: formData.category, inStock: formData.stockCount > 0 });
     onNavigate('/admin/products');
   };
 
@@ -190,14 +181,14 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
               </label>
               <select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as Product['category'] })}
                 className="w-full h-10 px-3 border border-[#E8DDD6] rounded-lg text-[13px] bg-[#FBF7F0]"
               >
-                <option value="Kanjeevaram Bridal">Kanjeevaram Bridal</option>
-                <option value="Varanasi Brocade">Varanasi Brocade</option>
-                <option value="Mangalagiri Pattu">Mangalagiri Pattu</option>
-                <option value="Tussar &amp; Temple">Tussar &amp; Temple</option>
-                <option value="Heirloom Pattu">Heirloom Pattu</option>
+                <option value="Kanjeevaram">Kanjeevaram</option>
+                <option value="Banarasi">Banarasi</option>
+                <option value="Mangalagiri">Mangalagiri</option>
+                <option value="Tussar">Tussar</option>
+                <option value="Organza">Organza</option>
               </select>
             </div>
 
@@ -207,8 +198,8 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.weave}
-                onChange={(e) => setFormData({ ...formData, weave: e.target.value })}
+                value={formData.weaveType}
+                onChange={(e) => setFormData({ ...formData, weaveType: e.target.value })}
                 placeholder="e.g. Korvai Interlocked Shuttle Handloom"
                 className="w-full h-10 px-3 border border-[#E8DDD6] rounded-lg text-[13px] bg-[#FBF7F0]"
               />
@@ -329,8 +320,8 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.silkMark}
-                onChange={(e) => setFormData({ ...formData, silkMark: e.target.checked })}
+                checked={formData.silkMarkCertified}
+                onChange={(e) => setFormData({ ...formData, silkMarkCertified: e.target.checked })}
                 className="rounded border-[#B88A44] text-[#780D24] focus:ring-[#780D24]"
               />
               <span className="font-semibold">Silk Mark Certified Organization</span>
@@ -339,8 +330,8 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.isBestSeller}
-                onChange={(e) => setFormData({ ...formData, isBestSeller: e.target.checked })}
+                checked={formData.tags.includes('Bestseller')}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.checked ? [...formData.tags, 'Bestseller'] : formData.tags.filter(t => t !== 'Bestseller') })}
                 className="rounded border-[#B88A44] text-[#780D24] focus:ring-[#780D24]"
               />
               <span className="font-semibold">Best Seller Highlight</span>
@@ -349,8 +340,8 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.isNewArrival}
-                onChange={(e) => setFormData({ ...formData, isNewArrival: e.target.checked })}
+                checked={formData.tags.includes('New')}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.checked ? [...formData.tags, 'New'] : formData.tags.filter(t => t !== 'New') })}
                 className="rounded border-[#B88A44] text-[#780D24] focus:ring-[#780D24]"
               />
               <span className="font-semibold">New Arrival Tag</span>
@@ -490,11 +481,11 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.specs.care}
+                value={formData.careInstructions.join('\n')}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    specs: { ...formData.specs, care: e.target.value },
+                    careInstructions: e.target.value.split('\n'),
                   })
                 }
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg text-xs bg-[#FBF7F0]"
@@ -507,11 +498,11 @@ export const AdminProductForm: React.FC<AdminProductFormProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.specs.origin}
+                value={formData.origin || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    specs: { ...formData.specs, origin: e.target.value },
+                    origin: e.target.value,
                   })
                 }
                 className="w-full h-9 px-3 border border-[#E8DDD6] rounded-lg text-xs bg-[#FBF7F0]"

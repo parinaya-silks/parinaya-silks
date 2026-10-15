@@ -1,3 +1,5 @@
+import { applyFulfilment, fulfilmentError } from '../utils/fulfilment.ts';
+import { demoEnabled } from '../config/runtime.ts';
 import {
   Product,
   CartItem,
@@ -18,22 +20,24 @@ import {
   INITIAL_SETTINGS,
 } from '../data/mockData.ts';
 
-const STORAGE_KEY_PRODUCTS = 'parinaya_products_v1';
-const STORAGE_KEY_CART = 'parinaya_cart_v1';
-const STORAGE_KEY_WISHLIST = 'parinaya_wishlist_v1';
-const STORAGE_KEY_ORDERS = 'parinaya_orders_v1';
-const STORAGE_KEY_CUSTOMER = 'parinaya_customer_v1';
-const STORAGE_KEY_CUSTOMERS = 'parinaya_customers_list_v1';
-const STORAGE_KEY_COUPONS = 'parinaya_coupons_v1';
-const STORAGE_KEY_SETTINGS = 'parinaya_settings_v1';
+const STORAGE_KEY_PRODUCTS = 'parinaya_products_demo_v2';
+const STORAGE_KEY_CART = 'parinaya_cart_demo_v2';
+const STORAGE_KEY_WISHLIST = 'parinaya_wishlist_demo_v2';
+const STORAGE_KEY_ORDERS = 'parinaya_orders_demo_v2';
+const STORAGE_KEY_CUSTOMER = 'parinaya_customer_demo_v2';
+const STORAGE_KEY_CUSTOMERS = 'parinaya_customers_list_demo_v2';
+const STORAGE_KEY_COUPONS = 'parinaya_coupons_demo_v2';
+const STORAGE_KEY_SETTINGS = 'parinaya_settings_demo_v2';
 
 function getStorage<T>(key: string, defaultValue: T): T {
   try {
     const saved = localStorage.getItem(key);
-    if (!saved) return defaultValue;
-    return JSON.parse(saved) as T;
+    if (!saved) return structuredClone(defaultValue);
+    const parsed = JSON.parse(saved);
+    if (parsed === null || Array.isArray(parsed) !== Array.isArray(defaultValue) || typeof parsed !== typeof defaultValue) return structuredClone(defaultValue);
+    return parsed as T;
   } catch {
-    return defaultValue;
+    return structuredClone(defaultValue);
   }
 }
 
@@ -93,6 +97,7 @@ class StoreService {
   }
 
   public updateProductStock(id: string, newStock: number): void {
+    if (!Number.isSafeInteger(newStock)) throw new Error('Stock must be a whole number.');
     const products = this.getProducts().map((p) => {
       if (p.id === id) {
         return {
@@ -132,10 +137,18 @@ class StoreService {
 
   // CART
   public getCart(): CartItem[] {
-    return getStorage<CartItem[]>(STORAGE_KEY_CART, DEFAULT_CART);
+    const products = this.getProducts();
+    return getStorage<CartItem[]>(STORAGE_KEY_CART, DEFAULT_CART).flatMap(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product || product.status !== 'Published' || !product.inStock || product.stockCount < 1 || !Number.isSafeInteger(item.quantity) || item.quantity < 1) return [];
+      return [{ ...item, product, quantity: Math.min(item.quantity, product.stockCount) }];
+    });
   }
 
   public addToCart(product: Product, quantity = 1, selectedColor?: string): void {
+    const currentProduct = this.getProductById(product.id);
+    if (!currentProduct || currentProduct.status !== 'Published' || !currentProduct.inStock || currentProduct.stockCount < 1 || !Number.isSafeInteger(quantity) || quantity < 1) return;
+    product = currentProduct;
     const cart = this.getCart();
     const existingIndex = cart.findIndex((item) => item.productId === product.id);
     if (existingIndex >= 0) {
@@ -165,7 +178,14 @@ class StoreService {
       return;
     }
 
-    item.quantity = Math.min(quantity, item.product.stockCount);
+    const product = this.getProductById(productId);
+    if (!Number.isSafeInteger(quantity)) return;
+    if (!product || product.status !== 'Published' || !product.inStock || product.stockCount < 1) {
+      this.removeFromCart(productId);
+      return;
+    }
+    item.product = product;
+    item.quantity = Math.min(quantity, product.stockCount);
     setStorage(STORAGE_KEY_CART, cart);
     this.notify();
   }
@@ -235,6 +255,12 @@ class StoreService {
   }
 
   public createOrder(orderData: Omit<Order, 'id' | 'referenceId' | 'createdAt' | 'timeline'>): Order {
+    if (!demoEnabled) throw new Error('Live checkout is not connected.');
+    if (!orderData.items.length || !orderData.shippingAddress) throw new Error('A bag and delivery address are required.');
+    for (const item of orderData.items) {
+      const product = this.getProductById(item.productId);
+      if (!product || product.status !== 'Published' || !product.inStock || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > product.stockCount) throw new Error('An item is unavailable. Review your bag.');
+    }
     const orders = this.getOrders();
     const randNum = Math.floor(100000 + Math.random() * 900000);
     const newOrder: Order = {
@@ -322,42 +348,10 @@ class StoreService {
     trackingNumber?: string,
     internalNotes?: string
   ): void {
-    const orders = this.getOrders().map((ord) => {
-      if (ord.id === orderId) {
-        const updated: Order = {
-          ...ord,
-          fulfilmentStatus,
-          courierPartner: courierPartner || ord.courierPartner,
-          trackingNumber: trackingNumber || ord.trackingNumber,
-          internalNotes: internalNotes !== undefined ? internalNotes : ord.internalNotes,
-        };
-
-        // advance timeline milestones according to status
-        const statusStepMap: Record<FulfilmentStatus, number> = {
-          Unfulfilled: 1,
-          Processing: 2,
-          Packed: 3,
-          Shipped: 4,
-          Delivered: 6,
-          Cancelled: 1,
-        };
-        const currentStep = statusStepMap[fulfilmentStatus];
-        updated.timeline = updated.timeline.map((m) => ({
-          ...m,
-          completed: m.step <= currentStep,
-          active: m.step === currentStep,
-        }));
-
-        if (fulfilmentStatus === 'Shipped') {
-          updated.latestStatusNote = `Dispatched via ${courierPartner || 'Blue Dart Express'}`;
-          updated.latestStatusTime = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        return updated;
-      }
-      return ord;
-    });
-
+    const orders = this.getOrders();
+    const index = orders.findIndex(o => o.id === orderId);
+    if (index < 0) throw new Error('Order not found.');
+    orders[index] = applyFulfilment(orders[index], fulfilmentStatus, courierPartner, trackingNumber, internalNotes);
     setStorage(STORAGE_KEY_ORDERS, orders);
     this.notify();
   }
@@ -369,38 +363,13 @@ class StoreService {
     trackingNumberMap?: Record<string, string>
   ): { successCount: number; ineligibleOrders: Order[] } {
     const orders = this.getOrders();
-    const targetOrders = orders.filter((o) => orderIds.includes(o.id));
-
-    // Filter out unpaid orders if trying to mark as Shipped
-    const ineligibleOrders = fulfilmentStatus === 'Shipped'
-      ? targetOrders.filter((o) => o.paymentStatus !== 'Paid')
-      : [];
-
-    const eligibleOrders = targetOrders.filter((o) => !ineligibleOrders.some((ineligible) => ineligible.id === o.id));
-
-    orders.forEach((ord) => {
-      if (eligibleOrders.some((el) => el.id === ord.id)) {
-        ord.fulfilmentStatus = fulfilmentStatus;
-        if (courierPartnerMap && courierPartnerMap[ord.id]) {
-          ord.courierPartner = courierPartnerMap[ord.id];
-        }
-        if (trackingNumberMap && trackingNumberMap[ord.id]) {
-          ord.trackingNumber = trackingNumberMap[ord.id];
-        }
-        if (fulfilmentStatus === 'Shipped') {
-          ord.latestStatusNote = `Dispatched with ${ord.courierPartner || 'Blue Dart'}`;
-          ord.latestStatusTime = 'Today';
-        }
-      }
-    });
-
-    setStorage(STORAGE_KEY_ORDERS, orders);
+    const selected = orders.filter(o => orderIds.includes(o.id));
+    const ineligibleOrders = selected.filter(o => fulfilmentError(o, fulfilmentStatus, courierPartnerMap?.[o.id], trackingNumberMap?.[o.id]));
+    const eligible = selected.filter(o => !ineligibleOrders.includes(o));
+    const updated = orders.map(o => eligible.includes(o) ? applyFulfilment(o, fulfilmentStatus, courierPartnerMap?.[o.id], trackingNumberMap?.[o.id]) : o);
+    setStorage(STORAGE_KEY_ORDERS, updated);
     this.notify();
-
-    return {
-      successCount: eligibleOrders.length,
-      ineligibleOrders,
-    };
+    return { successCount: eligible.length, ineligibleOrders };
   }
 
   // CUSTOMER

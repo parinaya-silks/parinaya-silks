@@ -172,6 +172,7 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
 
   return (
     <div className="pb-28">
+      <p role="note" className="bg-amber-50 text-amber-950 border-b border-amber-200 p-4 text-sm text-center">Draft policy preview. Shipping charges, dispatch estimates and final policy terms require business approval.</p>
       {/* Breadcrumb Strip */}
       <section className="bg-[#F4EEE5] border-b border-[#E8DDD6]">
         <div className="max-w-[760px] mx-auto px-4 py-2.5 flex items-center text-[13px] font-sans text-[#5F5552]">

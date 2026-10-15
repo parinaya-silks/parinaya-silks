@@ -21,7 +21,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
-      const matchesTier = tierFilter === 'All' || c.membershipTier === tierFilter;
+      const matchesTier = tierFilter === 'All' || c.vipTier === tierFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -60,7 +60,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Heirloom &amp; Gold Tier</span>
           <div className="mt-1 text-[22px] font-bold text-[#780D24]">
-            {customers.filter((c) => c.membershipTier.includes('Gold') || c.membershipTier.includes('Heirloom')).length} Patrons
+            {customers.filter((c) => c.vipTier.includes('Gold') || c.vipTier.includes('Heirloom')).length} Patrons
           </div>
           <span className="text-[11px] text-[#B88A44] font-medium">VIP bridal consultation eligible</span>
         </div>
@@ -153,7 +153,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
 
                     <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#F4EEE5] text-[#780D24] border border-[#B88A44]/30">
-                        ★ {cust.membershipTier}
+                        ★ {cust.vipTier}
                       </span>
                     </td>
 
@@ -201,7 +201,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
                     {selectedCustomer.name}
                   </h3>
                   <span className="text-[11px] text-[#780D24] font-bold">
-                    {selectedCustomer.membershipTier}
+                    {selectedCustomer.vipTier}
                   </span>
                 </div>
               </div>
@@ -256,7 +256,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
                     )}
                   </div>
                   <p className="text-[#5F5552]">
-                    {a.street}, {a.city}, {a.state} - {a.pincode}
+                    {a.line1}, {a.city}, {a.state} - {a.pincode}
                   </p>
                 </div>
               ))}

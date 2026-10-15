@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface RegisterViewProps {
   onNavigate: (path: string) => void;
-  onRegisterSuccess: (email: string) => void;
+  onRegisterSuccess: (name: string, email: string) => void;
 }
 
 export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegisterSuccess }) => {
@@ -37,7 +37,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
 
     setSimState('loading');
     setTimeout(() => {
-      onRegisterSuccess(email);
+      onRegisterSuccess(fullName.trim(), email);
       onNavigate('/verify-email?email=' + encodeURIComponent(email));
     }, 1200);
   };

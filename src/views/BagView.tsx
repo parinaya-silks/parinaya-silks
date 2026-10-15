@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { CartItem, Product, Coupon } from '../types/index.ts';
+import type { StoreSettings } from '../types/index.ts';
 import { formatINR, calculateOrderTotals } from '../utils/pricing.ts';
 
 interface BagViewProps {
+  settings: StoreSettings;
   cart: CartItem[];
   appliedCoupon: Coupon | null;
   onApplyCoupon: (coupon: Coupon | null) => void;
@@ -17,6 +19,7 @@ interface BagViewProps {
 }
 
 export const BagView: React.FC<BagViewProps> = ({
+  settings,
   cart,
   appliedCoupon,
   onApplyCoupon,
@@ -38,8 +41,10 @@ export const BagView: React.FC<BagViewProps> = ({
     cart,
     appliedCoupon,
     pointsToRedeem,
-    20000,
-    0
+    settings.complimentaryShippingThreshold,
+    settings.standardShippingFee,
+    settings.loyaltyPointsRedeemRate,
+    customerPoints
   );
 
   const handleApplyCoupon = (code: string) => {
@@ -95,7 +100,7 @@ export const BagView: React.FC<BagViewProps> = ({
   }
 
   return (
-    <div className="max-w-md md:max-w-4xl mx-auto px-4 pt-2 pb-28 space-y-4">
+    <div className="max-w-md md:max-w-4xl mx-auto px-4 pt-2 pb-44 md:pb-28 space-y-4">
       {/* Sub-header */}
       <div className="bg-white text-[#231919] p-4 rounded-xl border border-[#E8DDD6] flex items-baseline justify-between shadow-xs">
         <h1 className="font-serif text-[20px] font-medium tracking-tight">
@@ -302,7 +307,7 @@ export const BagView: React.FC<BagViewProps> = ({
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value)}
                     placeholder="Enter coupon code"
-                    className="flex-1 h-11 px-3 bg-[#FBF7F0] border border-[#E8DDD6] rounded text-[13px] uppercase tracking-wider font-sans text-[#231919] focus:outline-none focus:border-[#780D24]"
+                    className="flex-1 min-w-0 h-11 px-3 bg-[#FBF7F0] border border-[#E8DDD6] rounded text-[13px] uppercase tracking-wider font-sans text-[#231919] focus:outline-none focus:border-[#780D24]"
                   />
                   <button
                     onClick={() => handleApplyCoupon(couponInput)}
@@ -472,7 +477,7 @@ export const BagView: React.FC<BagViewProps> = ({
       )}
 
       {/* Sticky Bottom Commerce Bar */}
-      <aside className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)]">
+      <aside className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 inset-x-0 z-40 bg-white border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)]">
         <div className="max-w-md md:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="w-[42%] flex flex-col justify-center">
             <span className="text-[10px] text-[#5F5552] uppercase tracking-wider font-sans leading-none">

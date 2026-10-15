@@ -1,8 +1,11 @@
+import { storeService } from '../services/storeService.ts';
 import React, { useState } from 'react';
 import { CartItem, Coupon, Customer, Address, Order } from '../types/index.ts';
+import type { StoreSettings } from '../types/index.ts';
 import { formatINR, calculateOrderTotals } from '../utils/pricing.ts';
 
 interface CheckoutViewProps {
+  settings: StoreSettings;
   cart: CartItem[];
   appliedCoupon: Coupon | null;
   pointsToRedeem: number;
@@ -13,6 +16,7 @@ interface CheckoutViewProps {
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
+  settings,
   cart,
   appliedCoupon,
   pointsToRedeem,
@@ -25,7 +29,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [fullName, setFullName] = useState(customer.name);
   const [mobile, setMobile] = useState(customer.phone.replace('+91', '').trim());
   const [email, setEmail] = useState(customer.email);
-  const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
+  const [selectedAddressId, setSelectedAddressId] = useState(customer.addresses.find(a => a.isDefault)?.id || customer.addresses[0]?.id || '');
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Card' | 'NetBanking'>('UPI');
   const [whatsappOptIn, setWhatsappOptIn] = useState(customer.whatsappOptIn);
 
@@ -46,14 +50,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [checkoutState, setCheckoutState] = useState<'normal' | 'error' | 'processing'>('normal');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const totals = calculateOrderTotals(cart, appliedCoupon, pointsToRedeem, 20000, 0);
+  const totals = calculateOrderTotals(cart, appliedCoupon, pointsToRedeem, settings.complimentaryShippingThreshold, settings.standardShippingFee, settings.loyaltyPointsRedeemRate, customer.pointsBalance);
 
   const handleAddNewAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddress.line1 || !newAddress.pincode) return;
 
-    customer.addresses.push({
-      id: `addr-${Date.now()}`,
+    const address = storeService.addCustomerAddress({
       name: newAddress.name || customer.name,
       phone: newAddress.phone || customer.phone,
       line1: newAddress.line1,
@@ -64,7 +67,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       type: (newAddress.type as any) || 'HOME',
       isDefault: false,
     });
-    setSelectedAddressIndex(customer.addresses.length - 1);
+    setSelectedAddressId(address.id);
     setNewAddressModalOpen(false);
   };
 
@@ -83,10 +86,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       return;
     }
 
+    const address = customer.addresses.find(a => a.id === selectedAddressId);
+    if (!address || !/^[1-9][0-9]{5}$/.test(address.pincode) || !/^[6-9][0-9]{9}$/.test(mobile.replace(/\s/g, '')) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCheckoutState('error');
+      setErrorMessage('Select an address with a valid India PIN, mobile number and email.');
+      return;
+    }
     setCheckoutState('processing');
 
     setTimeout(() => {
-      const selectedAddr = customer.addresses[selectedAddressIndex] || customer.addresses[0];
+      const selectedAddr = storeService.getCustomer().addresses.find(a => a.id === selectedAddressId);
+      try {
       const newOrder = onCreateOrder({
         customerName: fullName,
         customerEmail: email,
@@ -106,25 +116,28 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         subtotal: totals.subtotal,
         couponCode: appliedCoupon?.code,
         couponDiscount: totals.couponDiscount,
-        pointsRedeemed: pointsToRedeem,
+        pointsRedeemed: totals.pointsRedeemed,
         pointsDiscount: totals.pointsDiscount,
         shippingFee: totals.shipping,
         totalAmount: totals.total,
         paymentStatus: 'Paid',
         paymentMethod,
-        paymentGatewayRef: `UPI/${Math.floor(100000000000 + Math.random() * 900000000000)}`,
+        paymentGatewayRef: `DEMO-${crypto.randomUUID()}`,
         fulfilmentStatus: 'Processing',
-        estimatedDelivery: 'Oct 28 – Oct 29, 2025',
       });
 
       onClearCart();
       setCheckoutState('normal');
       onNavigate(`/order-confirmed?orderId=${newOrder.id}`);
+      } catch (error) {
+        setCheckoutState('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Could not create demo order.');
+      }
     }, 2000);
   };
 
   return (
-    <div className="pb-32 bg-[#FBF7F0] min-h-screen">
+    <div className="pb-44 md:pb-32 bg-[#FBF7F0] min-h-screen">
       {/* Interactive State Floating Switcher */}
       <aside
         aria-label="Checkout State Switcher"
@@ -393,11 +406,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               {/* Address Cards */}
               <div className="space-y-3">
                 {customer.addresses.map((addr, idx) => {
-                  const isSelected = selectedAddressIndex === idx;
+                  const isSelected = selectedAddressId === addr.id;
                   return (
                     <div
                       key={addr.id}
-                      onClick={() => setSelectedAddressIndex(idx)}
+                      onClick={() => setSelectedAddressId(addr.id)}
                       className={`border-2 rounded-lg p-4 cursor-pointer transition-all relative ${
                         isSelected
                           ? 'border-[#B88A44] bg-[#FBF7F0]'
@@ -410,7 +423,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                             type="radio"
                             name="delivery-addr"
                             checked={isSelected}
-                            onChange={() => setSelectedAddressIndex(idx)}
+                            onChange={() => setSelectedAddressId(addr.id)}
                             className="w-4 h-4 text-[#780D24] focus:ring-[#780D24] accent-[#780D24]"
                           />
                           <span className="font-serif text-[15px] text-[#231919] font-semibold">
@@ -670,7 +683,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       </main>
 
       {/* Sticky Bottom Action Bar */}
-      <aside className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)]">
+      <aside className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 inset-x-0 z-40 bg-white border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="w-[38%] flex flex-col justify-center">
             <span className="text-[10px] text-[#5F5552] uppercase tracking-wider font-sans leading-none">
@@ -688,7 +701,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               className="w-full h-12 bg-[#780D24] hover:bg-[#5E091B] text-white rounded-lg font-sans text-[14px] font-semibold tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">lock</span>
-              <span>Pay {formatINR(totals.total)}</span>
+              <span>Simulate payment</span>
             </button>
           </div>
         </div>

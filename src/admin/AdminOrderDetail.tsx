@@ -37,14 +37,19 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
   }
 
   const [status, setStatus] = useState<FulfilmentStatus>(order.fulfilmentStatus);
-  const [courier, setCourier] = useState(order.courierPartner || 'Blue Dart Express');
+  const [courier, setCourier] = useState(order.courierPartner || '');
   const [tracking, setTracking] = useState(order.trackingNumber || '');
   const [notes, setNotes] = useState(order.internalNotes || '');
   const [saveToast, setSaveToast] = useState(false);
   const [showSlipModal, setShowSlipModal] = useState(false);
 
   const handleSave = () => {
-    onUpdateOrder(order.id, status, courier, tracking, notes);
+    try {
+      onUpdateOrder(order.id, status, courier, tracking, notes);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not update order.');
+      return;
+    }
     setSaveToast(true);
     setTimeout(() => setSaveToast(false), 3000);
   };
@@ -125,40 +130,40 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
               {order.items.map((item, idx) => (
                 <div key={idx} className="p-4 flex items-start gap-4 hover:bg-[#FBF7F0]/50 transition-colors">
                   <img
-                    src={item.product.images.full}
-                    alt={item.product.name}
+                    src={item.image}
+                    alt={item.productName}
                     className="w-16 h-20 object-cover rounded border border-[#E8DDD6] shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <span className="text-[10px] font-mono font-bold text-[#817567] uppercase block">
-                          SKU: {item.product.sku}
+                          SKU: {item.sku}
                         </span>
                         <h3 className="font-serif text-[15px] font-semibold text-[#231919] leading-snug">
-                          {item.product.name}
+                          {item.productName}
                         </h3>
                       </div>
                       <div className="text-right">
                         <span className="font-bold text-[#231919] text-[14px]">
-                          {formatINR(item.product.price * item.quantity)}
+                          {formatINR(item.price * item.quantity)}
                         </span>
                         <span className="text-[11px] text-[#5F5552] block">
-                          {formatINR(item.product.price)} × {item.quantity}
+                          {formatINR(item.price)} × {item.quantity}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <span className="inline-flex items-center px-2 py-0.5 bg-[#F4EEE5] text-[#780D24] text-[10px] font-bold rounded">
-                        {item.product.category}
+                        {item.category}
                       </span>
-                      {item.selectedColor && (
+                      {item.subtitle && (
                         <span className="text-[11px] text-[#5F5552]">
-                          Color: <strong>{item.selectedColor}</strong>
+                          Color: <strong>{item.subtitle}</strong>
                         </span>
                       )}
-                      {item.product.silkMark && (
+                      {false && (
                         <span className="text-[10px] text-amber-900 bg-amber-100/60 px-1.5 py-0.5 rounded font-bold">
                           ✓ Silk Mark
                         </span>
@@ -173,7 +178,7 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
             <div className="p-4 bg-[#FBF7F0] border-t border-[#E8DDD6] space-y-2 text-[13px]">
               <div className="flex justify-between text-[#5F5552]">
                 <span>Items Subtotal:</span>
-                <span>{formatINR(order.itemsSubtotal)}</span>
+                <span>{formatINR(order.subtotal)}</span>
               </div>
               <div className="flex justify-between text-[#5F5552]">
                 <span>Insured Express Shipping:</span>
@@ -181,16 +186,16 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
                   {order.shippingFee === 0 ? 'FREE' : formatINR(order.shippingFee)}
                 </span>
               </div>
-              {order.discountAmount > 0 && (
+              {order.couponDiscount > 0 && (
                 <div className="flex justify-between text-[#780D24]">
-                  <span>Coupon Discount ({order.appliedCouponCode || 'PROMO'}):</span>
-                  <span>-{formatINR(order.discountAmount)}</span>
+                  <span>Coupon Discount ({order.couponCode || 'PROMO'}):</span>
+                  <span>-{formatINR(order.couponDiscount)}</span>
                 </div>
               )}
               {order.pointsRedeemed > 0 && (
                 <div className="flex justify-between text-[#B88A44]">
                   <span>Loyalty Redemption ({order.pointsRedeemed} pts):</span>
-                  <span>-{formatINR(order.pointsRedeemed)}</span>
+                  <span>-{formatINR(order.pointsDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-[16px] font-bold text-[#231919] pt-2 border-t border-[#E8DDD6]">
@@ -221,7 +226,7 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
               </span>
               <div className="font-semibold text-[14px] text-[#231919]">{order.shippingAddress.name}</div>
               <p className="text-[12px] text-[#5F5552] leading-relaxed">
-                {order.shippingAddress.street}, {order.shippingAddress.city},<br />
+                {order.shippingAddress.line1}, {order.shippingAddress.city},<br />
                 {order.shippingAddress.state} - {order.shippingAddress.pincode}
               </p>
             </div>
@@ -371,7 +376,7 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
               <div>
                 <span>SHIP TO: </span>
                 <span className="font-sans font-medium text-[#231919]">
-                  {order.shippingAddress.name}, {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
+                  {order.shippingAddress.name}, {order.shippingAddress.line1}, {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
                 </span>
               </div>
             </div>
@@ -388,10 +393,10 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
               <tbody className="divide-y divide-[#E8DDD6]">
                 {order.items.map((i, idx) => (
                   <tr key={idx}>
-                    <td className="p-2 font-medium">{i.product.name}</td>
-                    <td className="p-2 font-mono text-[11px]">{i.product.sku}</td>
+                    <td className="p-2 font-medium">{i.productName}</td>
+                    <td className="p-2 font-mono text-[11px]">{i.sku}</td>
                     <td className="p-2 text-center">{i.quantity}</td>
-                    <td className="p-2 text-right">{formatINR(i.product.price * i.quantity)}</td>
+                    <td className="p-2 text-right">{formatINR(i.price * i.quantity)}</td>
                   </tr>
                 ))}
               </tbody>

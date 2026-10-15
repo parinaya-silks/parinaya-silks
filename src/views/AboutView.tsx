@@ -39,13 +39,13 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
       {/* Content Sections */}
       <div className="space-y-6 font-sans text-[15px] sm:text-[16px] text-[#5F5552] leading-relaxed">
-        {/* Section: Our Story */}
+        {/* Section: About the Store */}
         <section className="space-y-2">
           <h2 className="font-serif text-[22px] text-[#780D24] font-medium">
-            Our Story
+            About the Store
           </h2>
           <p>
-            Parinaya Silks was born from an enduring appreciation for timeless Indian textile traditions. We are committed to celebrating authentic handloom heritage by bringing thoughtfully curated weaves into the contemporary wardrobe. Every saree we present reflects human artistry, cultural reverence, and lasting grace.
+            PARINAYA SILKS is based in Hyderabad, India. Browse our saree collection and contact us via WhatsApp or email for product information.
           </p>
         </section>
 

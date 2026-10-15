@@ -71,7 +71,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
     const result = onBulkUpdateStatus(selectedOrderIds, bulkActionStatus);
     if (result.ineligibleOrders.length > 0) {
       setBulkMessage(
-        `Updated ${result.successCount} orders to ${bulkActionStatus}. ${result.ineligibleOrders.length} order(s) skipped because payment is unpaid.`
+        `Updated ${result.successCount} orders to ${bulkActionStatus}. ${result.ineligibleOrders.length} order(s) skipped: unpaid, missing shipment details, or invalid status transition.`
       );
     } else {
       setBulkMessage(`Successfully updated ${result.successCount} orders to ${bulkActionStatus}.`);
@@ -277,10 +277,10 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
                           {ord.items.slice(0, 2).map((item, idx) => (
                             <img
                               key={idx}
-                              src={item.product.images.full}
-                              alt={item.product.name}
+                              src={item.image}
+                              alt={item.productName}
                               className="w-7 h-9 object-cover rounded border border-[#E8DDD6]"
-                              title={item.product.name}
+                              title={item.productName}
                             />
                           ))}
                           {ord.items.length > 2 && (
@@ -316,7 +316,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
                         <select
                           value={ord.fulfilmentStatus}
                           onChange={(e) =>
-                            onUpdateStatus(ord.id, e.target.value as FulfilmentStatus)
+                            (() => { try { onUpdateStatus(ord.id, e.target.value as FulfilmentStatus); } catch (error) { window.alert(error instanceof Error ? error.message : 'Could not update order.'); } })()
                           }
                           className="text-[11px] font-semibold py-1 px-2 rounded border border-[#E8DDD6] bg-white text-[#231919] focus:outline-none focus:border-[#780D24]"
                         >

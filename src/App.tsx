@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { demoEnabled } from './config/runtime.ts';
+import { normalizePath } from './utils/routing.ts';
 import { storeService } from './services/storeService.ts';
 import {
   Product,
@@ -50,9 +52,26 @@ import { AdminCoupons } from './admin/AdminCoupons.tsx';
 import { AdminSettings } from './admin/AdminSettings.tsx';
 
 export default function App() {
+  if (!demoEnabled) {
+    return <div className="min-h-screen bg-[#FBF7F0] text-[#231919] grid place-items-center px-6">
+      <main className="max-w-lg text-center space-y-4">
+        <h1 className="font-serif text-3xl text-[#780D24]">PARINAYA SILKS</h1>
+        <p>Our online store is being prepared. Online checkout and account access are not available yet.</p>
+        <p>Hyderabad, India</p>
+        <p><a className="underline" href="https://wa.me/918367383073">WhatsApp +91 8367383073</a></p>
+        <p><a className="underline break-all" href="mailto:parinayasilks.in@gmail.com">parinayasilks.in@gmail.com</a></p>
+      </main>
+    </div>;
+  }
+  return <><div role="note" className="bg-[#231919] text-white text-center px-4 py-2 text-xs">
+    Local demo — sample products, customers and orders. Login and payments are simulated. Use test details only.
+  </div><DemoApp /></>;
+}
+
+function DemoApp() {
   // Navigation State (Simple client-side routing)
   const [currentPath, setCurrentPath] = useState<string>(() => {
-    return window.location.hash.replace(/^#/, '') || '/';
+    return normalizePath(window.location.hash.replace(/^#/, '') || '/');
   });
 
   // Reactive Data State from StoreService
@@ -87,7 +106,7 @@ export default function App() {
   // Sync hash changes with state
   useEffect(() => {
     const handleHashChange = () => {
-      const hashPath = window.location.hash.replace(/^#/, '') || '/';
+      const hashPath = normalizePath(window.location.hash.replace(/^#/, '') || '/');
       setCurrentPath(hashPath);
       window.scrollTo(0, 0);
     };
@@ -97,6 +116,7 @@ export default function App() {
   }, []);
 
   const navigate = useCallback((path: string) => {
+    path = normalizePath(path);
     window.location.hash = path;
     setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -264,7 +284,7 @@ export default function App() {
     }
 
     return (
-      <AdminLayout currentPath={currentPath} onNavigate={navigate}>
+      <AdminLayout key={currentPath} currentPath={currentPath} onNavigate={navigate}>
         {adminContent}
       </AdminLayout>
     );
@@ -276,7 +296,7 @@ export default function App() {
   if (currentPath === '/' || currentPath === '') {
     customerView = (
       <HomeView
-        products={products}
+        products={products.filter(p => p.status === 'Published')}
         onNavigate={navigate}
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
@@ -290,6 +310,7 @@ export default function App() {
 
     customerView = (
       <ShopView
+        key={currentPath}
         products={products}
         initialCategory={categoryParam}
         initialSearch={searchParam}
@@ -301,10 +322,14 @@ export default function App() {
     );
   } else if (currentPath.startsWith('/product/')) {
     const prodId = currentPath.replace('/product/', '').split('?')[0];
-    const product = products.find((p) => p.id === prodId) || products[0];
+    const product = products.find((p) => p.id === prodId && p.status === 'Published');
+    if (!product) {
+      customerView = <MissingRecord label="Product" onNavigate={navigate} />;
+    } else {
 
     customerView = (
       <ProductDetailView
+        key={product.id}
         product={product}
         allProducts={products}
         onNavigate={navigate}
@@ -313,6 +338,7 @@ export default function App() {
         isWishlisted={isWishlisted}
       />
     );
+    }
   } else if (currentPath === '/wishlist') {
     customerView = (
       <WishlistView
@@ -326,6 +352,7 @@ export default function App() {
   } else if (currentPath === '/bag') {
     customerView = (
       <BagView
+        settings={settings}
         cart={cart}
         appliedCoupon={appliedCoupon}
         onApplyCoupon={(coupon) => setAppliedCoupon(coupon)}
@@ -347,6 +374,7 @@ export default function App() {
   } else if (currentPath === '/checkout') {
     customerView = (
       <CheckoutView
+        settings={settings}
         cart={cart}
         appliedCoupon={appliedCoupon}
         pointsToRedeem={pointsToRedeem}
@@ -367,24 +395,25 @@ export default function App() {
     const queryOrderId = urlParams.get('orderId');
     const targetId = pathOrderId || queryOrderId;
     const targetOrder = targetId
-      ? orders.find(
+      ? orders.filter(o => o.customerEmail === customer.email).find(
           (o) =>
             o.id === targetId ||
             o.referenceId.replace(/[^a-zA-Z0-9]/g, '') === targetId.replace(/[^a-zA-Z0-9]/g, '')
         )
-      : orders[0];
+      : undefined;
 
     customerView = (
-      <OrderResultView
+      targetOrder ? <OrderResultView
+        key={targetOrder.id}
         order={targetOrder}
         onNavigate={navigate}
-      />
+      /> : <MissingRecord label="Order" onNavigate={navigate} />
     );
-  } else if (currentPath === '/account' || currentPath.startsWith('/account')) {
+  } else if (currentPath === '/account' || currentPath === '/account/orders') {
     customerView = (
       <AccountView
         customer={customer}
-        orders={orders}
+        orders={orders.filter(o => o.customerEmail === customer.email)}
         onNavigate={navigate}
         onUpdateProfile={(updates) => storeService.updateCustomerProfile(updates)}
         onAddAddress={(addr) => storeService.addCustomerAddress(addr)}
@@ -393,13 +422,14 @@ export default function App() {
     );
   } else if (currentPath.startsWith('/order-tracking')) {
     const orderId = currentPath.replace('/order-tracking/', '').replace('/order-tracking', '');
-    const targetOrder = orderId ? orders.find((o) => o.id === orderId) : orders[0];
+    const targetOrder = orders.find((o) => o.id === orderId && o.customerEmail === customer.email);
 
     customerView = (
-      <OrderTrackingView
+      targetOrder ? <OrderTrackingView
+        key={targetOrder.id}
         order={targetOrder}
         onNavigate={navigate}
-      />
+      /> : <MissingRecord label="Order" onNavigate={navigate} />
     );
   } else if (currentPath === '/login') {
     customerView = (
@@ -430,6 +460,7 @@ export default function App() {
   } else if (currentPath === '/verify-email') {
     customerView = (
       <VerifyEmailView
+        initialEmail={customer.email}
         onNavigate={navigate}
       />
     );
@@ -474,25 +505,16 @@ export default function App() {
       />
     );
   } else {
-    // Default fallback
-    customerView = (
-      <HomeView
-        products={products}
-        onNavigate={navigate}
-        onAddToCart={handleAddToCart}
-        onToggleWishlist={handleToggleWishlist}
-        isWishlisted={isWishlisted}
-      />
-    );
+    customerView = <MissingRecord label="Page" onNavigate={navigate} />;
   }
 
   return (
     <div className="min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white">
       {/* Top Store Announcement Banner */}
-      {settings.bannerEnabled && settings.bannerText && (
+      {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-[15px] text-[#B88A44]">sparkles</span>
-          <span>{settings.bannerText}</span>
+          <span>{settings.announcementBarText}</span>
           <button
             onClick={() => navigate('/shop')}
             className="underline underline-offset-2 ml-1 text-[#F4EEE5] hover:text-white font-semibold"
@@ -516,15 +538,15 @@ export default function App() {
       </main>
 
       {/* Floating Mode Switcher (Seamless evaluation between Storefront and Admin Console) */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40">
+      {!['/bag', '/checkout'].includes(currentPath) && !currentPath.startsWith('/product/') && <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40">
         <button
           onClick={() => navigate('/admin/dashboard')}
           className="group flex items-center gap-2 bg-[#231919] hover:bg-[#780D24] text-white px-3.5 py-2.5 rounded-full shadow-lg border border-[#B88A44] transition-all hover:scale-105"
-          title="Open Parinaya Silks Atelier Admin Console"
+          title="Open Parinaya Silks Demo Admin Console"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-sans text-[12px] font-bold tracking-wide">
-            Atelier Admin
+            Demo Admin
           </span>
           <span className="material-symbols-outlined text-[16px] text-[#B88A44] group-hover:translate-x-0.5 transition-transform">
             arrow_forward
@@ -532,6 +554,7 @@ export default function App() {
         </button>
       </div>
 
+      }
       {/* Storefront Footer */}
       <Footer onNavigate={navigate} />
 
@@ -544,4 +567,12 @@ export default function App() {
       />
     </div>
   );
+}
+
+function MissingRecord({ label, onNavigate }: { label: string; onNavigate: (path: string) => void }) {
+  return <section className="p-8 text-center space-y-4">
+    <h1 className="font-serif text-2xl">{label} not found</h1>
+    <p>The requested {label.toLowerCase()} is unavailable.</p>
+    <button className="min-h-11 px-5 bg-[#780D24] text-white rounded" onClick={() => onNavigate('/shop')}>Continue shopping</button>
+  </section>;
 }

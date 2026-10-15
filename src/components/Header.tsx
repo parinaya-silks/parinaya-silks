@@ -28,10 +28,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      {/* Top Announcement Bar if enabled */}
-      <div className="bg-[#5E091B] text-[#F2BE72] text-[11px] font-sans tracking-wide py-1.5 px-4 text-center font-medium border-b border-[#B88A44]/30">
-        Complimentary Insured Delivery Across India on Orders Above ₹20,000 · Hyderabad Loom Curations
-      </div>
 
       {/* Approved Top App Bar (Deep Maroon #780D24, Single Row) */}
       <header className="sticky top-0 z-40 bg-[#780D24] text-white shadow-md">
@@ -56,14 +52,14 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="w-8 h-8 rounded-full border border-[#B88A44]/80 bg-[#5E091B] flex items-center justify-center font-serif text-[13px] font-bold text-[#F2BE72] tracking-wider shrink-0 shadow-inner">
                 PS
               </span>
-              <span className="font-serif text-[18px] sm:text-[20px] tracking-[0.14em] uppercase font-medium text-white whitespace-nowrap">
+              <span className="font-serif text-[16px] min-[390px]:text-[18px] sm:text-[20px] tracking-[0.10em] sm:tracking-[0.14em] uppercase font-medium text-white whitespace-nowrap">
                 PARINAYA SILKS
               </span>
             </button>
           </div>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-[13px] font-medium tracking-wider uppercase text-[#FBF7F0]/90">
+          <nav className="hidden xl:flex items-center gap-6 text-[13px] font-medium tracking-wider uppercase text-[#FBF7F0]/90">
             <button
               onClick={() => onNavigate('/')}
               className={`hover:text-[#F2BE72] transition-colors py-1 ${currentPath === '/' ? 'text-[#F2BE72] font-semibold border-b border-[#F2BE72]' : ''}`}

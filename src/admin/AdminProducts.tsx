@@ -19,14 +19,14 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
 
-  const categories = ['All', 'Kanjeevaram Bridal', 'Varanasi Brocade', 'Mangalagiri Pattu', 'Tussar & Temple'];
+  const categories = ['All', 'Kanjeevaram', 'Banarasi', 'Mangalagiri', 'Tussar', 'Organza', 'Ikat'];
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesCategory =
         selectedCategory === 'All' ||
         p.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        p.weave.toLowerCase().includes(selectedCategory.toLowerCase());
+        p.weaveType.toLowerCase().includes(selectedCategory.toLowerCase());
 
       const matchesStatus =
         selectedStatus === 'All' || p.status === selectedStatus;
@@ -36,7 +36,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
         !q ||
         p.name.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
-        p.weave.toLowerCase().includes(q) ||
+        p.weaveType.toLowerCase().includes(q) ||
         p.colorName.toLowerCase().includes(q);
 
       return matchesCategory && matchesStatus && matchesSearch;
@@ -206,10 +206,10 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                               {p.name}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#5F5552]">
-                              <span>{p.weave}</span>
+                              <span>{p.weaveType}</span>
                               <span>•</span>
                               <span>{p.colorName}</span>
-                              {p.silkMark && (
+                              {p.silkMarkCertified && (
                                 <span className="bg-amber-100 text-amber-900 px-1 py-0.2 rounded text-[9px] font-bold">
                                   Silk Mark
                                 </span>
