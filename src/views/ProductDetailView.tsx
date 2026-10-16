@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -122,7 +124,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   verified
                 </span>
                 <span className="font-sans text-[10px] text-[#231919] uppercase tracking-wider font-semibold">
-                  Pure Silk Mark
+                  Sample silk details
                 </span>
               </div>
             )}
@@ -186,6 +188,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
         {/* RIGHT COLUMN: Product Information & Controls */}
         <div className="space-y-4">
+          {!demoEnabled && <FeatureNotice>Sample product details and pricing for review. Availability, materials and certification are unverified. Checkout is unavailable.</FeatureNotice>}
           {/* Summary Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -194,7 +197,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </span>
               <div className="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                {product.inStock ? 'In Stock • Ready for Atelier Dispatch' : 'Sold Out'}
+                {demoEnabled ? (product.inStock ? 'In Stock' : 'Sold Out') : 'Sample stock status'}
               </div>
             </div>
 
@@ -220,7 +223,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
 
             <p className="font-sans text-[13px] text-[#5F5552]">
-              Inclusive of all taxes · Free insured shipping across India
+              Sample price; taxes and delivery terms are unconfirmed.
             </p>
 
             {/* Loyalty Points callout */}
@@ -233,7 +236,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   workspace_premium
                 </span>
                 <span className="text-[#231919]">
-                  Earn <strong className="text-[#B88A44] font-bold">{Math.floor(product.price / 50)} Heirloom Points</strong> on this purchase
+                  Loyalty rewards are not connected
                 </span>
               </div>
               <span className="text-[#780D24] font-medium text-[12px] group-hover:underline flex items-center">
@@ -424,7 +427,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 <div className="flex justify-between py-1">
                   <span className="text-[#5F5552]">Silk Mark Certified</span>
                   <span className="font-medium text-[#780D24]">
-                    {product.silkMarkCertified ? 'Yes (Certified Authentic)' : 'Traditional Handloom'}
+                    {demoEnabled ? (product.silkMarkCertified ? 'Sample certified item' : 'Traditional Handloom') : 'Unverified sample detail'}
                   </span>
                 </div>
               </div>
@@ -479,14 +482,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </span>
               </summary>
               <div className="px-4 pb-4 pt-1 font-sans text-[13px] text-[#5F5552] space-y-1.5 leading-relaxed">
-                <p>• Complimentary insured domestic courier dispatch across India for orders above ₹20,000.</p>
-                <p>• Carefully packaged in our signature keepsake trousseau box to protect silk and zari integrity.</p>
-                <p>
-                  • Exchange requests can be initiated within 48 hours of delivery for unused sarees with original tags intact. See our{' '}
-                  <button onClick={() => onNavigate('/policies?tab=returns')} className="text-[#780D24] underline">
-                    Returns Policy
-                  </button>.
-                </p>
+                <p>Shipping charges, dispatch estimates and exchange terms require business approval. See our <button onClick={() => onNavigate('/shipping-policy')} className="text-[#780D24] underline">draft policies</button>.</p>
               </div>
             </details>
           </div>
@@ -575,7 +571,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </button>
             </div>
             <p className="font-sans text-[13px] text-[#5F5552] leading-relaxed">
-              Every purchase earns 1 Silk Club point per ₹100 spent. Redeem points directly on subsequent orders or custom embroidery finishing services at checkout.
+              Loyalty earning and redemption are not connected. No points are awarded or redeemed in this preview.
             </p>
             <button
               onClick={() => setRewardsModalOpen(false)}
@@ -603,14 +599,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </button>
           <button
             onClick={handleBuyNow}
-            disabled={!product.inStock}
+            disabled={!demoEnabled || !product.inStock}
             className={`flex-1 h-12 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans font-semibold rounded-lg flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all ${
               product.inStock ? '' : 'opacity-50 cursor-not-allowed'
             }`}
             type="button"
           >
             <span className="material-symbols-outlined text-[20px]">bolt</span>
-            <span>Buy Now</span>
+            <span>{demoEnabled ? 'Buy Now' : 'Checkout unavailable'}</span>
           </button>
         </div>
       </aside>

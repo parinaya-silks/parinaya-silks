@@ -68,6 +68,18 @@ with sync_playwright() as p:
     page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
     print('All existing admin areas show honest unavailable data; access-record revocation and refreshed claim removal/grant passed')
 
+    page.set_viewport_size({'width':1440,'height':900})
+    page.get_by_role('button',name='View Public Store',exact=False).filter(visible=True).click()
+    page.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
+    assert page.url==origin+'/'
+    page.goto(origin+'/admin')
+    page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
+    page.set_viewport_size({'width':390,'height':844})
+    print('Authorized View Public Store link opens the actual homepage and administrator session remains valid')
+
+    # Keep a protected route behind this one for the sign-out/Back assertion.
+    page.goto(origin+'/admin/orders')
+    page.get_by_role('heading',name='Orders & Shipments',exact=True).wait_for()
     page.get_by_role('button',name='Sign out',exact=True).filter(visible=True).click()
     page.get_by_role('heading',name='Administrator Sign In').wait_for()
     page.go_back()
@@ -105,12 +117,16 @@ with sync_playwright() as p:
     production.get_by_role('heading',name='Administrator Sign In').wait_for()
     assert production.evaluate('typeof window.parinayaFirebase')=='undefined'
     production.goto('http://127.0.0.1:4200/')
-    production.get_by_text('Our online store is being prepared.',exact=False).wait_for()
+    production.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
+    production.get_by_role('note').filter(has_text='Storefront preview').wait_for()
     assert production.get_by_role('link',name='Admin',exact=True).count()==0
     production.goto('http://127.0.0.1:3101/admin')
     production.get_by_role('heading',name='Administrator access unavailable').wait_for()
     production.get_by_role('button',name='Retry access check').click()
     production.get_by_role('heading',name='Administrator access unavailable').wait_for()
     assert production.get_by_role('heading',name='Dashboard',exact=True).count()==0
-    print('Production direct/nested routing and preparation gate passed locally; no hosted deployment was tested')
+    production.goto('http://127.0.0.1:3101/')
+    production.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
+    production.get_by_role('note').filter(has_text='Storefront preview').wait_for()
+    print('Production direct/nested routing and public storefront passed locally; no hosted deployment was tested')
     browser.close()

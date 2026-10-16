@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 import { CartItem, Product, Coupon } from '../types/index.ts';
 import type { StoreSettings } from '../types/index.ts';
@@ -48,6 +50,7 @@ export const BagView: React.FC<BagViewProps> = ({
   );
 
   const handleApplyCoupon = (code: string) => {
+    if (!demoEnabled) return;
     const found = availableCoupons.find(
       (c) => c.code.toUpperCase() === code.trim().toUpperCase() && c.active
     );
@@ -107,7 +110,7 @@ export const BagView: React.FC<BagViewProps> = ({
           My Bag ({totalQuantity} {totalQuantity === 1 ? 'item' : 'items'})
         </h1>
         <span className="text-[12px] text-[#5F5552] font-sans">
-          Standard insured shipping
+          {demoEnabled ? 'Standard insured shipping' : 'Saved on this device'}
         </span>
       </div>
 
@@ -190,7 +193,7 @@ export const BagView: React.FC<BagViewProps> = ({
                         alarm
                       </span>
                       <span className="text-[11px] font-medium text-[#780D24] font-sans">
-                        Only {item.product.stockCount} piece remaining
+                        Sample stock: {item.product.stockCount} remaining
                       </span>
                     </div>
                   )}
@@ -253,6 +256,8 @@ export const BagView: React.FC<BagViewProps> = ({
 
         {/* Right column: Coupons, Points & Summary */}
         <div className="md:col-span-5 space-y-4">
+          {!demoEnabled && <FeatureNotice>Checkout, coupons and loyalty are unavailable. Sample prices are for review; shipping and the final payable amount are not calculated.</FeatureNotice>}
+          {demoEnabled && <>
           {/* Apply Coupon Section */}
           <section className="bg-white rounded-xl border border-[#E8DDD6] p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -364,6 +369,7 @@ export const BagView: React.FC<BagViewProps> = ({
             </label>
           </section>
 
+          </>}
           {/* Order Summary */}
           <section className="bg-white rounded-xl border border-[#E8DDD6] p-4 shadow-xs space-y-2.5">
             <h3 className="font-serif text-[16px] text-[#231919] pb-2 border-b border-[#E8DDD6] font-medium">
@@ -398,7 +404,7 @@ export const BagView: React.FC<BagViewProps> = ({
               <div className="flex justify-between items-center">
                 <span>Estimated Shipping</span>
                 <span className="text-[12px] text-[#5F5552] italic">
-                  {totals.shipping === 0 ? 'Complimentary (FREE)' : formatINR(totals.shipping)}
+                  {!demoEnabled ? 'Not calculated' : totals.shipping === 0 ? 'Complimentary (FREE)' : formatINR(totals.shipping)}
                 </span>
               </div>
             </div>
@@ -406,14 +412,14 @@ export const BagView: React.FC<BagViewProps> = ({
             <div className="pt-3 mt-2 border-t border-[#E8DDD6] flex justify-between items-baseline">
               <div>
                 <span className="font-serif text-[16px] text-[#231919] font-semibold block">
-                  Estimated Total
+                  {demoEnabled ? 'Estimated Total' : 'Sample subtotal'}
                 </span>
                 <span className="text-[10px] text-[#5F5552] font-sans">
-                  Inclusive of handcrafted textile levies
+                  {demoEnabled ? 'Inclusive of handcrafted textile levies' : 'Sample subtotal; not payable'}
                 </span>
               </div>
               <span className="font-sans text-[22px] font-bold text-[#780D24]">
-                {formatINR(totals.total)}
+                {formatINR(demoEnabled ? totals.total : totals.subtotal)}
               </span>
             </div>
           </section>
@@ -481,10 +487,10 @@ export const BagView: React.FC<BagViewProps> = ({
         <div className="max-w-md md:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="w-[42%] flex flex-col justify-center">
             <span className="text-[10px] text-[#5F5552] uppercase tracking-wider font-sans leading-none">
-              Estimated Total
+              {demoEnabled ? 'Estimated Total' : 'Sample subtotal'}
             </span>
             <span className="text-[20px] font-bold text-[#780D24] font-sans leading-tight mt-0.5">
-              {formatINR(totals.total)}
+              {formatINR(demoEnabled ? totals.total : totals.subtotal)}
             </span>
             <span className="text-[11px] text-[#B88A44] font-medium font-sans leading-none mt-0.5">
               View Breakdown
@@ -493,10 +499,10 @@ export const BagView: React.FC<BagViewProps> = ({
 
           <div className="w-[58%]">
             <button
-              onClick={() => onNavigate('/checkout')}
+              disabled={!demoEnabled} onClick={() => { if (demoEnabled) onNavigate('/checkout'); }}
               className="w-full h-12 bg-[#780D24] hover:bg-[#5E091B] text-white rounded-lg font-sans text-[13px] font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
             >
-              <span>Proceed to Checkout</span>
+              <span>{demoEnabled ? 'Proceed to Checkout' : 'Checkout unavailable'}</span>
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </div>

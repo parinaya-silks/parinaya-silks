@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 
 interface ForgotPasswordViewProps {
@@ -11,6 +13,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoEnabled) return;
     if (!email.includes('@')) {
       setState('validation');
       return;
@@ -39,7 +42,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive States Switcher Ribbon */}
-      <aside
+      {demoEnabled && <aside
         aria-label="Forgot Password State Switcher"
         className="w-full bg-[#2A1116] px-3 py-2 text-white border-b border-[#B88A44]/30 text-xs"
       >
@@ -93,7 +96,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
             </button>
           </div>
         </div>
-      </aside>
+      </aside>}
 
       {/* Main Container */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-6 pb-6 font-sans flex-1">
@@ -143,13 +146,14 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            {!demoEnabled && <FeatureNotice>Customer sign-in, registration and account recovery are not connected yet. This form is unavailable; no account changes or emails will be sent.</FeatureNotice>}
+        <form onSubmit={handleSubmit} className="space-y-5">
               <div className="text-left space-y-1.5">
                 <label className="block font-sans text-[11px] uppercase tracking-wider font-bold text-[#780D24]">
                   Email Address
                 </label>
                 <div className="relative">
-                  <input
+                  <input disabled={!demoEnabled}
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -173,7 +177,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
 
               <button
                 type="submit"
-                disabled={state === 'loading'}
+                disabled={!demoEnabled || state === 'loading'}
                 className="w-full min-h-[48px] py-3.5 px-4 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[14px] font-semibold tracking-wide rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
               >
                 {state === 'loading' ? (

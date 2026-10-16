@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState, useEffect } from 'react';
 
 interface VerifyEmailViewProps {
@@ -6,7 +8,7 @@ interface VerifyEmailViewProps {
 }
 
 export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
-  initialEmail = 'priyanka.reddy@example.com',
+  initialEmail = '',
   onNavigate,
 }) => {
   const [email, setEmail] = useState(initialEmail);
@@ -30,6 +32,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
   };
 
   const handleCheckVerification = () => {
+    if (!demoEnabled) return;
     setPreviewState(2);
     setTimeout(() => {
       // Simulate verified return
@@ -39,6 +42,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
   };
 
   const handleResend = () => {
+    if (!demoEnabled) return;
     if (countdown > 0) {
       showToast(`Please wait ${countdown}s before requesting another verification email.`);
       return;
@@ -48,6 +52,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
   };
 
   const handleChangeEmail = () => {
+    if (!demoEnabled) return;
     const updated = prompt('Enter updated email address:', email);
     if (updated && updated.includes('@') && updated !== email) {
       setEmail(updated);
@@ -66,7 +71,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
       )}
 
       {/* Interactive Toolbar */}
-      <aside
+      {demoEnabled && <aside
         aria-label="Email Verification State Switcher"
         className="w-full bg-[#2D0B12] text-white text-xs px-3 py-2 border-b border-[#B88A44]/30"
       >
@@ -95,8 +100,9 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
             ))}
           </div>
         </div>
-      </aside>
+      </aside>}
 
+      {!demoEnabled && <FeatureNotice>Customer email verification is not connected. No verification email has been sent and no email status can be confirmed.</FeatureNotice>}
       {/* Main Content */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-6 pb-6 font-sans flex-1">
         {/* Header Back/Close Controls */}
@@ -146,7 +152,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
           <p className="text-[15px] text-[#5F5552] leading-relaxed max-w-[320px] mx-auto">
             {previewState === 4
               ? 'Your email address has been successfully verified. You can now access all features of your Parinaya account.'
-              : 'Open the verification link in your email, then return here.'}
+              : demoEnabled ? 'Open the verification link in your email, then return here.' : 'Email verification is unavailable until customer authentication is connected.'}
           </p>
         </div>
 
@@ -174,7 +180,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
               </span>
             </div>
             <button
-              onClick={handleChangeEmail}
+              disabled={!demoEnabled} onClick={handleChangeEmail}
               className="shrink-0 ml-2 text-[13px] font-semibold text-[#780D24] hover:underline"
               type="button"
             >
@@ -198,7 +204,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
           <div className="space-y-3.5">
             <button
               onClick={handleCheckVerification}
-              disabled={previewState === 2}
+              disabled={!demoEnabled || previewState === 2}
               className="w-full h-12 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[15px] font-semibold rounded-lg flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
             >
               {previewState === 2 ? (
@@ -212,7 +218,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
             </button>
 
             <button
-              onClick={handleResend}
+              disabled={!demoEnabled} onClick={handleResend}
               type="button"
               className="w-full h-12 bg-white border border-[#B88A44] hover:bg-[#F4EEE5] text-[#780D24] font-sans text-[14px] font-semibold rounded-lg flex items-center justify-center gap-2 transition-all"
             >

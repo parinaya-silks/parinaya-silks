@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 import { Customer, Order, Address } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -19,7 +21,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   onAddAddress,
   onRemoveAddress,
 }) => {
-  const [subView, setSubView] = useState<'overview' | 'orders' | 'profile' | 'addresses' | 'loyalty' | 'empty' | 'signedout'>('overview');
+  const [subView, setSubView] = useState<'overview' | 'orders' | 'profile' | 'addresses' | 'loyalty' | 'empty' | 'signedout'>(demoEnabled ? 'overview' : 'signedout');
   const [orderFilter, setOrderFilter] = useState<'all' | 'active' | 'delivered' | 'cancelled'>('all');
   const [orderSearch, setOrderSearch] = useState('');
 
@@ -40,6 +42,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoEnabled) return;
     onUpdateProfile({
       name: editName,
       email: editEmail,
@@ -52,6 +55,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
   const handleSaveNewAddress = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoEnabled) return;
     if (!newAddrLine1.trim()) return;
     onAddAddress({
       name: newAddrName,
@@ -87,7 +91,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   return (
     <div className="pb-28 max-w-4xl mx-auto px-4 py-4 space-y-5">
       {/* Simulation Ribbon Bar */}
-      <aside
+      {demoEnabled && <aside
         aria-label="Account Simulator Switcher"
         className="bg-[#2A2020] text-white px-3 py-1.5 rounded-lg text-xs flex items-center justify-between border border-[#B88A44]/30"
       >
@@ -152,8 +156,9 @@ export const AccountView: React.FC<AccountViewProps> = ({
             Signed Out
           </button>
         </div>
-      </aside>
+      </aside>}
 
+      {!demoEnabled && <FeatureNotice>Customer accounts, order history, profile saves, addresses and loyalty are not connected yet. Continue browsing without signing in.</FeatureNotice>}
       {/* 1. OVERVIEW VIEW */}
       {subView === 'overview' && (
         <div className="space-y-4">
@@ -312,7 +317,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5F5552] text-[18px]">
                 search
               </span>
-              <input
+              <input disabled={!demoEnabled}
                 type="text"
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
@@ -461,7 +466,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#231919] mb-1">
                   Full Name *
                 </label>
-                <input
+                <input disabled={!demoEnabled}
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
@@ -474,7 +479,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#231919] mb-1">
                   Email Address *
                 </label>
-                <input
+                <input disabled={!demoEnabled}
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
@@ -491,7 +496,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   <span className="inline-flex items-center px-3 border border-r-0 border-[#E8DDD6] bg-[#F4EEE5] text-[#231919] text-[14px] font-bold rounded-l-md select-none">
                     🇮🇳 +91
                   </span>
-                  <input
+                  <input disabled={!demoEnabled}
                     type="tel"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
@@ -503,7 +508,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
               <div className="pt-2 border-t border-[#F4EEE5]">
                 <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
+                  <input disabled={!demoEnabled}
                     type="checkbox"
                     checked={editWhatsapp}
                     onChange={(e) => setEditWhatsapp(e.target.checked)}
@@ -574,7 +579,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <form onSubmit={handleSaveNewAddress} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px]">
                 <div>
                   <label className="block text-[11px] font-bold uppercase mb-1">Recipient Name *</label>
-                  <input
+                  <input disabled={!demoEnabled}
                     type="text"
                     value={newAddrName}
                     onChange={(e) => setNewAddrName(e.target.value)}
@@ -584,7 +589,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase mb-1">Mobile Contact *</label>
-                  <input
+                  <input disabled={!demoEnabled}
                     type="tel"
                     value={newAddrPhone}
                     onChange={(e) => setNewAddrPhone(e.target.value)}
@@ -594,7 +599,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-bold uppercase mb-1">Address &amp; Landmark *</label>
-                  <input
+                  <input disabled={!demoEnabled}
                     type="text"
                     value={newAddrLine1}
                     onChange={(e) => setNewAddrLine1(e.target.value)}
@@ -605,7 +610,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase mb-1">PIN Code *</label>
-                  <input
+                  <input disabled={!demoEnabled}
                     type="text"
                     value={newAddrPincode}
                     onChange={(e) => setNewAddrPincode(e.target.value)}
@@ -848,7 +853,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <label className="block text-[11px] font-bold uppercase text-[#231919] mb-1">
                 Mobile Number or Email
               </label>
-              <input
+              <input disabled={!demoEnabled}
                 type="text"
                 placeholder="+91 98490 12345"
                 className="w-full h-11 px-3.5 border border-[#E8DDD6] rounded-md text-[14px]"

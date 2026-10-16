@@ -39,6 +39,7 @@ import { VerifyEmailView } from './views/VerifyEmailView.tsx';
 import { ContactView } from './views/ContactView.tsx';
 import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
+import { FeatureUnavailable } from './components/FeatureUnavailable.tsx';
 
 import { isAdminLocation, safeAdminDestination } from './admin/accessPolicy.ts';
 const SecureAdmin = React.lazy(() => import('./admin/AdminAccess.tsx'));
@@ -67,26 +68,17 @@ export default function App() {
   }, []);
   if (adminPath) return <React.Suspense fallback={<main className="min-h-screen bg-[#FBF7F0] p-8" role="status">Loading administrator access…</main>}><SecureAdmin requestedPath={adminPath} /></React.Suspense>;
 
-  if (!demoEnabled) {
-    return <div className="min-h-screen bg-[#FBF7F0] text-[#231919] grid place-items-center px-6">
-      <main className="max-w-lg text-center space-y-4">
-        <h1 className="font-serif text-3xl text-[#780D24]">PARINAYA SILKS</h1>
-        <p>Our online store is being prepared. Online checkout and account access are not available yet.</p>
-        <p>Hyderabad, India</p>
-        <p><a className="underline" href="https://wa.me/918367383073">WhatsApp +91 8367383073</a></p>
-        <p><a className="underline break-all" href="mailto:parinayasilks.in@gmail.com">parinayasilks.in@gmail.com</a></p>
-      </main>
-    </div>;
-  }
-  return <><div role="note" className="bg-[#231919] text-white text-center px-4 py-2 text-xs">
-    Local demo — sample products, customers and orders. Login and payments are simulated. Use test details only.
-  </div><DemoApp /></>;
+  return <Storefront />;
 }
 
-function DemoApp() {
+function customerLocation() {
+  return normalizePath(window.location.hash.startsWith('#/') ? window.location.hash.slice(1) : window.location.pathname + window.location.search);
+}
+
+function Storefront() {
   // Navigation State (Simple client-side routing)
   const [currentPath, setCurrentPath] = useState<string>(() => {
-    return normalizePath(window.location.hash.replace(/^#/, '') || '/');
+    return customerLocation();
   });
 
   // Reactive Data State from StoreService
@@ -121,18 +113,20 @@ function DemoApp() {
   // Sync hash changes with state
   useEffect(() => {
     const handleHashChange = () => {
-      const hashPath = normalizePath(window.location.hash.replace(/^#/, '') || '/');
+      const hashPath = customerLocation();
       setCurrentPath(hashPath);
       window.scrollTo(0, 0);
     };
 
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleHashChange);
+    return () => { window.removeEventListener('hashchange', handleHashChange); window.removeEventListener('popstate', handleHashChange); };
   }, []);
 
   const navigate = useCallback((path: string) => {
     path = normalizePath(path);
-    window.location.hash = path;
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
     setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
@@ -191,7 +185,14 @@ function DemoApp() {
   // Render Customer Storefront Views
   let customerView: React.ReactNode = null;
 
-  if (currentPath === '/' || currentPath === '') {
+  const unavailable = !demoEnabled && (
+    currentPath === '/checkout' ? ['Checkout unavailable', 'Online checkout, payment collection and order submission are not connected. No payment will be collected and no order will be placed.'] :
+    /^\/(?:order-result|order-confirmed|order-tracking)(?:\/|\?|$)/.test(currentPath) ? ['Orders unavailable', 'Order history, confirmations and tracking are not connected. No payment or order status can be verified here.'] : null
+  );
+
+  if (unavailable) {
+    customerView = <FeatureUnavailable title={unavailable[0]} onNavigate={navigate}>{unavailable[1]}</FeatureUnavailable>;
+  } else if (currentPath === '/' || currentPath === '') {
     customerView = (
       <HomeView
         products={products.filter(p => p.status === 'Published')}
@@ -201,7 +202,7 @@ function DemoApp() {
         isWishlisted={isWishlisted}
       />
     );
-  } else if (currentPath === '/shop' || currentPath.startsWith('/shop?')) {
+  } else if (currentPath === '/shop' || currentPath.startsWith('/shop?') || currentPath === '/collections' || currentPath === '/sale' || currentPath === '/search' || currentPath.startsWith('/search?')) {
     const urlParams = new URLSearchParams(currentPath.includes('?') ? currentPath.split('?')[1] : '');
     const categoryParam = urlParams.get('category') || undefined;
     const searchParam = urlParams.get('search') || undefined;
@@ -212,6 +213,7 @@ function DemoApp() {
         products={products}
         initialCategory={categoryParam}
         initialSearch={searchParam}
+        saleOnly={currentPath === '/sale'}
         onNavigate={navigate}
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
@@ -408,6 +410,9 @@ function DemoApp() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white">
+      <div role="note" className="bg-[#F4EEE5] text-[#5F5552] text-center px-4 py-2 text-xs border-b border-[#E8DDD6]">
+        {demoEnabled ? 'Local demo — simulated accounts and transactions. Use test details only.' : 'Storefront preview — sample catalogue and prices. Stock, offers, reviews and delivery are unverified. Bag and wishlist stay on this device; checkout and customer accounts are unavailable.'}
+      </div>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">

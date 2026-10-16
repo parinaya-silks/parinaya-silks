@@ -1,10 +1,12 @@
 # Administrator access milestone
 
+Current storefront scope: [STOREFRONT_REVIEW.md](STOREFRONT_REVIEW.md) supersedes the former blanket preparation gate. Public browsing is available; customer accounts and transactions remain unavailable. The admin authorization mechanism below is unchanged.
+
 Target: `parinaya-silks`, Cloud Firestore `(default)`. Entry: `https://parinayasilks.vercel.app/admin`. First approved account: `parinayasilks.in@gmail.com`.
 
 ## Release status and scope
 
-Local implementation provides Firebase email/password sign-in, session restoration, sign-out, neutral password-reset feedback, protected nested routes and access revocation. Production customer pages retain the preparation state. Customer login/signup, product/order CRUD, payments, refunds and shipping execution are not connected by this milestone.
+Local implementation provides Firebase email/password sign-in, session restoration, sign-out, neutral password-reset feedback, protected nested routes and access revocation. Production customer pages now permit browsing under the separate storefront-review milestone. Customer login/signup, product/order CRUD, payments, refunds and shipping execution are not connected by this milestone.
 
 **Manual release dependencies:** enable/configure Firebase Authentication, create/confirm the approved existing account, deploy the reviewed restrictive rules, provision its real UID from a trusted environment, then commit/push and test the Vercel deployment. None of those live changes were performed automatically. No real UID or successful live provisioning is claimed.
 
@@ -152,7 +154,7 @@ At `https://parinayasilks.vercel.app/admin`:
 6. Test Sign out, Back and refresh. The guarded screens must remain unavailable while signed out.
 7. Test Forgot Password with controlled existing/absent addresses; do not disclose results or passwords publicly.
 8. If testing revocation, use a controlled administrator and the trusted procedure. Disabling its access record must remove protected content and deny direct business reads with the old token. Restore only through the trusted owner process.
-9. Check `/` still shows the preparation page; no customer admin link, demo checkout release or admin role toggle exists.
+9. Check `/` shows the original storefront with its sample-catalogue notice; no customer admin link, demo checkout release or admin role toggle exists.
 10. Verify direct nested refresh on Vercel, static assets and any future `/api/*` routes independently. The local rewrite configuration does not prove hosted routing before deployment.
 
 Do not treat the access milestone as live-complete until the owner has performed the Console/rules/provisioning/deployment steps above. No live account password, real UID, trusted credential or production session was used by this implementation task.

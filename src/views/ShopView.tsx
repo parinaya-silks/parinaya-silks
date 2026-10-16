@@ -1,3 +1,4 @@
+import { demoEnabled } from '../config/runtime.ts';
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -6,6 +7,7 @@ interface ShopViewProps {
   products: Product[];
   initialCategory?: string;
   initialSearch?: string;
+  saleOnly?: boolean;
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product) => void;
   onToggleWishlist: (product: Product) => void;
@@ -16,6 +18,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
   products,
   initialCategory,
   initialSearch = '',
+  saleOnly = false,
   onNavigate,
   onAddToCart,
   onToggleWishlist,
@@ -74,6 +77,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
           p.tags.some((t) => t.toLowerCase().includes(q))
         );
       })
+      .filter(p => !saleOnly || Boolean(p.discountPercent))
       .filter((p) => {
         // In-stock filter
         if (inStockOnly && !p.inStock) return false;
@@ -95,7 +99,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         if (sortOption === 'newest') return b.id.localeCompare(a.id);
         return 0; // featured default
       });
-  }, [products, selectedCategory, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption]);
+  }, [products, selectedCategory, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption, saleOnly]);
 
   const activeFilterCount =
     (selectedCategory !== 'all' ? 1 : 0) +
@@ -379,16 +383,17 @@ export const ShopView: React.FC<ShopViewProps> = ({
                           Sold Out
                         </span>
                         <button
+                          disabled={!demoEnabled}
                           onClick={(e) => {
                             e.stopPropagation();
-                            alert(`You will be notified when ${product.name} is restocked!`);
+                            alert('Stock notifications are not connected. No subscription was created.');
                           }}
                           className="mt-2.5 w-full bg-white text-[#231919] font-sans text-[10px] font-semibold py-1.5 px-2 rounded-lg shadow-sm border border-[#E8DDD6] active:scale-95 transition-transform flex items-center justify-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[14px] text-[#780D24]">
                             notifications
                           </span>
-                          <span className="truncate">Notify When Back</span>
+                          <span className="truncate">Notifications unavailable</span>
                         </button>
                       </div>
                     )}
@@ -418,7 +423,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                             {formatINR(product.originalPrice)}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[#5F5552]">In Stock</span>
+                          <span className="text-[10px] text-[#5F5552]">{demoEnabled ? 'In Stock' : 'Sample stock'}</span>
                         )}
                       </div>
 
@@ -434,7 +439,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                         </button>
                       ) : (
                         <div className="w-full mt-2.5 py-1.5 text-center text-[10px] font-sans uppercase tracking-wider text-[#780D24] font-medium">
-                          Restocking Soon
+                          Sample unavailable item
                         </div>
                       )}
                     </div>
@@ -568,7 +573,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
               <div className="pt-2">
                 <label className="flex items-center justify-between p-3 rounded-lg bg-[#F4EEE5] border border-[#E8DDD6] cursor-pointer">
                   <span className="font-sans text-[13px] text-[#231919] font-medium">
-                    In Stock Only (Ready for Atelier Dispatch)
+                    Sample in-stock items
                   </span>
                   <input
                     type="checkbox"

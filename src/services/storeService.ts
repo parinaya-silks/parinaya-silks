@@ -21,8 +21,8 @@ import {
 } from '../data/mockData.ts';
 
 const STORAGE_KEY_PRODUCTS = 'parinaya_products_demo_v2';
-const STORAGE_KEY_CART = 'parinaya_cart_demo_v2';
-const STORAGE_KEY_WISHLIST = 'parinaya_wishlist_demo_v2';
+const STORAGE_KEY_CART = demoEnabled ? 'parinaya_cart_demo_v2' : 'parinaya_cart_preview_v1';
+const STORAGE_KEY_WISHLIST = demoEnabled ? 'parinaya_wishlist_demo_v2' : 'parinaya_wishlist_preview_v1';
 const STORAGE_KEY_ORDERS = 'parinaya_orders_demo_v2';
 const STORAGE_KEY_CUSTOMER = 'parinaya_customer_demo_v2';
 const STORAGE_KEY_CUSTOMERS = 'parinaya_customers_list_demo_v2';
@@ -89,7 +89,7 @@ class StoreService {
 
   // PRODUCTS
   public getProducts(): Product[] {
-    return getStorage<Product[]>(STORAGE_KEY_PRODUCTS, INITIAL_PRODUCTS);
+    return demoEnabled ? getStorage<Product[]>(STORAGE_KEY_PRODUCTS, INITIAL_PRODUCTS) : structuredClone(INITIAL_PRODUCTS);
   }
 
   public getProductById(id: string): Product | undefined {
@@ -138,7 +138,7 @@ class StoreService {
   // CART
   public getCart(): CartItem[] {
     const products = this.getProducts();
-    return getStorage<CartItem[]>(STORAGE_KEY_CART, DEFAULT_CART).flatMap(item => {
+    return getStorage<CartItem[]>(STORAGE_KEY_CART, demoEnabled ? DEFAULT_CART : []).flatMap(item => {
       const product = products.find(p => p.id === item.productId);
       if (!product || product.status !== 'Published' || !product.inStock || product.stockCount < 1 || !Number.isSafeInteger(item.quantity) || item.quantity < 1) return [];
       return [{ ...item, product, quantity: Math.min(item.quantity, product.stockCount) }];
@@ -206,7 +206,7 @@ class StoreService {
 
   // WISHLIST
   public getWishlist(): WishlistItem[] {
-    return getStorage<WishlistItem[]>(STORAGE_KEY_WISHLIST, DEFAULT_WISHLIST);
+    return getStorage<WishlistItem[]>(STORAGE_KEY_WISHLIST, demoEnabled ? DEFAULT_WISHLIST : []);
   }
 
   public isInWishlist(productId: string): boolean {
@@ -245,7 +245,7 @@ class StoreService {
 
   // ORDERS
   public getOrders(): Order[] {
-    return getStorage<Order[]>(STORAGE_KEY_ORDERS, INITIAL_ORDERS);
+    return demoEnabled ? getStorage<Order[]>(STORAGE_KEY_ORDERS, INITIAL_ORDERS) : [];
   }
 
   public getOrderById(id: string): Order | undefined {
@@ -374,14 +374,15 @@ class StoreService {
 
   // CUSTOMER
   public getCustomer(): Customer {
-    return getStorage<Customer>(STORAGE_KEY_CUSTOMER, INITIAL_CUSTOMER);
+    return demoEnabled ? getStorage<Customer>(STORAGE_KEY_CUSTOMER, INITIAL_CUSTOMER) : { id: '', name: '', email: '', phone: '', addresses: [], lifetimeSpend: 0, totalOrdersCount: 0, pointsBalance: 0, vipTier: 'Club Member', registeredDate: '', whatsappOptIn: false };
   }
 
   public getCustomersList(): Customer[] {
-    return getStorage<Customer[]>(STORAGE_KEY_CUSTOMERS, INITIAL_CUSTOMERS);
+    return demoEnabled ? getStorage<Customer[]>(STORAGE_KEY_CUSTOMERS, INITIAL_CUSTOMERS) : [];
   }
 
   public updateCustomerProfile(updates: Partial<Customer>): Customer {
+    if (!demoEnabled) throw new Error('Customer accounts are not connected.');
     const current = this.getCustomer();
     const updated = { ...current, ...updates };
     setStorage(STORAGE_KEY_CUSTOMER, updated);
@@ -399,6 +400,7 @@ class StoreService {
   }
 
   public addCustomerAddress(address: Omit<Address, 'id'>): Address {
+    if (!demoEnabled) throw new Error('Customer accounts are not connected.');
     const customer = this.getCustomer();
     const newAddress: Address = {
       ...address,
@@ -414,6 +416,7 @@ class StoreService {
   }
 
   public removeCustomerAddress(addressId: string): void {
+    if (!demoEnabled) throw new Error('Customer accounts are not connected.');
     const customer = this.getCustomer();
     customer.addresses = customer.addresses.filter((a) => a.id !== addressId);
     setStorage(STORAGE_KEY_CUSTOMER, customer);
@@ -422,7 +425,7 @@ class StoreService {
 
   // COUPONS
   public getCoupons(): Coupon[] {
-    return getStorage<Coupon[]>(STORAGE_KEY_COUPONS, INITIAL_COUPONS);
+    return demoEnabled ? getStorage<Coupon[]>(STORAGE_KEY_COUPONS, INITIAL_COUPONS) : [];
   }
 
   public findCoupon(code: string): Coupon | undefined {
@@ -454,7 +457,7 @@ class StoreService {
 
   // SETTINGS
   public getSettings(): StoreSettings {
-    return getStorage<StoreSettings>(STORAGE_KEY_SETTINGS, INITIAL_SETTINGS);
+    return demoEnabled ? getStorage<StoreSettings>(STORAGE_KEY_SETTINGS, INITIAL_SETTINGS) : { ...INITIAL_SETTINGS, announcementBarActive: false };
   }
 
   public updateSettings(updates: Partial<StoreSettings>): StoreSettings {

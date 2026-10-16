@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 
 interface LoginViewProps {
@@ -40,6 +42,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoEnabled) return;
     if (!email.includes('@')) {
       setEmailError(true);
       return;
@@ -59,7 +62,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive Prototype Preview Ribbon */}
-      <aside
+      {demoEnabled && <aside
         aria-label="Login Prototype State Switcher"
         className="w-full bg-[#1F1918] text-white border-b border-[#352B28] px-3 py-2 z-50 text-xs"
       >
@@ -117,7 +120,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
             Connection Error
           </button>
         </div>
-      </aside>
+      </aside>}
 
       {/* Main Form Canvas Container */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-8 pb-6 font-sans flex-1">
@@ -178,6 +181,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
         )}
 
         {/* Form */}
+        {!demoEnabled && <FeatureNotice>Customer sign-in, registration and account recovery are not connected yet. This form is unavailable; no account changes or emails will be sent.</FeatureNotice>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -190,7 +194,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
                 </span>
               )}
             </div>
-            <input
+            <input disabled={!demoEnabled}
               type="email"
               value={email}
               onChange={(e) => {
@@ -226,7 +230,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
               </button>
             </div>
             <div className="relative flex items-center">
-              <input
+              <input disabled={!demoEnabled}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {
@@ -255,7 +259,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
           <div className="pt-2">
             <button
               type="submit"
-              disabled={simState === 'loading'}
+              disabled={!demoEnabled || simState === 'loading'}
               className="w-full h-12 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[14px] font-semibold uppercase tracking-wider rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
               {simState === 'loading' ? (

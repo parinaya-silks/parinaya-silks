@@ -202,7 +202,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               workspace_premium
             </span>
             <span className="font-sans text-[10px] sm:text-[11px] text-[#5F5552] uppercase mt-0.5 font-semibold">
-              Silk Mark Certified
+              Sample silk selection
             </span>
           </div>
           <div className="flex-1 px-1 flex flex-col items-center">
@@ -210,7 +210,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               diamond
             </span>
             <span className="font-sans text-[10px] sm:text-[11px] text-[#5F5552] uppercase mt-0.5 font-semibold">
-              Pure Gold Zari
+              Weave inspiration
             </span>
           </div>
           <div className="flex-1 px-1 flex flex-col items-center">
@@ -218,7 +218,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               shield_with_heart
             </span>
             <span className="font-sans text-[10px] sm:text-[11px] text-[#5F5552] uppercase mt-0.5 font-semibold">
-              Insured Pan-India
+              Delivery unconfirmed
             </span>
           </div>
         </div>
@@ -467,7 +467,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </button>
                 <span className="font-sans text-[11px] uppercase tracking-wider text-[#FFDDB1]/80">
-                  Limited Looms Available
+                  Collection preview
                 </span>
               </div>
             </div>
@@ -485,16 +485,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
             Woven with grace in Hyderabad
           </h2>
           <p className="font-sans text-[14px] text-[#5F5552] max-w-md mx-auto leading-relaxed">
-            Pan-India insured delivery. 100% genuine silk certified directly from the loom master craftsmen.
+            Explore this sample collection. Product specifications, certification and delivery terms await confirmation.
           </p>
           <div className="mt-5 pt-4 border-t border-[#E8DDD6] flex items-center justify-center gap-6 text-[#5F5552] text-[12px] font-sans">
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-[#B88A44]">verified</span>
-              100% Handloom
+              Sample handlooms
             </span>
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-[#B88A44]">local_shipping</span>
-              Insured Transit
+              Shipping pending
             </span>
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-[#B88A44]">video_call</span>

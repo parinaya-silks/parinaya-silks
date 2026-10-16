@@ -1,3 +1,5 @@
+import { demoEnabled } from '../config/runtime.ts';
+import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 
 interface RegisterViewProps {
@@ -26,6 +28,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoEnabled) return;
     if (!email.includes('@')) {
       setSimState('validation');
       return;
@@ -45,7 +48,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive Prototype States Ribbon */}
-      <aside
+      {demoEnabled && <aside
         aria-label="Register Prototype State Switcher"
         className="w-full bg-[#231919] text-[#F3E7C4] px-3 py-2 z-50 text-xs shadow-md"
       >
@@ -103,7 +106,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
             Offline
           </button>
         </div>
-      </aside>
+      </aside>}
 
       {/* Main Canvas */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-6 pb-6 font-sans flex-1">
@@ -167,12 +170,13 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
         </section>
 
         {/* Form */}
+        {!demoEnabled && <FeatureNotice>Customer sign-in, registration and account recovery are not connected yet. This form is unavailable; no account changes or emails will be sent.</FeatureNotice>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-[#231919] mb-1">
               Full Name *
             </label>
-            <input
+            <input disabled={!demoEnabled}
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
@@ -186,7 +190,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
             <label className="block text-[11px] font-bold uppercase tracking-wider text-[#231919] mb-1">
               Email Address *
             </label>
-            <input
+            <input disabled={!demoEnabled}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -211,7 +215,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
               <span className="inline-flex items-center px-3 border border-r-0 border-[#E8DDD6] bg-[#F4EEE5] text-[#231919] text-[14px] font-bold rounded-l-md select-none">
                 🇮🇳 +91
               </span>
-              <input
+              <input disabled={!demoEnabled}
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
@@ -229,7 +233,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
               Create Password *
             </label>
             <div className="relative flex items-center">
-              <input
+              <input disabled={!demoEnabled}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -257,7 +261,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
 
           <div className="pt-1">
             <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
+              <input disabled={!demoEnabled}
                 type="checkbox"
                 checked={whatsappMarketing}
                 onChange={(e) => setWhatsappMarketing(e.target.checked)}
@@ -272,7 +276,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
           <div className="pt-2">
             <button
               type="submit"
-              disabled={simState === 'loading'}
+              disabled={!demoEnabled || simState === 'loading'}
               className="w-full h-12 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[14px] font-semibold tracking-wider uppercase rounded-md shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
               {simState === 'loading' ? (

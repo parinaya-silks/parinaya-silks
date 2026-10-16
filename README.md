@@ -1,14 +1,14 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Customer demo navigation uses URL hashes and isolated localStorage data. Administrator routes use clean URLs, real Firebase Authentication and server-managed permissions. Business repositories and trusted checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support and isolated local preview bag/wishlist data. Administrator routes use clean URLs, real Firebase Authentication and server-managed permissions. Business repositories and trusted checkout remain unconnected.
 
 ## Administrator access
 
-See [administrator setup and release instructions](docs/ADMIN_ACCESS.md). Production /admin is separate from the customer preparation gate. Both a server-assigned admin claim and an enabled adminAccess record are required. No customer admin shortcut or demo admin bypass remains.
+See [administrator setup and release instructions](docs/ADMIN_ACCESS.md). Production /admin remains separate from public browsing and always requires real authorization. Both a server-assigned admin claim and an enabled adminAccess record are required. No customer admin shortcut or demo admin bypass remains.
 
 The owner-supplied rules allow public reads/writes until 14 November 2026. The restrictive local firestore.rules replacement requires owner review/deployment. Local code does not change deployed permissions.
 
-Run npm.cmd run test:admin for isolated emulator tests. Provisioning is a separate trusted owner action: npm.cmd run admin:provision is read-only until explicit UID/email confirmation and --apply. No real administrator was provisioned by this implementation task.
+Run npm.cmd run test:admin for isolated emulator tests. Provisioning is a separate trusted owner action: npm.cmd run admin:provision is read-only until explicit UID/email confirmation and --apply. The approved existing administrator was provisioned separately through the trusted procedure; provisioning is not part of storefront builds.
 
 ## Firebase connection — Step 1
 
@@ -34,11 +34,13 @@ npm.cmd run build
 npm.cmd run preview
 ```
 
-`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer prototype login, registration, recovery, verification and payments remain simulations. Administrator authentication is real in normal modes.
+`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer login, registration, recovery, verification, checkout and order actions are unavailable in ordinary development and all builds. Administrator authentication is real.
 
-The **default production storefront shows a preparation page**, while /admin requires real Firebase authentication and administrator permission. Simulated customer sessions and checkout remain unavailable. This is an intentional release boundary until real services and permissions are implemented. An explicitly requested demo build is available through `npm.cmd run build:demo`; never treat that output as a live shop.
+The **original storefront is visible by default** for browsing and review, with a restrained sample-catalogue notice. There is no visibility environment flag. Shop, product gallery, local wishlist/bag, information and draft policy pages are available; unconnected features display relevant unavailable states. See [storefront release details and production acceptance](docs/STOREFRONT_REVIEW.md).
 
-Demo state uses `parinaya_*_demo_v2` localStorage keys. Earlier `*_v1` state is left untouched and is not migrated into this demo. The existing Reset Demo action clears only the current demo namespace. No Git repository was present at takeover; the original `src` tree was copied to ignored `.cache/baseline-src` before source changes.
+Simulations require an explicit local server: `npm.cmd run dev -- --mode demo --port 3002`. `demoEnabled` requires both Vite `DEV=true` and `MODE=demo`; all production builds disable simulations, including `build:demo`.
+
+Public bag/wishlist use `parinaya_*_preview_v1` keys and start empty. Isolated demo state uses `parinaya_*_demo_v2` localStorage keys. Earlier `*_v1` state is left untouched and is not migrated into this demo. The existing Reset Demo action clears only the current demo namespace. No Git repository was present at takeover; the original `src` tree was copied to ignored `.cache/baseline-src` before source changes.
 
 ## Browser checks
 
@@ -46,10 +48,11 @@ With development running on `127.0.0.1:3000` and a default production preview on
 
 ```powershell
 python scripts/browser-audit.py
-python scripts/browser-flows.py
+python scripts/storefront-browser.test.py
+python scripts/firebase-browser.test.py
 ```
 
-These optional scripts use the host's Python Playwright package and Chromium installation. They are not installed by npm. Route/viewport results and screenshots go to `.cache/browser`. Browser tests use isolated synthetic fixture records, not real customer information.
+The optional historical `browser-flows.py` additionally requires the explicit demo server on port 3002. These scripts use the host's Python Playwright package and Chromium installation. They are not installed by npm. Route/viewport results and screenshots go to `.cache/browser`. Browser tests use isolated synthetic fixture records, not real customer information.
 
 ## Project layout
 

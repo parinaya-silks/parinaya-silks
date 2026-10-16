@@ -6,12 +6,12 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={'width': 390, 'height': 844})
     errors = []
     page.on('pageerror', lambda e: errors.append(str(e)))
-    page.goto('http://127.0.0.1:3000/#/product/prod-padmavathi-rust')
+    page.goto('http://127.0.0.1:3002/#/product/prod-padmavathi-rust')
     page.get_by_role('button', name='Add to Bag', exact=False).click()
-    page.goto('http://127.0.0.1:3000/#/bag')
+    page.goto('http://127.0.0.1:3002/#/bag')
     page.get_by_role('button', name='Proceed to Checkout', exact=False).click()
     page.get_by_role('button', name='Simulate payment', exact=False).click()
-    page.wait_for_url('**/#/order-confirmed?orderId=*')
+    page.wait_for_url('**/order-confirmed?orderId=*')
     order_id = page.url.split('orderId=')[1]
     page.get_by_role('button', name='View Order', exact=False).first.click()
     assert order_id in page.url
@@ -50,11 +50,12 @@ with sync_playwright() as p:
     assert not errors, errors
     context = browser.new_context()
     production = context.new_page()
-    for route in ['/login', '/checkout']:
-        production.goto('http://127.0.0.1:4173/#' + route)
-        production.get_by_text('Our online store is being prepared.', exact=False).wait_for()
-        assert production.locator('input').count() == 0
-        assert production.evaluate('localStorage.length') == 0
+    production.goto('http://127.0.0.1:4173/login')
+    assert production.get_by_role('button',name='Sign In',exact=True).is_disabled()
+    production.goto('http://127.0.0.1:4173/checkout')
+    production.get_by_role('heading',name='Checkout unavailable').wait_for()
+    assert production.locator('input').count()==0
+    assert production.evaluate('localStorage.length')==0
     production.goto('http://127.0.0.1:4173/admin/orders')
     production.get_by_role('heading', name='Administrator Sign In').wait_for()
     print('Production admin requires real authentication; customer login and checkout remain unavailable')
