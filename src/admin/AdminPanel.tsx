@@ -19,11 +19,11 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   if (path === '/admin' || path === '/admin/dashboard' || path === '/admin/login') {
     content = <AdminDashboard unavailable orders={[]} products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} />;
   } else if (path === '/admin/orders') {
-    content = <fieldset disabled className="min-w-0"><AdminOrders orders={[]} onNavigate={navigate} onUpdateStatus={unavailableWrite} onBulkUpdateStatus={unavailableWrite} /></fieldset>;
+    content = <fieldset disabled className="min-w-0"><AdminOrders unavailable orders={[]} onNavigate={navigate} onUpdateStatus={unavailableWrite} onBulkUpdateStatus={unavailableWrite} /></fieldset>;
   } else if (path === '/admin/products') {
-    content = <><button className="min-h-11 px-4 mb-4 rounded-lg border border-[#B88A44] text-[#780D24]" onClick={() => navigate('/admin/products/new')}>Open product editor</button><fieldset disabled className="min-w-0"><AdminProducts products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} onToggleStatus={unavailableWrite} /></fieldset></>;
+    content = <><button className="min-h-11 px-4 mb-4 rounded-lg border border-[#B88A44] text-[#780D24]" onClick={() => navigate('/admin/products/new')}>Open product editor</button><fieldset disabled className="min-w-0"><AdminProducts unavailable products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} onToggleStatus={unavailableWrite} /></fieldset></>;
   } else if (path === '/admin/customers') {
-    content = <fieldset disabled className="min-w-0"><AdminCustomers customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
+    content = <fieldset disabled className="min-w-0"><AdminCustomers unavailable customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;

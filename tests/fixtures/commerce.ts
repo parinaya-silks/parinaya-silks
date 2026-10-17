@@ -1,4 +1,4 @@
-import { Product, Order, Customer, Coupon, StoreSettings } from '../types/index.ts';
+import { Product, Order, Customer, Coupon, StoreSettings } from '../../src/types/index.ts';
 
 export const INITIAL_PRODUCTS: Product[] = [
   {

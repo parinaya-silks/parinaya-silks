@@ -1,3 +1,5 @@
+> Superseded for content/data behavior by [CONTENT_CLEANUP.md](CONTENT_CLEANUP.md). The storefront remains visible, now with empty data rather than a sample catalogue.
+
 # Storefront browsing release — 16 October 2026
 
 The original storefront is visible by default in development and production builds. This supersedes the previous blanket preparation-page requirement. This milestone releases browsing for review, not live commerce.

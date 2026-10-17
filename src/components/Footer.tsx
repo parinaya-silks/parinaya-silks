@@ -151,9 +151,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <div className="p-3 bg-black/40 rounded border border-[#B88A44]/30 text-[11px] text-[#C4B7AC] space-y-1">
               <span className="font-semibold text-[#F2BE72] uppercase tracking-wider block">
-                100% Online Payments Only
+                Shopping assistance
               </span>
-              <p>Online payments only. Cash on delivery is not available. Payment integration is being prepared.</p>
+              <p>For product information or assistance, please contact us via WhatsApp or email.</p>
             </div>
           </div>
         </div>

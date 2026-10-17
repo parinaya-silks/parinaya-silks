@@ -64,7 +64,7 @@ export const BagView: React.FC<BagViewProps> = ({
         setCouponError(`Requires minimum order value of ${formatINR(found.minOrderValue)}`);
       }
     } else {
-      setCouponError("Invalid coupon code. Try 'HEIRLOOM10' or 'SILK20'");
+      setCouponError('Coupon application is unavailable.');
     }
   };
 
@@ -88,14 +88,14 @@ export const BagView: React.FC<BagViewProps> = ({
           Your bag is empty
         </h2>
         <p className="font-sans text-[14px] text-[#5F5552] leading-relaxed">
-          Your wedding and festive trousseau awaits. Explore our mastercraft pure silk sarees.
+          Browse the shop or contact us for assistance.
         </p>
         <div className="pt-2">
           <button
             onClick={() => onNavigate('/shop')}
             className="px-6 py-3 bg-[#780D24] text-white rounded-lg font-sans text-[13px] font-bold uppercase tracking-wider hover:bg-[#5E091B] transition-colors shadow-sm"
           >
-            Explore Sarees
+            Continue Shopping
           </button>
         </div>
       </div>

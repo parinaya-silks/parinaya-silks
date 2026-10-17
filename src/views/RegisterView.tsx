@@ -16,16 +16,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
   const [whatsappMarketing, setWhatsappMarketing] = useState(false);
   const [simState, setSimState] = useState<'default' | 'validation' | 'registered' | 'loading' | 'offline'>('default');
 
-  const handleSimState = (state: 'default' | 'validation' | 'registered' | 'loading' | 'offline') => {
-    setSimState(state);
-    if (state === 'validation') {
-      setEmail('priyanka.reddy');
-      setPassword('short');
-    } else if (state === 'registered') {
-      setEmail('priyanka@example.com');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!demoEnabled) return;
@@ -48,65 +38,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive Prototype States Ribbon */}
-      {demoEnabled && <aside
-        aria-label="Register Prototype State Switcher"
-        className="w-full bg-[#231919] text-[#F3E7C4] px-3 py-2 z-50 text-xs shadow-md"
-      >
-        <div className="max-w-md mx-auto flex items-center justify-between pb-1">
-          <span className="font-bold tracking-wider uppercase text-[10px] text-white flex items-center gap-1 font-sans">
-            <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
-            Prototype States:
-          </span>
-          <span className="text-[10px] opacity-75 font-mono capitalize">{simState}</span>
-        </div>
-        <div className="max-w-md mx-auto grid grid-cols-5 gap-1 text-[10px] font-sans">
-          <button
-            type="button"
-            onClick={() => handleSimState('default')}
-            className={`py-1 rounded text-center truncate ${
-              simState === 'default' ? 'bg-[#780D24] text-white font-bold' : 'bg-black/40 text-stone-300'
-            }`}
-          >
-            Default
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSimState('validation')}
-            className={`py-1 rounded text-center truncate ${
-              simState === 'validation' ? 'bg-[#780D24] text-white font-bold' : 'bg-black/40 text-stone-300'
-            }`}
-          >
-            Errors
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSimState('registered')}
-            className={`py-1 rounded text-center truncate ${
-              simState === 'registered' ? 'bg-[#780D24] text-white font-bold' : 'bg-black/40 text-stone-300'
-            }`}
-          >
-            Registered
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSimState('loading')}
-            className={`py-1 rounded text-center truncate ${
-              simState === 'loading' ? 'bg-[#780D24] text-white font-bold' : 'bg-black/40 text-stone-300'
-            }`}
-          >
-            Loading
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSimState('offline')}
-            className={`py-1 rounded text-center truncate ${
-              simState === 'offline' ? 'bg-[#780D24] text-white font-bold' : 'bg-black/40 text-stone-300'
-            }`}
-          >
-            Offline
-          </button>
-        </div>
-      </aside>}
+
 
       {/* Main Canvas */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-6 pb-6 font-sans flex-1">
@@ -180,7 +112,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Priyanka Reddy"
+              placeholder="Your full name"
               className="w-full h-12 px-3.5 bg-white border border-[#E8DDD6] rounded-md text-[#231919] text-[16px] focus:outline-none focus:border-[#780D24]"
               required
             />
@@ -194,7 +126,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="priyanka@example.com"
+              placeholder="Your email address"
               className={`w-full h-12 px-3.5 bg-white border rounded-md text-[#231919] text-[16px] focus:outline-none ${
                 simState === 'validation' ? 'border-[#BA1A1A] bg-red-50/20' : 'border-[#E8DDD6] focus:border-[#780D24]'
               }`}
@@ -219,7 +151,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-                placeholder="98765 43210"
+                placeholder="Your mobile number"
                 className="w-full h-12 px-3.5 bg-white border border-[#E8DDD6] rounded-r-md text-[#231919] text-[16px] focus:outline-none focus:border-[#780D24]"
               />
             </div>

@@ -51,6 +51,11 @@ with sync_playwright() as p:
             raise
         assert page.get_by_text('No live records are displayed',exact=False).count()==1
         assert '8,42,500' not in page.inner_text('body')
+        body = page.inner_text('body')
+        for fictional in ['Mayuri Regal Wine', 'Ananya Rao', 'Across 4 master loom regions', 'Redeemable at', '0 Clients', '0 Pts', '0 Sarees']:
+            assert fictional not in body, (route,fictional)
+        if route in ['/admin/products','/admin/customers']:
+            assert page.get_by_text('Not connected',exact=True).count() >= 3
         assert page.locator('nav[aria-label="Mobile Bottom Navigation"]').count()==0
         assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1')
     page.goto(origin+'/admin')
@@ -70,7 +75,7 @@ with sync_playwright() as p:
 
     page.set_viewport_size({'width':1440,'height':900})
     page.get_by_role('button',name='View Public Store',exact=False).filter(visible=True).click()
-    page.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
+    page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
     assert page.url==origin+'/'
     page.goto(origin+'/admin')
     page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
@@ -117,8 +122,8 @@ with sync_playwright() as p:
     production.get_by_role('heading',name='Administrator Sign In').wait_for()
     assert production.evaluate('typeof window.parinayaFirebase')=='undefined'
     production.goto('http://127.0.0.1:4200/')
-    production.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
-    production.get_by_role('note').filter(has_text='Storefront preview').wait_for()
+    production.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+    production.get_by_text('No products available yet.',exact=True).wait_for()
     assert production.get_by_role('link',name='Admin',exact=True).count()==0
     production.goto('http://127.0.0.1:3101/admin')
     production.get_by_role('heading',name='Administrator access unavailable').wait_for()
@@ -126,7 +131,7 @@ with sync_playwright() as p:
     production.get_by_role('heading',name='Administrator access unavailable').wait_for()
     assert production.get_by_role('heading',name='Dashboard',exact=True).count()==0
     production.goto('http://127.0.0.1:3101/')
-    production.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
-    production.get_by_role('note').filter(has_text='Storefront preview').wait_for()
+    production.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+    production.get_by_text('No products available yet.',exact=True).wait_for()
     print('Production direct/nested routing and public storefront passed locally; no hosted deployment was tested')
     browser.close()

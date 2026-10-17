@@ -3,6 +3,7 @@ import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 
 interface AdminProductsProps {
+  unavailable?: boolean;
   products: Product[];
   onNavigate: (path: string) => void;
   onAdjustStock: (product: Product, delta: number) => void;
@@ -10,6 +11,7 @@ interface AdminProductsProps {
 }
 
 export const AdminProducts: React.FC<AdminProductsProps> = ({
+  unavailable = true,
   products,
   onNavigate,
   onAdjustStock,
@@ -19,7 +21,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
 
-  const categories = ['All', 'Kanjeevaram', 'Banarasi', 'Mangalagiri', 'Tussar', 'Organza', 'Ikat'];
+  const categories = ['All', ...new Set(products.map(p => p.category))];
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -80,28 +82,28 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Total Catalog</span>
-          <div className="mt-1 text-[22px] font-bold text-[#231919]">{products.length} Sarees</div>
-          <span className="text-[11px] text-[#817567]">Across 4 master loom regions</span>
+          <div className="mt-1 text-[22px] font-bold text-[#231919]">{unavailable ? '—' : products.length} {unavailable ? '' : 'Sarees'}</div>
+          <span className="text-[11px] text-[#817567]">Not connected</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Inventory Value</span>
-          <div className="mt-1 text-[22px] font-bold text-[#780D24]">{formatINR(totalValue)}</div>
-          <span className="text-[11px] text-[#817567]">Pure silk retail valuation</span>
+          <div className="mt-1 text-[22px] font-bold text-[#780D24]">{unavailable ? '—' : formatINR(totalValue)}</div>
+          <span className="text-[11px] text-[#817567]">Not connected</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Low Stock Alerts</span>
-          <div className="mt-1 text-[22px] font-bold text-amber-700">{lowStockCount} Sarees</div>
-          <span className="text-[11px] text-amber-800 font-medium">≤ 2 units remaining</span>
+          <div className="mt-1 text-[22px] font-bold text-amber-700">{unavailable ? '—' : lowStockCount} {unavailable ? '' : 'Sarees'}</div>
+          <span className="text-[11px] text-amber-800 font-medium">Not connected</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Published Active</span>
           <div className="mt-1 text-[22px] font-bold text-emerald-700">
-            {products.filter((p) => p.status === 'Published').length} Sarees
+            {unavailable ? '—' : products.filter((p) => p.status === 'Published').length} {unavailable ? '' : 'Sarees'}
           </div>
-          <span className="text-[11px] text-emerald-800 font-medium">Live on storefront</span>
+          <span className="text-[11px] text-emerald-800 font-medium">Not connected</span>
         </div>
       </div>
 
@@ -185,8 +187,8 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                     <span className="material-symbols-outlined text-[36px] text-[#B88A44] mb-2 block">
                       inventory_2
                     </span>
-                    <p className="font-serif text-[16px] text-[#231919]">No matching sarees found</p>
-                    <p className="text-xs text-[#817567] mt-1">Try resetting search or category filter</p>
+                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Products are not connected.' : 'No products found.'}</p>
+                    <p className="text-xs text-[#817567] mt-1">{unavailable ? 'This module is unavailable.' : 'Try another search or filter.'}</p>
                   </td>
                 </tr>
               ) : (

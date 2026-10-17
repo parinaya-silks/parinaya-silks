@@ -42,61 +42,7 @@ export const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onNaviga
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive States Switcher Ribbon */}
-      {demoEnabled && <aside
-        aria-label="Forgot Password State Switcher"
-        className="w-full bg-[#2A1116] px-3 py-2 text-white border-b border-[#B88A44]/30 text-xs"
-      >
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <span className="text-[#F2BE72] font-semibold uppercase tracking-wider text-[10px] font-sans">
-            Preview:
-          </span>
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-sans text-[11px]">
-            <button
-              onClick={() => setState('default')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                state === 'default' ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              Default
-            </button>
-            <button
-              onClick={() => setState('loading')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                state === 'loading' ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              Loading
-            </button>
-            <button
-              onClick={() => {
-                setState('validation');
-                setEmail('invalid-email');
-              }}
-              className={`px-2.5 py-1 rounded transition-all ${
-                state === 'validation' ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              Invalid Email
-            </button>
-            <button
-              onClick={() => setState('network')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                state === 'network' ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              Network Error
-            </button>
-            <button
-              onClick={() => setState('sent')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                state === 'sent' ? 'bg-[#780D24] text-white font-bold' : 'bg-white/10 hover:bg-white/20'
-              }`}
-            >
-              Sent (State B)
-            </button>
-          </div>
-        </div>
-      </aside>}
+
 
       {/* Main Container */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-6 pb-6 font-sans flex-1">

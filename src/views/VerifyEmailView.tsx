@@ -71,36 +71,7 @@ export const VerifyEmailView: React.FC<VerifyEmailViewProps> = ({
       )}
 
       {/* Interactive Toolbar */}
-      {demoEnabled && <aside
-        aria-label="Email Verification State Switcher"
-        className="w-full bg-[#2D0B12] text-white text-xs px-3 py-2 border-b border-[#B88A44]/30"
-      >
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wider text-[#F2BE72] font-semibold font-sans">
-            Preview State:
-          </span>
-          <div className="flex items-center gap-1 font-sans text-[11px]">
-            {[
-              { id: 1 as const, label: '1. Default' },
-              { id: 2 as const, label: '2. Checking' },
-              { id: 3 as const, label: '3. Not Verified' },
-              { id: 4 as const, label: '4. Verified' },
-            ].map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setPreviewState(st.id)}
-                className={`px-2 py-1 rounded transition-all ${
-                  previewState === st.id
-                    ? 'bg-[#780D24] text-white font-bold border border-[#F2BE72]'
-                    : 'text-white/80 hover:bg-white/10'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>}
+
 
       {!demoEnabled && <FeatureNotice>Customer email verification is not connected. No verification email has been sent and no email status can be confirmed.</FeatureNotice>}
       {/* Main Content */}

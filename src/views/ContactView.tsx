@@ -78,7 +78,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                 type="text"
                 value={orderRef}
                 onChange={(e) => setOrderRef(e.target.value)}
-                placeholder="e.g. #PS-8492"
+                placeholder="Your order number"
                 className="w-full h-11 bg-[#FBF7F0] px-3.5 pr-10 text-[#231919] text-[15px] font-sans border border-[#E8DDD6] rounded-lg focus:outline-none focus:border-[#780D24]"
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#B88A44] material-symbols-outlined text-[18px] pointer-events-none">
@@ -193,13 +193,13 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
             {faqOpen === 1 && (
               <div className="px-4 pb-4 pt-1 border-t border-[#F4EEE5] text-[#5F5552] text-[14px] leading-relaxed">
                 <p className="mb-3">
-                  You can easily view the current status of your shipment via the My Orders section in your account. Real-time courier dispatch and AWB tracking details are updated as soon as your saree is prepared.
+                  Online order tracking is not available yet. Please contact us via WhatsApp or email for assistance.
                 </p>
                 <button
                   onClick={() => onNavigate('/account')}
                   className="inline-flex items-center gap-1 text-[13px] text-[#780D24] font-semibold hover:underline"
                 >
-                  <span>Track your order via My Orders</span>
+                  <span>View account availability</span>
                   <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </button>
               </div>
@@ -223,7 +223,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
             {faqOpen === 2 && (
               <div className="px-4 pb-4 pt-1 border-t border-[#F4EEE5] text-[#5F5552] text-[14px] leading-relaxed">
                 <p className="mb-3">
-                  Orders are dispatched securely with tamper-evident packaging. Standard domestic deliveries typically take 3 to 5 business days across India depending on the pin code.
+                  Please contact us for current delivery information. Shipping terms are pending final approval.
                 </p>
                 <button
                   onClick={() => onNavigate('/policies?tab=shipping')}
@@ -253,7 +253,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
             {faqOpen === 3 && (
               <div className="px-4 pb-4 pt-1 border-t border-[#F4EEE5] text-[#5F5552] text-[14px] leading-relaxed">
                 <p className="mb-3">
-                  We accept exchanges for eligible unused sarees in their original folding and condition with tags intact. Requests can be initiated within 48 hours of parcel delivery.
+                  Returns and exchange terms are pending final approval. Please contact us with any questions.
                 </p>
                 <button
                   onClick={() => onNavigate('/policies?tab=returns')}

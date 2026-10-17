@@ -3,12 +3,14 @@ import { Customer, Order } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 
 interface AdminCustomersProps {
+  unavailable?: boolean;
   customers: Customer[];
   orders: Order[];
   onNavigate: (path: string) => void;
 }
 
 export const AdminCustomers: React.FC<AdminCustomersProps> = ({
+  unavailable = true,
   customers,
   orders,
   onNavigate,
@@ -17,7 +19,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
   const [tierFilter, setTierFilter] = useState('All');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  const tiers = ['All', 'Royal Heirloom Patron', 'Gold Silk Patron', 'Silver Patron'];
+  const tiers = ['All', ...new Set(customers.map(c => c.vipTier))];
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
@@ -53,24 +55,24 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Total Registered Patrons</span>
-          <div className="mt-1 text-[22px] font-bold text-[#231919]">{customers.length} Clients</div>
-          <span className="text-[11px] text-[#817567]">Across India and international diaspora</span>
+          <div className="mt-1 text-[22px] font-bold text-[#231919]">{unavailable ? '—' : customers.length} {unavailable ? '' : 'Clients'}</div>
+          <span className="text-[11px] text-[#817567]">Not connected</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
-          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Heirloom &amp; Gold Tier</span>
+          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Membership</span>
           <div className="mt-1 text-[22px] font-bold text-[#780D24]">
-            {customers.filter((c) => c.vipTier.includes('Gold') || c.vipTier.includes('Heirloom')).length} Patrons
+            {unavailable ? '—' : customers.filter((c) => c.vipTier.includes('Gold') || c.vipTier.includes('Heirloom')).length}
           </div>
-          <span className="text-[11px] text-[#B88A44] font-medium">VIP bridal consultation eligible</span>
+          <span className="text-[11px] text-[#B88A44] font-medium">Not connected</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Loyalty Points Outstanding</span>
           <div className="mt-1 text-[22px] font-bold text-[#B88A44]">
-            {customers.reduce((acc, c) => acc + c.pointsBalance, 0).toLocaleString('en-IN')} Pts
+            {unavailable ? '—' : customers.reduce((acc, c) => acc + c.pointsBalance, 0).toLocaleString('en-IN')}
           </div>
-          <span className="text-[11px] text-[#5F5552]">Redeemable at ₹1/pt</span>
+          <span className="text-[11px] text-[#5F5552]">Not connected</span>
         </div>
       </div>
 
@@ -127,7 +129,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({
                     <span className="material-symbols-outlined text-[36px] text-[#B88A44] mb-2 block">
                       group
                     </span>
-                    <p className="font-serif text-[16px] text-[#231919]">No matching patrons found</p>
+                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Customer records are not connected.' : 'No matching customers found.'}</p>
                   </td>
                 </tr>
               ) : (

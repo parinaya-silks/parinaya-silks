@@ -19,7 +19,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 }) => {
   const [removedItem, setRemovedItem] = useState<{ id: string; name: string } | null>(null);
   const [variantSheetProduct, setVariantSheetProduct] = useState<Product | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState('Rust Gold Kadwa Brocade');
+  const [selectedVariant, setSelectedVariant] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [demoState, setDemoState] = useState<'default' | 'empty' | 'signedout'>('default');
 
@@ -105,14 +105,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             Your wishlist is empty
           </h2>
           <p className="font-sans text-[14px] text-[#5F5552] leading-relaxed">
-            Save the heirloom sarees you adore to revisit or share anytime.
+            Your saved products will appear here.
           </p>
           <div className="pt-2">
             <button
               onClick={() => onNavigate('/shop')}
               className="px-8 py-3 bg-[#780D24] hover:bg-[#5E091B] text-white rounded font-sans text-[13px] font-bold tracking-wider uppercase shadow-md active:scale-95 transition-all"
             >
-              Explore Sarees
+              Continue Shopping
             </button>
           </div>
         </div>
@@ -317,11 +317,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <label className="block font-sans text-[11px] font-bold uppercase tracking-wider text-[#231919]">
                 Select Color / Zari Weave
               </label>
-              {[
-                { name: 'Rust Gold Kadwa Brocade', desc: 'Antique gold zari korvai border with floral jaal' },
-                { name: 'Crimson Vermilion Brocade', desc: 'Rich deep vermilion with antique copper zari' },
-                { name: 'Royal Copper Kadwa Saree', desc: 'Subtle dual-tone copper zari kadwa border' },
-              ].map((variant) => (
+              {[{ name: variantSheetProduct.colorName, desc: variantSheetProduct.subtitle }].map((variant) => (
                 <label
                   key={variant.name}
                   className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${

@@ -31,7 +31,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-[#E8DDD6] shadow-sm bg-white">
           <img
             src="https://lh3.googleusercontent.com/aida/AEtjO1WWb89xEHPaMRY7UWw_vRreP4eG4DkHD20JEzI2M_ZcPzkU-vjrJ-1JhOm7DBGy6cJx6R9w2o1Sd7rumSzUCf-zvPC7p8-Q-JoFPhmWgW7Q-Fg6WS7-yBQWEoE4U8aCbvrZG1oqOZzP0KurIPpnIS88te2iD083FdfetS4W-MedTChT-0BI2suALPQVhyWmr9RACAtbs4dpH345PR5Opmuz8NnbjyTLmQZSp27o9Pzha-PjrhRlZZNE6w"
-            alt="Parinaya Silks authentic handwoven saree drape"
+            alt="Parinaya Silks saree photography"
             className="w-full h-full object-cover object-center"
           />
         </div>
@@ -65,7 +65,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             Your Shopping Experience
           </h2>
           <p>
-            We strive to make discovering sarees effortless and personal. Patrons can enjoy seamless digital browsing, supportive customer assistance, and secure, protective packaging designed to preserve every drape until it arrives at your doorstep.
+            Browse the website and contact us via WhatsApp or email for product information and assistance.
           </p>
         </section>
       </div>

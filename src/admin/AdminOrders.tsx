@@ -3,6 +3,7 @@ import { Order, FulfilmentStatus } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 
 interface AdminOrdersProps {
+  unavailable?: boolean;
   orders: Order[];
   onNavigate: (path: string) => void;
   onUpdateStatus: (orderId: string, status: FulfilmentStatus, courier?: string, tracking?: string) => void;
@@ -10,6 +11,7 @@ interface AdminOrdersProps {
 }
 
 export const AdminOrders: React.FC<AdminOrdersProps> = ({
+  unavailable = true,
   orders,
   onNavigate,
   onUpdateStatus,
@@ -19,8 +21,8 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkActionStatus, setBulkActionStatus] = useState<FulfilmentStatus | ''>('');
-  const [bulkCourier, setBulkCourier] = useState('Blue Dart Express');
-  const [bulkTrackingPrefix, setBulkTrackingPrefix] = useState('BD-HYD-');
+  const [bulkCourier, setBulkCourier] = useState('');
+  const [bulkTrackingPrefix, setBulkTrackingPrefix] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
 
@@ -149,7 +151,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
                   statusFilter === st.label ? 'bg-white/20 text-white' : 'bg-black/5 text-[#5F5552]'
                 }`}
               >
-                {st.count}
+                {unavailable ? '—' : st.count}
               </span>
             </button>
           ))}
@@ -237,8 +239,8 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
                     <span className="material-symbols-outlined text-[36px] text-[#B88A44] mb-2 block">
                       inbox
                     </span>
-                    <p className="font-serif text-[16px] text-[#231919]">No matching orders found</p>
-                    <p className="text-xs text-[#817567] mt-1">Try adjusting your filters or search keywords</p>
+                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Orders are not connected.' : 'No orders found.'}</p>
+                    <p className="text-xs text-[#817567] mt-1">{unavailable ? 'This module is unavailable.' : 'Try another search or filter.'}</p>
                   </td>
                 </tr>
               ) : (

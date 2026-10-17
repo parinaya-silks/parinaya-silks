@@ -28,10 +28,7 @@ import { ShopView } from './views/ShopView.tsx';
 import { ProductDetailView } from './views/ProductDetailView.tsx';
 import { WishlistView } from './views/WishlistView.tsx';
 import { BagView } from './views/BagView.tsx';
-import { CheckoutView } from './views/CheckoutView.tsx';
-import { OrderResultView } from './views/OrderResultView.tsx';
 import { AccountView } from './views/AccountView.tsx';
-import { OrderTrackingView } from './views/OrderTrackingView.tsx';
 import { LoginView } from './views/LoginView.tsx';
 import { RegisterView } from './views/RegisterView.tsx';
 import { ForgotPasswordView } from './views/ForgotPasswordView.tsx';
@@ -167,17 +164,6 @@ function Storefront() {
     return storeService.removeFromWishlist(productId);
   }, []);
 
-  // Order Placement
-  const handlePlaceOrder = useCallback(
-    (orderData: any): Order => {
-      const newOrder = storeService.createOrder(orderData);
-      setAppliedCoupon(null);
-      setPointsToRedeem(0);
-      return newOrder;
-    },
-    []
-  );
-
   // Derived Counts
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlist.length;
@@ -186,8 +172,8 @@ function Storefront() {
   let customerView: React.ReactNode = null;
 
   const unavailable = !demoEnabled && (
-    currentPath === '/checkout' ? ['Checkout unavailable', 'Online checkout, payment collection and order submission are not connected. No payment will be collected and no order will be placed.'] :
-    /^\/(?:order-result|order-confirmed|order-tracking)(?:\/|\?|$)/.test(currentPath) ? ['Orders unavailable', 'Order history, confirmations and tracking are not connected. No payment or order status can be verified here.'] : null
+    currentPath === '/checkout' ? ['Checkout unavailable', 'Online checkout is not available yet. Please contact us for assistance.'] :
+    /^\/(?:order-result|order-confirmed|order-tracking)(?:\/|\?|$)/.test(currentPath) ? ['Orders unavailable', 'Online order history and tracking are not available yet. Please contact us for assistance.'] : null
   );
 
   if (unavailable) {
@@ -271,44 +257,6 @@ function Storefront() {
         onNavigate={navigate}
       />
     );
-  } else if (currentPath === '/checkout') {
-    customerView = (
-      <CheckoutView
-        settings={settings}
-        cart={cart}
-        appliedCoupon={appliedCoupon}
-        pointsToRedeem={pointsToRedeem}
-        customer={customer}
-        onNavigate={navigate}
-        onCreateOrder={handlePlaceOrder}
-        onClearCart={() => storeService.clearCart()}
-      />
-    );
-  } else if (currentPath.startsWith('/order-result') || currentPath.startsWith('/order-confirmed')) {
-    const cleanPath = currentPath.split('?')[0];
-    const pathOrderId = cleanPath
-      .replace('/order-result/', '')
-      .replace('/order-result', '')
-      .replace('/order-confirmed/', '')
-      .replace('/order-confirmed', '');
-    const urlParams = new URLSearchParams(currentPath.includes('?') ? currentPath.split('?')[1] : '');
-    const queryOrderId = urlParams.get('orderId');
-    const targetId = pathOrderId || queryOrderId;
-    const targetOrder = targetId
-      ? orders.filter(o => o.customerEmail === customer.email).find(
-          (o) =>
-            o.id === targetId ||
-            o.referenceId.replace(/[^a-zA-Z0-9]/g, '') === targetId.replace(/[^a-zA-Z0-9]/g, '')
-        )
-      : undefined;
-
-    customerView = (
-      targetOrder ? <OrderResultView
-        key={targetOrder.id}
-        order={targetOrder}
-        onNavigate={navigate}
-      /> : <MissingRecord label="Order" onNavigate={navigate} />
-    );
   } else if (currentPath === '/account' || currentPath === '/account/orders') {
     customerView = (
       <AccountView
@@ -320,35 +268,18 @@ function Storefront() {
         onRemoveAddress={(id) => storeService.removeCustomerAddress(id)}
       />
     );
-  } else if (currentPath.startsWith('/order-tracking')) {
-    const orderId = currentPath.replace('/order-tracking/', '').replace('/order-tracking', '');
-    const targetOrder = orders.find((o) => o.id === orderId && o.customerEmail === customer.email);
-
-    customerView = (
-      targetOrder ? <OrderTrackingView
-        key={targetOrder.id}
-        order={targetOrder}
-        onNavigate={navigate}
-      /> : <MissingRecord label="Order" onNavigate={navigate} />
-    );
   } else if (currentPath === '/login') {
     customerView = (
       <LoginView
         onNavigate={navigate}
-        onLoginSuccess={(email) => {
-          storeService.updateCustomerProfile({ email });
-          navigate('/account');
-        }}
+        onLoginSuccess={() => {}}
       />
     );
   } else if (currentPath === '/register') {
     customerView = (
       <RegisterView
         onNavigate={navigate}
-        onRegisterSuccess={(name, email) => {
-          storeService.updateCustomerProfile({ name, email });
-          navigate('/verify-email');
-        }}
+        onRegisterSuccess={() => {}}
       />
     );
   } else if (currentPath === '/forgot-password') {
@@ -410,9 +341,6 @@ function Storefront() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white">
-      <div role="note" className="bg-[#F4EEE5] text-[#5F5552] text-center px-4 py-2 text-xs border-b border-[#E8DDD6]">
-        {demoEnabled ? 'Local demo — simulated accounts and transactions. Use test details only.' : 'Storefront preview — sample catalogue and prices. Stock, offers, reviews and delivery are unverified. Bag and wishlist stay on this device; checkout and customer accounts are unavailable.'}
-      </div>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">

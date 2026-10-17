@@ -1,6 +1,6 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support and isolated local preview bag/wishlist data. Administrator routes use clean URLs, real Firebase Authentication and server-managed permissions. Business repositories and trusted checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Business records are empty until their integrations are implemented. Administrator routes use clean URLs, real Firebase Authentication and server-managed permissions. Business repositories and trusted checkout remain unconnected.
 
 ## Administrator access
 
@@ -36,11 +36,11 @@ npm.cmd run preview
 
 `lint` currently means TypeScript checking, not ESLint. Use test data only. Customer login, registration, recovery, verification, checkout and order actions are unavailable in ordinary development and all builds. Administrator authentication is real.
 
-The **original storefront is visible by default** for browsing and review, with a restrained sample-catalogue notice. There is no visibility environment flag. Shop, product gallery, local wishlist/bag, information and draft policy pages are available; unconnected features display relevant unavailable states. See [storefront release details and production acceptance](docs/STOREFRONT_REVIEW.md).
+The **storefront stays visible with clean empty states**. No sample catalogue, customer identity, order history, sale campaigns or fictional reporting is displayed. See [content cleanup and review instructions](docs/CONTENT_CLEANUP.md).
 
-Simulations require an explicit local server: `npm.cmd run dev -- --mode demo --port 3002`. `demoEnabled` requires both Vite `DEV=true` and `MODE=demo`; all production builds disable simulations, including `build:demo`.
+There is no visibility flag or public simulator mode. `demoEnabled` is false in every mode. Customer sign-in, checkout and order actions remain unavailable. Automated tests import fixtures directly from `tests/fixtures/commerce.ts`; the normal application never imports that dataset.
 
-Public bag/wishlist use `parinaya_*_preview_v1` keys and start empty. Isolated demo state uses `parinaya_*_demo_v2` localStorage keys. Earlier `*_v1` state is left untouched and is not migrated into this demo. The existing Reset Demo action clears only the current demo namespace. No Git repository was present at takeover; the original `src` tree was copied to ignored `.cache/baseline-src` before source changes.
+A one-time versioned migration removes only the 12 exact retired product IDs from the named legacy bag/wishlist keys. It preserves unknown rows, order/profile data, preferences and Firebase authentication storage. Those legacy records are not read into the normal website. See the cleanup guide for the exact keys and failure behavior.
 
 ## Browser checks
 
@@ -52,7 +52,7 @@ python scripts/storefront-browser.test.py
 python scripts/firebase-browser.test.py
 ```
 
-The optional historical `browser-flows.py` additionally requires the explicit demo server on port 3002. These scripts use the host's Python Playwright package and Chromium installation. They are not installed by npm. Route/viewport results and screenshots go to `.cache/browser`. Browser tests use isolated synthetic fixture records, not real customer information.
+The historical `browser-flows.py` delegates to the current empty-content checks. These scripts use the host's Python Playwright package and Chromium installation. They are not installed by npm. Route/viewport results and screenshots go to `.cache/browser`. Browser tests use isolated synthetic fixture records, not real customer information.
 
 ## Project layout
 
@@ -60,10 +60,11 @@ The optional historical `browser-flows.py` additionally requires the explicit de
 - `src/components`: storefront header, footer and mobile navigation.
 - `src/views`: customer screens.
 - `src/admin`: admin screens and separate layout.
-- `src/services/storeService.ts`: local demo repository, not an authorization or payment boundary.
+- `src/services/storeService.ts`: explicit empty/unconnected business repositories; no automatic seeding.
+- `src/services/legacyDemoCleanup.ts`: narrow versioned legacy bag/wishlist cleanup.
 - `src/types/index.ts`: shared data model.
 - `src/utils`: shared totals, route normalization, fulfilment validation and tests.
-- `src/config/runtime.ts`: demo/production mode boundary.
-- `src/data/mockData.ts`: fictional catalog, customers, orders, coupons and settings.
+- `src/config/runtime.ts`: public simulations remain disabled in every mode.
+- `tests/fixtures/commerce.ts`: isolated fictional records for automated tests only.
 
 See [the takeover audit and Phase 3 plan](docs/TAKEOVER_AUDIT.md) for the historical baseline, screen coverage, known gaps and proposed future ownership model. Step 1 connection changes are described in [Firebase setup](docs/FIREBASE_SETUP.md). No live services, deployed rules or Vercel settings were changed.

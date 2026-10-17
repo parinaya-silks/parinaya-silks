@@ -1,6 +1,7 @@
-"""Browsing review against normal development and the actual production build.
-Start Vite on 3000 and production preview on 4173. No live credentials/data used.
+"""Empty-content/browser migration checks. Dev 3000 and production preview 4173.
+All records seeded here are isolated browser fixtures, never Firebase records.
 """
+import json
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -8,85 +9,94 @@ routes = ['/', '/shop', '/collections', '/sale', '/shop?search=wine', '/search?s
           '/product/prod-mayuri-wine', '/wishlist', '/bag', '/account', '/account/orders',
           '/login', '/register', '/forgot-password', '/verify-email', '/about', '/contact',
           '/shipping-policy', '/returns-policy', '/privacy-policy', '/terms-conditions', '/missing-page']
+forbidden = ['Mayuri Regal Wine', 'Padmavathi Rust', 'Swarna Peethambari', 'Ananya Rao',
+             'Priyanka Reddy', 'Sample stock', 'Storefront preview', 'Heirloom Points',
+             'HEIRLOOM10', 'SILK20', '3 to 5 business days', 'within 48 hours', 'Certified Authentic']
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
     for origin in ['http://127.0.0.1:3000', 'http://127.0.0.1:4173']:
         context = browser.new_context(viewport={'width':390,'height':844}, reduced_motion='reduce')
         errors, backend_requests = [], []
-        context.route('https://firestore.googleapis.com/**', lambda route: (backend_requests.append(route.request.url), route.abort()))
-        context.route('https://identitytoolkit.googleapis.com/**', lambda route: (backend_requests.append(route.request.url), route.abort()))
-        context.add_init_script("""localStorage.setItem('parinaya_customer_demo_v2', JSON.stringify({name:'FORGED CUSTOMER',email:'forged@example.test',role:'admin'}));
-            localStorage.setItem('parinaya_orders_demo_v2', JSON.stringify([{id:'forged-order',paymentStatus:'Paid'}]));""")
+        for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**']:
+            context.route(pattern, lambda route: (backend_requests.append(route.request.url),route.abort()))
+        context.add_init_script("""if (!localStorage.getItem('cleanup-test-seeded')) {
+          localStorage.setItem('cleanup-test-seeded','yes');
+          localStorage.setItem('parinaya_cart_preview_v1',JSON.stringify([
+            {productId:'prod-mayuri-wine',product:{id:'prod-mayuri-wine',name:'Mayuri Regal Wine'}},
+            {productId:'owner-real-item',product:{id:'owner-real-item',name:'Owner data'}}]));
+          localStorage.setItem('parinaya_wishlist_preview_v1',JSON.stringify([{productId:'prod-padmavathi-rust',product:{id:'prod-padmavathi-rust'}}]));
+          localStorage.setItem('parinaya_customer_demo_v2',JSON.stringify({name:'Ananya Rao',role:'admin'}));
+          localStorage.setItem('parinaya_orders_demo_v2',JSON.stringify([{id:'ord-1089',paymentStatus:'Paid'}]));
+          localStorage.setItem('firebase:authUser:preserve-test','existing auth fixture');
+          localStorage.setItem('theme','ivory');
+        }""")
         page = context.new_page()
         page.on('pageerror', lambda e: errors.append(str(e)))
         for route in routes:
             page.goto(origin+route)
-            page.get_by_role('note').filter(has_text='Storefront preview').wait_for()
-            try:
-                page.reload()
-            except Exception as error:
-                raise AssertionError(f'Refresh failed at {origin}{route}') from error
-            page.get_by_role('note').filter(has_text='Storefront preview').wait_for()
+            page.locator('main').first.wait_for()
+            page.reload()
+            page.locator('main').first.wait_for()
+            text = page.locator('body').inner_text()
+            for phrase in forbidden:
+                assert phrase not in text, (route,phrase)
             assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1'), route
-            assert page.get_by_text('FORGED CUSTOMER',exact=False).count()==0
-            assert page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button').count()==5
-        page.get_by_role('heading',name='Page not found').wait_for()
-        page.goto(origin+'/product/prod-mayuri-wine')
-        page.get_by_role('button',name='Add to Bag',exact=False).click()
-        page.get_by_role('button',name='Save to Wishlist',exact=True).click()
-        commerce = page.locator('aside').last
-        bottom = page.get_by_role('navigation',name='Mobile Bottom Navigation')
-        assert commerce.bounding_box()['y'] + commerce.bounding_box()['height'] <= bottom.bounding_box()['y'] + 1
-        assert page.get_by_role('button',name='Checkout unavailable',exact=False).is_disabled()
-        bottom.get_by_role('button',name='Bag',exact=False).click()
-        page.get_by_role('heading',name='My Bag',exact=False).wait_for()
-        assert page.get_by_role('button',name='Checkout unavailable',exact=False).is_disabled()
-        page.get_by_role('button',name='Increase quantity').click()
-        page.reload()
-        page.get_by_role('heading',name='My Bag',exact=False).wait_for()
-        page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button',name='Wishlist',exact=False).click()
-        assert page.get_by_text('Mayuri Regal Wine Pure Kanjeevaram Silk Saree',exact=True).count()>0
-        for route in ['/checkout','/order-confirmed?orderId=forged-order','/order-result/forged-order','/order-tracking/forged-order','/account/orders/forged-order']:
+            tabs=page.get_by_role('navigation',name='Mobile Bottom Navigation')
+            assert tabs.get_by_role('button').count()==5
+            assert tabs.get_by_role('button').nth(2).inner_text().strip().endswith('Wishlist')
+            assert tabs.get_by_role('button').nth(3).inner_text().strip().endswith('Bag')
+            assert not any(char.isdigit() for char in tabs.inner_text())
+        state=page.evaluate('Object.fromEntries(Object.entries(localStorage))')
+        assert json.loads(state['parinaya_cart_preview_v1'])==[{'productId':'owner-real-item','product':{'id':'owner-real-item','name':'Owner data'}}]
+        assert json.loads(state['parinaya_wishlist_preview_v1'])==[]
+        assert state['firebase:authUser:preserve-test']=='existing auth fixture'
+        assert state['theme']=='ivory'
+        assert json.loads(state['parinaya_orders_demo_v2'])[0]['id']=='ord-1089'
+        page.goto(origin+'/shop')
+        page.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
+        assert page.locator('article img').count()==0
+        assert page.get_by_role('button',name='Kanjeevaram',exact=True).count()==0
+        page.goto(origin+'/shop?search=wine')
+        page.get_by_role('heading',name='No products found.',exact=True).wait_for()
+        page.get_by_role('button',name='Clear filters',exact=True).click()
+        page.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
+        for route,heading in [('/bag','Your bag is empty'),('/wishlist','Your wishlist is empty'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed?orderId=ord-1089','Orders unavailable'),('/checkout','Checkout unavailable')]:
             page.goto(origin+route)
-            page.get_by_role('heading',name='Checkout unavailable' if route=='/checkout' else 'Orders unavailable').wait_for()
+            page.get_by_role('heading',name=heading,exact=True).wait_for()
             assert page.get_by_role('button',name='Simulate payment',exact=False).count()==0
-            assert page.get_by_text('Payment successful',exact=False).count()==0
-        for route, button in [('/login','Sign In'),('/register','Create Account'),('/forgot-password','Send Reset Link')]:
+        for route in ['/login','/register','/forgot-password']:
             page.goto(origin+route)
-            submit = page.locator('button[type="submit"]')
-            assert submit.count()==1 and submit.is_disabled(), route
-            assert page.locator('input:not([disabled])').count()==0, route
+            assert page.locator('button[type="submit"]').is_disabled()
+            assert page.locator('input:not([disabled])').count()==0
             page.locator('form').evaluate('(form)=>form.requestSubmit()')
-            page.wait_for_timeout(100)
             assert page.url==origin+route
-        page.goto(origin+'/verify-email')
-        assert page.get_by_role('button',name='Check Verification',exact=False).is_disabled()
-        assert page.get_by_role('complementary',name='Email Verification State Switcher').count()==0
-        assert backend_requests==[], 'Public browsing must not request live identity or Firestore data'
+        page.goto(origin+'/contact')
+        for label in ['How do I track my order?','Where can I find delivery information?','Where can I check the returns and exchange policy?']:
+            page.get_by_role('button',name=label,exact=False).click()
+        text=page.locator('body').inner_text()
+        for phrase in forbidden: assert phrase not in text, phrase
+        assert backend_requests==[], 'Public empty states must not scan live business collections'
         page.goto(origin+'/admin/orders')
         page.get_by_role('heading',name='Administrator Sign In').wait_for()
         assert page.get_by_role('heading',name='Dashboard',exact=True).count()==0
         page.goto(origin+'/')
-        page.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
-        # Header navigation, browser history, clean and legacy hash routes.
+        page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
         page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button').nth(1).click()
         assert page.url==origin+'/shop'
         page.go_back()
-        page.get_by_role('heading',name='The Festive Heirloom Weaves').wait_for()
+        page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
         page.goto(origin+'/#/about')
         page.get_by_role('heading',name='About Parinaya Silks').wait_for()
-        Path('.cache/storefront').mkdir(parents=True,exist_ok=True)
+        Path('.cache/empty-content').mkdir(parents=True,exist_ok=True)
         for width in [360,390,430,768,1024,1440]:
             page.set_viewport_size({'width':width,'height':900})
-            for route in ['/','/shop','/product/prod-mayuri-wine','/bag','/account']:
+            for route in ['/','/shop','/bag','/wishlist','/account','/contact','/shipping-policy']:
                 page.goto(origin+route)
-                page.get_by_role('note').filter(has_text='Storefront preview').wait_for()
                 assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1'), (width,route)
-            if width in [390,1440] and origin.endswith('4173'):
-                page.goto(origin+'/')
-                page.screenshot(path=f'.cache/storefront/home-{width}.png',full_page=True)
+                if origin.endswith('4173') and width in [390,1440] and route in ['/','/shop']:
+                    page.screenshot(path=f'.cache/empty-content/{"home" if route=="/" else "shop"}-{width}.png',full_page=True)
         assert not errors, errors
-        print(origin+': direct routes/refresh, five tabs, local bag/wishlist, safe account/checkout, history, admin guard and six widths passed')
+        print(origin+': empty public routes/refresh, legacy cleanup, badges, no fixture data, unavailable actions and six widths passed')
         context.close()
     browser.close()

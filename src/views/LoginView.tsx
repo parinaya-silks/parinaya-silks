@@ -15,31 +15,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
 
-  const handleStateChange = (state: 'empty' | 'filled' | 'validation' | 'credentials' | 'network' | 'loading') => {
-    setSimState(state);
-    setEmailError(false);
-    setPasswordError(false);
-
-    if (state === 'empty') {
-      setEmail('');
-      setPassword('');
-    } else if (state === 'filled') {
-      setEmail('ananya.rao@example.com');
-      setPassword('SilkPatron2025!');
-    } else if (state === 'validation') {
-      setEmail('ananya.rao');
-      setPassword('');
-      setEmailError(true);
-      setPasswordError(true);
-    } else if (state === 'credentials') {
-      setEmail('ananya.rao@example.com');
-      setPassword('wrongpassword');
-    } else if (state === 'network') {
-      setEmail('ananya.rao@example.com');
-      setPassword('SilkPatron2025!');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!demoEnabled) return;
@@ -62,65 +37,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col justify-between pb-12">
       {/* Interactive Prototype Preview Ribbon */}
-      {demoEnabled && <aside
-        aria-label="Login Prototype State Switcher"
-        className="w-full bg-[#1F1918] text-white border-b border-[#352B28] px-3 py-2 z-50 text-xs"
-      >
-        <div className="max-w-md mx-auto flex items-center justify-between pb-1">
-          <span className="text-[10px] tracking-widest uppercase font-semibold text-[#D4AF37] flex items-center gap-1 font-sans">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
-            Preview States
-          </span>
-          <span className="text-[10px] text-stone-400 font-sans">Interactive Demo</span>
-        </div>
-        <div className="max-w-md mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar font-sans text-[11px]">
-          <button
-            type="button"
-            onClick={() => handleStateChange('empty')}
-            className={`px-2.5 py-1 rounded border transition-colors ${
-              simState === 'empty' ? 'bg-[#780D24] text-white border-[#780D24]' : 'border-stone-600 bg-stone-800 text-stone-200'
-            }`}
-          >
-            Default Empty
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStateChange('filled')}
-            className={`px-2.5 py-1 rounded border transition-colors ${
-              simState === 'filled' ? 'bg-[#780D24] text-white border-[#780D24]' : 'border-stone-600 bg-stone-800 text-stone-200'
-            }`}
-          >
-            Completed
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStateChange('validation')}
-            className={`px-2.5 py-1 rounded border transition-colors ${
-              simState === 'validation' ? 'bg-[#780D24] text-white border-[#780D24]' : 'border-stone-600 bg-stone-800 text-stone-200'
-            }`}
-          >
-            Validation Error
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStateChange('credentials')}
-            className={`px-2.5 py-1 rounded border transition-colors ${
-              simState === 'credentials' ? 'bg-[#780D24] text-white border-[#780D24]' : 'border-stone-600 bg-stone-800 text-stone-200'
-            }`}
-          >
-            Wrong Credentials
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStateChange('network')}
-            className={`px-2.5 py-1 rounded border transition-colors ${
-              simState === 'network' ? 'bg-[#780D24] text-white border-[#780D24]' : 'border-stone-600 bg-stone-800 text-stone-200'
-            }`}
-          >
-            Connection Error
-          </button>
-        </div>
-      </aside>}
+
 
       {/* Main Form Canvas Container */}
       <main className="w-full max-w-md mx-auto px-5 sm:px-6 pt-8 pb-6 font-sans flex-1">

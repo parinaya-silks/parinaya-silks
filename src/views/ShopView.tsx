@@ -35,22 +35,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number>(80000);
 
-  const categories = [
-    { id: 'all', label: 'All Sarees' },
-    { id: 'Kanjeevaram', label: 'Kanjeevaram' },
-    { id: 'Banarasi', label: 'Brocade & Korvai' },
-    { id: 'Tussar', label: 'Tussar & Organza' },
-    { id: 'Mangalagiri', label: 'Mangalagiri' },
-    { id: 'bridal', label: 'Bridal Edit' },
-  ];
-
-  const colorOptions = [
-    { name: 'Deep Maroon', hex: '#780D24' },
-    { name: 'Vermillion Red', hex: '#8A1F1D' },
-    { name: 'Antique Gold', hex: '#B88A44' },
-    { name: 'Forest Green', hex: '#174D38' },
-    { name: 'Midnight Blue', hex: '#1B264F' },
-  ];
+  const categories = [{ id: 'all', label: 'All Sarees' }, ...Array.from(new Set(products.map(p => p.category))).map(category => ({ id: category, label: category }))];
+  const colorOptions = Array.from(new Map(products.map(p => [p.colorName, { name: p.colorName, hex: p.colorHex }])).values());
 
   // Filtered & Sorted products
   const filteredProducts = useMemo(() => {
@@ -142,7 +128,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
             </span>
           </div>
           <span className="font-sans text-[12px] text-[#780D24] font-medium hidden sm:inline">
-            Handloom Silk
+            PARINAYA SILKS
           </span>
         </div>
       </section>
@@ -175,6 +161,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
           <div className="flex items-center justify-between gap-3">
             {/* Filter Drawer Trigger */}
             <button
+              disabled={products.length === 0}
               onClick={() => setFilterDrawerOpen(true)}
               className="flex-1 flex items-center justify-center gap-2 bg-[#F4EEE5] border border-[#E8DDD6] hover:border-[#B88A44] text-[#231919] py-2 px-3 rounded-lg active:scale-95 transition-all"
             >
@@ -317,21 +304,21 @@ export const ShopView: React.FC<ShopViewProps> = ({
       {/* 2-Column Mobile / 4-Column Desktop Product Grid */}
       <main className="max-w-7xl mx-auto px-4 py-2">
         {filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-[#E8DDD6] p-12 text-center my-6 space-y-4">
+          <div className="max-w-xl mx-auto bg-white rounded-xl border border-[#E8DDD6] p-6 text-center my-6 space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EEE5] border border-[#B88A44] flex items-center justify-center text-[#780D24]">
               <span className="material-symbols-outlined text-[32px]">inventory_2</span>
             </div>
             <h2 className="font-serif text-[20px] text-[#231919] font-medium">
-              No Handlooms Found
+              {searchQuery || activeFilterCount > 0 ? 'No products found.' : 'No products available yet.'}
             </h2>
             <p className="font-sans text-[14px] text-[#5F5552] max-w-sm mx-auto">
-              We couldn&apos;t find any sarees matching your selected criteria. Try resetting filters or exploring other collections.
+              {searchQuery || activeFilterCount > 0 ? 'Try another search or clear your filters.' : 'Please check back or contact us for more information.'}
             </p>
             <button
-              onClick={clearAllFilters}
+              onClick={() => searchQuery || activeFilterCount > 0 ? clearAllFilters() : onNavigate('/contact')}
               className="px-6 py-2.5 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[12px] font-bold tracking-wider uppercase rounded-lg shadow-sm active:scale-95 transition-all"
             >
-              Reset All Filters
+              {searchQuery || activeFilterCount > 0 ? 'Clear filters' : 'Contact Us'}
             </button>
           </div>
         ) : (
@@ -573,7 +560,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
               <div className="pt-2">
                 <label className="flex items-center justify-between p-3 rounded-lg bg-[#F4EEE5] border border-[#E8DDD6] cursor-pointer">
                   <span className="font-sans text-[13px] text-[#231919] font-medium">
-                    Sample in-stock items
+                    In-stock items
                   </span>
                   <input
                     type="checkbox"

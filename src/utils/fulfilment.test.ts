@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INITIAL_ORDERS } from '../data/mockData.ts';
+import { INITIAL_ORDERS } from '../../tests/fixtures/commerce.ts';
 import { applyFulfilment, fulfilmentError } from './fulfilment.ts';
 import type { Order } from '../types/index.ts';
 
