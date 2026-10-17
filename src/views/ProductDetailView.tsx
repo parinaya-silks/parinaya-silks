@@ -21,27 +21,27 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onToggleWishlist,
   isWishlisted,
 }) => {
-  const [activeImageKey, setActiveImageKey] = useState<'full' | 'pallu' | 'border' | 'blouse'>('full');
+  const [activeImageKey, setActiveImageKey] = useState<string>(product.gallery?.find(image=>image.url===product.images.full)?.mediaId || 'full');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [rewardsModalOpen, setRewardsModalOpen] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(product.colorName);
+  const [selectedColor, setSelectedColor] = useState(product.variants?.[0]?.id || product.colorName);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('500034');
   const [deliveryResult, setDeliveryResult] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const imagesList = [
+  const imagesList = product.gallery?.length ? product.gallery.map(image=>({key:image.mediaId,label:image.alt,url:image.url})) : [
     { key: 'full' as const, label: 'Full Saree', url: product.images.full },
     { key: 'pallu' as const, label: 'Pallu', url: product.images.pallu || product.images.full },
     { key: 'border' as const, label: 'Border', url: product.images.border || product.images.full },
     { key: 'blouse' as const, label: 'Blouse', url: product.images.blouse || product.images.full },
   ];
 
-  const currentImageUrl = product.images[activeImageKey] || product.images.full;
+  const currentImageUrl = imagesList.find(image=>image.key===activeImageKey)?.url || product.images.full;
 
-  const colorVariants = [
-    { name: product.colorName, hex: product.colorHex },
-  ];
+  const colorVariants = product.variants?.length ? product.variants.map(variant=>({...variant,key:variant.id})) : [{key:product.colorName,name:product.colorName,hex:product.colorHex}];
+  const selectedVariant = product.variants?.find(variant=>variant.id===selectedColor);
+  const selectedStock = selectedVariant ? selectedVariant.quantity : product.stockCount;
 
   const handleCheckPincode = () => {
     if (/^[1-9][0-9]{5}$/.test(pincode)) {
@@ -75,7 +75,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const wishlisted = isWishlisted(product.id);
 
   return (
-    <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+    <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4" style={{overflowWrap:'anywhere'}}>
       {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#780D24] text-white px-5 py-2.5 rounded-lg shadow-xl flex items-center gap-2 border border-[#B88A44]/50 animate-bounce">
@@ -100,7 +100,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           Shop Sarees
         </button>
         <span>&gt;</span>
-        <button onClick={() => onNavigate(`/shop?category=${product.category}`)} className="hover:text-[#780D24]">
+        <button onClick={() => onNavigate(`/shop?category=${product.categoryId}`)} className="hover:text-[#780D24]">
           {product.category}
         </button>
         <span>&gt;</span>
@@ -113,8 +113,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <div className="relative w-full aspect-[4/5] bg-[#F4EEE5] rounded-xl overflow-hidden border border-[#E8DDD6] shadow-sm group">
             <img
               src={currentImageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover transition-all duration-300"
+              alt={imagesList.find(image=>image.key===activeImageKey)?.label || product.name}
+              className="w-full h-full object-contain transition-all duration-300"
             />
 
             {/* Silk Mark Pill */}
@@ -132,7 +132,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Wishlist Heart Button */}
             <button
               aria-label="Save to Wishlist"
-              onClick={() => onToggleWishlist(product)}
+              disabled title="Saved shopping is not available yet" onClick={() => onToggleWishlist(product)}
               className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/85 backdrop-blur-md border border-[#E8DDD6] flex items-center justify-center text-[#231919] hover:text-[#780D24] shadow-sm active:scale-95 transition-all"
               type="button"
             >
@@ -172,7 +172,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   }`}
                   type="button"
                 >
-                  <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                  <img src={img.url} alt={img.label} className="w-full h-full object-contain" />
                   <span
                     className={`absolute inset-x-0 bottom-0 text-[9px] font-sans py-0.5 text-center leading-tight font-medium ${
                       isActive ? 'bg-[#780D24] text-white' : 'bg-[#231919]/75 text-white'
@@ -188,16 +188,16 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
         {/* RIGHT COLUMN: Product Information & Controls */}
         <div className="space-y-4">
-          {!demoEnabled && <FeatureNotice>Sample product details and pricing for review. Availability, materials and certification are unverified. Checkout is unavailable.</FeatureNotice>}
+          <FeatureNotice>Online checkout and saved shopping are unavailable. Please contact us for assistance.</FeatureNotice>
           {/* Summary Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-sans text-[11px] text-[#B88A44] tracking-widest uppercase font-bold">
-                {product.categoryLabel} Heirloom
+                {product.categoryLabel}
               </span>
               <div className="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                {demoEnabled ? (product.inStock ? 'In Stock' : 'Sold Out') : 'Sample stock status'}
+                {selectedStock > 0 ? 'In Stock' : 'Out of stock'}
               </div>
             </div>
 
@@ -223,7 +223,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
 
             <p className="font-sans text-[13px] text-[#5F5552]">
-              Sample price; taxes and delivery terms are unconfirmed.
+              Contact us for delivery information before ordering.
             </p>
 
             {/* Loyalty Points callout */}
@@ -252,15 +252,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               <div>
                 <div className="flex items-center gap-2 mb-2 text-[12px] font-sans">
                   <span className="text-[#5F5552] uppercase font-bold tracking-wider">Colour:</span>
-                  <span className="text-[#231919] font-semibold">{selectedColor}</span>
+                  <span className="text-[#231919] font-semibold">{selectedVariant?.name || product.colorName}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {colorVariants.map((c) => {
-                    const isSelected = selectedColor === c.name;
+                    const isSelected = selectedColor === c.key;
                     return (
                       <button
-                        key={c.name}
-                        onClick={() => setSelectedColor(c.name)}
+                        key={c.key}
+                        onClick={() => {setSelectedColor(c.key);setQuantity(1);}}
                         className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                           isSelected ? 'ring-2 ring-offset-2 ring-[#780D24]' : 'opacity-80 hover:opacity-100 border border-black/20'
                         }`}
@@ -297,7 +297,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stockCount, quantity + 1))}
+                    disabled={selectedStock===0 || quantity>=selectedStock}
+                    onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))}
                     className="w-8 h-8 flex items-center justify-center text-[#231919] hover:text-[#780D24] active:scale-95 font-bold"
                     type="button"
                     aria-label="Increase quantity"
@@ -315,7 +316,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </span>
               <div>
                 <p className="font-sans text-[13px] text-[#231919] leading-relaxed">
-                  <strong className="text-[#780D24]">Unstitched blouse piece included:</strong>{' '}
+                  <strong className="text-[#780D24]">Blouse piece {product.blouseIncluded ? 'included' : 'not included'}:</strong>{' '}
                   {product.blouseDetails}
                 </p>
               </div>
@@ -333,7 +334,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   Check Delivery
                 </h3>
               </div>
-              <span className="text-[11px] font-sans text-[#5F5552]">Express Courier Transit</span>
+              <span className="text-[11px] font-sans text-[#5F5552]">PIN format check only</span>
             </div>
             <div className="flex gap-2">
               <input
@@ -422,12 +423,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#F4EEE5]">
                   <span className="text-[#5F5552]">Net Weight</span>
-                  <span className="font-medium text-[#231919]">{product.weightGrams} Grams</span>
+                  <span className="font-medium text-[#231919]">{product.weightGrams ? `${product.weightGrams} Grams` : 'Not specified'}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-[#5F5552]">Silk Mark Certified</span>
+                  <span className="text-[#5F5552]">Fabric</span>
                   <span className="font-medium text-[#780D24]">
-                    {demoEnabled ? (product.silkMarkCertified ? 'Sample certified item' : 'Traditional Handloom') : 'Unverified sample detail'}
+                    {product.fabric}
                   </span>
                 </div>
               </div>
@@ -490,7 +491,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       </div>
 
       {/* Related Sarees Rail */}
-      <section className="mt-12 pt-8 border-t border-[#E8DDD6]">
+      {relatedProducts.length > 0 && <section className="mt-12 pt-8 border-t border-[#E8DDD6]">
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="font-sans text-[11px] text-[#B88A44] uppercase tracking-wider font-bold">
@@ -505,11 +506,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           {relatedProducts.map((rel) => (
             <div
               key={rel.id}
-              onClick={() => onNavigate(`/product/${rel.id}`)}
+              onClick={() => onNavigate(`/product/${rel.slug || rel.id}`)}
               className="min-w-[200px] sm:min-w-[230px] bg-white rounded-xl border border-[#E8DDD6] overflow-hidden hover:shadow-md transition-shadow cursor-pointer shrink-0"
             >
               <div className="relative aspect-[3/4] bg-[#F4EEE5] overflow-hidden">
-                <img src={rel.images.full} alt={rel.name} className="w-full h-full object-cover" />
+                <img src={rel.images.full} alt={rel.name} className="w-full h-full object-contain" />
                 <span className="absolute top-2 left-2 bg-[#780D24] text-white text-[9px] font-sans px-2 py-0.5 rounded font-medium">
                   {rel.category}
                 </span>
@@ -526,7 +527,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
           ))}
         </div>
-      </section>
+      </section>}
 
       {/* Lightbox Zoom Modal */}
       {zoomModalOpen && (
@@ -588,7 +589,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           <button
             onClick={handleAdd}
-            disabled={!product.inStock}
+            disabled
             className={`flex-1 h-12 border-2 border-[#780D24] text-[#780D24] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
               product.inStock ? 'hover:bg-[#780D24]/5 bg-white' : 'opacity-50 cursor-not-allowed'
             }`}

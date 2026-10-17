@@ -10,6 +10,7 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
   const [signingOut, setSigningOut] = useState(false);
   const refresh = useRef<(() => Promise<void>) | undefined>(undefined);
   const signOutLock = useRef(false);
+  const previousUser = useRef<Extract<AdminSession, { status: 'authorized' }>['user'] | null>(null);
   useEffect(() => {
     setSession({ status: 'checking' });
     try {
@@ -28,12 +29,21 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
 
   const leave = async () => {
     if (signOutLock.current) return;
+    if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
     signOutLock.current = true; setSigningOut(true);
     try { await adminSignOut(); setSession({ status: 'signed-out' }); }
     catch { setSession({ status: 'error', message: 'Unable to sign out. Retry or close this session before leaving a shared device.' }); }
     finally { setSigningOut(false); signOutLock.current = false; }
   };
-  if (signingOut || session.status === 'checking') return <AdminAccessFrame><h1 className="font-serif text-2xl text-[#780D24]">PARINAYA SILKS</h1><p role="status">{signingOut ? 'Signing out…' : 'Checking administrator access…'}</p></AdminAccessFrame>;
+  if (session.status === 'authorized') previousUser.current = session.user;
+  else if (session.status !== 'checking') previousUser.current = null;
+  const checking = signingOut || session.status === 'checking';
+  if (previousUser.current && (session.status === 'authorized' || session.status === 'checking')) {
+    // Preserve editor state across token/focus refreshes while keeping the
+    // previously verified panel hidden and inert until the fresh check passes.
+    return <><div hidden={checking} inert={checking || undefined} aria-hidden={checking || undefined}><AdminPanel key={previousUser.current.uid} path={safeAdminDestination(requestedPath)} email={previousUser.current.email || 'Administrator'} onSignOut={() => void leave()} /></div>{checking && <AdminAccessFrame><p role="status">Checking administrator access…</p></AdminAccessFrame>}</>;
+  }
+  if (checking) return <AdminAccessFrame><h1 className="font-serif text-2xl text-[#780D24]">PARINAYA SILKS</h1><p role="status">{signingOut ? 'Signing out…' : 'Checking administrator access…'}</p></AdminAccessFrame>;
   if (session.status === 'signed-out') return <AdminLogin />;
   if (session.status === 'restricted') return <AdminAccessFrame>
     <h1 className="font-serif text-2xl text-[#780D24]">Access Restricted</h1>

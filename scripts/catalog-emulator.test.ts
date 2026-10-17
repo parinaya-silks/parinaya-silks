@@ -1,0 +1,83 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
+import {doc,getDoc,setDoc,updateDoc,deleteDoc} from 'firebase/firestore';
+import {serverFirebase} from '../server/firebase.ts';
+import {catalogService} from '../server/catalog.ts';
+import {emptyProduct,productInput,quantity,type ProductRecord} from '../src/products/model.ts';
+
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw new Error('Loopback emulators required.');
+process.env.PARINAYA_SERVER_EMULATORS='true';
+test('trusted product CRUD, stock races, media ownership and public visibility',async()=>{
+  const environment=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}});
+  const {database:db,auth}=serverFirebase();
+  const tokens:Record<string,string>={};const users:string[]=[];
+  let verifyFails=false;
+  const service=catalogService({database:db,auth,media:{sign:ticket=>({public_id:ticket.publicId,timestamp:ticket.timestamp,overwrite:'false',signature:'synthetic'}),verify:async ticket=>{if(verifyFails)throw new Error('Fixture verification failed');return {assetId:'trusted-'+ticket.publicId,publicId:ticket.publicId,url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/fixture.jpg',width:300,height:400,bytes:1000,format:'jpg',version:1};}}});
+  try {
+    await environment.clearFirestore();
+    for(const [role,claim,enabled]of [['admin',true,true],['customer',false,false],['claim-only',true,false],['record-only',false,true],['disabled',true,false]] as const){
+      const uid='crud-'+role,password=randomUUID()+'Aa9!';users.push(uid);
+      await auth.createUser({uid,email:`${uid}@example.test`,password});await auth.setCustomUserClaims(uid,{admin:claim});if(enabled)await db.doc(`adminAccess/${uid}`).set({enabled:true});
+      const result=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=synthetic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:`${uid}@example.test`,password,returnSecureToken:true})});tokens[role]=(await result.json()).idToken;
+    }
+    const categoryId='c'.repeat(20),otherCategory='d'.repeat(20);
+    await db.doc(`categories/${categoryId}`).set({name:'Emulator category',enabled:true});await db.doc(`categories/${otherCategory}`).set({name:'Disabled',enabled:false});
+    const id=db.collection('products').doc().id,operation=()=>randomUUID().replaceAll('-','');
+    const draft={...emptyProduct(),slug:'emulator-saree'};
+    const save=(product:unknown,revision:number,operationId=operation(),productId=id)=>service.privileged(tokens.admin,{action:'save',id:productId,expectedRevision:revision,operationId,product}) as Promise<ProductRecord>;
+    const op=operation();let saved=await save(draft,0,op);assert.equal(saved.revision,1);assert.equal(saved.name,'');
+    assert.equal((await save(draft,0,op)).revision,1);
+    await assert.rejects(save({...draft,name:'Changed operation'},0,op),{code:'conflict'});
+    assert.equal((await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord).slug,draft.slug);
+    assert.equal((await service.privileged(tokens.admin,{action:'list'}) as {items:unknown[]}).items.length,1);
+    await assert.rejects(save(draft,0,operation(),db.collection('products').doc().id),{code:'duplicate'});
+    const raceSlug={...draft,slug:'race-slug'};
+    const race=await Promise.allSettled([save(raceSlug,0,operation(),db.collection('products').doc().id),save(raceSlug,0,operation(),db.collection('products').doc().id)]);assert.equal(race.filter(item=>item.status==='fulfilled').length,1);
+    for(const role of ['customer','claim-only','record-only','disabled'])for(const action of ['save','list','get','sign','verify','delete'])await assert.rejects(service.privileged(tokens[role],{action,id,product:draft}));
+    await assert.rejects(service.privileged('',{action:'list'}),{code:'unauthorized'});
+    await assert.rejects(save({...draft,status:'Published'},1),{code:'invalid'});
+    await assert.rejects(save({...draft,createdAt:0},1),{code:'invalid'});
+    const imageId='a'.repeat(32);
+    const sign={action:'sign',productId:id,mediaId:imageId,type:'image/jpeg',size:1000};
+    await assert.rejects(service.privileged(tokens.admin,{...sign,public_id:'another-client/asset'}),{code:'invalid'});
+    await assert.rejects(service.privileged(tokens.admin,{...sign,type:'image/svg+xml'}),{code:'invalid'});
+    await assert.rejects(service.privileged(tokens.admin,{...sign,size:10485761}),{code:'invalid'});
+    await service.privileged(tokens.admin,sign);
+    verifyFails=true;await assert.rejects(service.privileged(tokens.admin,{action:'verify',productId:id,mediaId:imageId}));
+    assert.equal((await db.doc(`productMedia/${imageId}`).get()).data()!.verified,false);
+    verifyFails=false;await service.privileged(tokens.admin,{action:'verify',productId:id,mediaId:imageId});
+    await assert.rejects(save({...draft,slug:'wrong-media-owner',images:[{mediaId:imageId,alt:'Not this product'}]},0,operation(),db.collection('products').doc().id),{code:'media'});
+    const published={...draft,name:'Real emulator saree',sku:'PS-EMULATOR',description:'Emulator-only product description',categoryId,pricePaise:123405,originalPricePaise:150000,fabric:'Silk',weaveType:'Handloom',sareeLength:'6 metres',careInstructions:'Dry clean',images:[{mediaId:imageId,alt:'Full saree fixture'}],coverMediaId:imageId,status:'Published' as const,inventory:{mode:'simple' as const,quantity:4,variants:[]}};
+    await assert.rejects(save({...published,categoryId:otherCategory},1),{code:'invalid'});
+    await assert.rejects(save({...published,images:[{mediaId:'b'.repeat(32),alt:'Forged'}],coverMediaId:'b'.repeat(32)},1),{code:'media'});
+    saved=await save(published,1);assert.equal(saved.images[0].assetId,'trusted-parinaya-silks/products/'+id+'/'+imageId);assert.equal(saved.pricePaise,123405);
+    assert.equal((await service.publicGet(draft.slug)).id,id);assert.equal((await service.publicList()).items.length,1);
+    const guest=environment.unauthenticatedContext().firestore(),customer=environment.authenticatedContext('ordinary').firestore();
+    for(const client of [guest,customer]){await assertSucceeds(getDoc(doc(client,'products',id)));await assertFails(setDoc(doc(client,'products',id),published));await assertFails(updateDoc(doc(client,'products',id),{status:'Published'}));await assertFails(getDoc(doc(client,'productMedia',imageId)));}
+    const browserAdmin=environment.authenticatedContext('crud-admin',{admin:true}).firestore();await assertFails(updateDoc(doc(browserAdmin,'products',id),{pricePaise:1}));
+    await db.doc(`categories/${categoryId}`).update({enabled:false});
+    await assert.rejects(service.publicGet(draft.slug),{code:'not-found'});assert.equal((await service.publicList()).items.length,0);await assertFails(getDoc(doc(guest,'products',id)));
+    await db.doc(`categories/${categoryId}`).update({enabled:true});
+    const renamed={...productInput(saved),name:'Renamed saree'};saved=await save(renamed,saved.revision);assert.equal(saved.slug,draft.slug);
+    const stale=saved.revision;
+    const stockRace=await Promise.allSettled([save({...productInput(saved),inventory:{mode:'simple',quantity:5,variants:[]}},stale),save({...productInput(saved),inventory:{mode:'simple',quantity:6,variants:[]}},stale)]);assert.equal(stockRace.filter(item=>item.status==='fulfilled').length,1);assert.equal(stockRace.filter(item=>item.status==='rejected').length,1);
+    saved=await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord;
+    await assert.rejects(save({...productInput(saved),slug:'renamed-url'},saved.revision),{code:'invalid'});
+    const variants=[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:2},{id:'gold',name:'Gold',hex:'#B88A44',sku:'GOLD',quantity:3}];
+    saved=await save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants}},saved.revision);assert.equal(quantity(saved),5);
+    await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:5,variants}},saved.revision),{code:'invalid'});
+    await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants:[variants[0],variants[0]]}},saved.revision),{code:'invalid'});
+    saved=await save({...productInput(saved),status:'Draft'},saved.revision);await assert.rejects(service.publicGet(draft.slug),{code:'not-found'});await assertFails(getDoc(doc(guest,'products',id)));
+    saved=await save({...productInput(saved),status:'Archived',images:[],coverMediaId:''},saved.revision);await assert.rejects(service.publicGet(draft.slug),{code:'not-found'});await assertFails(getDoc(doc(customer,'products',id)));
+    assert.ok((await db.doc(`productMedia/${imageId}`).get()).exists,'Detached media is retained');
+    await db.doc('orders/historical-reference').set({productId:id});
+    await assert.rejects(service.privileged(tokens.admin,{action:'delete',id}),{code:'deletion-blocked'});await assertFails(deleteDoc(doc(browserAdmin,'products',id)));await assertFails(deleteDoc(doc(browserAdmin,'categories',categoryId)));assert.ok((await db.doc(`products/${id}`).get()).exists);
+    await db.doc('adminAccess/crud-admin').update({enabled:false});await assert.rejects(save({...productInput(saved),name:'Revoked edit'},saved.revision),{code:'permission'});
+    await db.doc('adminAccess/crud-admin').update({enabled:'true'});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'permission'});
+    await db.doc('adminAccess/crud-admin').update({enabled:true});
+    await auth.updateUser('crud-admin',{disabled:true});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'unauthorized'});await auth.updateUser('crud-admin',{disabled:false});
+  } finally {await environment.clearFirestore();for(const uid of users)await auth.deleteUser(uid);await environment.cleanup();}
+});

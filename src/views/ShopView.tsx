@@ -35,14 +35,15 @@ export const ShopView: React.FC<ShopViewProps> = ({
   // Filters state
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [maxPrice, setMaxPrice] = useState<number>(80000);
+  const [maxPrice, setMaxPrice] = useState<number>(Infinity);
+  const priceCeiling = Math.max(1, ...products.map(product => Math.ceil(product.price)));
 
   const { state: categoryState, retry: retryCategories } = useCategories();
   const publicCategories = categoryState.status === 'ready' ? categoryState.items : [];
   const selectedPublic = requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
   const selectedCategory = selectedPublic?.id || 'all';
   const categories = [{ id: 'all', label: 'All Sarees' }, ...publicCategories.map(category => ({ id: category.id, label: category.name }))];
-  const colorOptions = Array.from(new Map(products.map(p => [p.colorName, { name: p.colorName, hex: p.colorHex }])).values());
+  const colorOptions = Array.from(new Map(products.flatMap(p => p.variants?.length ? p.variants.map(variant => [variant.name, { name: variant.name, hex: variant.hex }] as const) : p.colorName ? [[p.colorName, { name: p.colorName, hex: p.colorHex }] as const] : [])).values());
 
   // Filtered & Sorted products
   const filteredProducts = useMemo(() => {
@@ -79,13 +80,13 @@ export const ShopView: React.FC<ShopViewProps> = ({
       .filter((p) => {
         // Color filter
         if (selectedColors.length === 0) return true;
-        return selectedColors.some((c) => p.colorName.toLowerCase().includes(c.toLowerCase()));
+        return selectedColors.some((c) => [p.colorName,...(p.variants||[]).map(variant=>variant.name)].some(name=>name.toLowerCase().includes(c.toLowerCase())));
       })
       .sort((a, b) => {
         if (sortOption === 'price-asc') return a.price - b.price;
         if (sortOption === 'price-desc') return b.price - a.price;
-        if (sortOption === 'newest') return b.id.localeCompare(a.id);
-        return 0; // featured default
+        if (sortOption === 'newest') return (b.createdAt||0)-(a.createdAt||0);
+        return Number(b.tags.includes('Featured')) - Number(a.tags.includes('Featured'));
       });
   }, [products, selectedCategory, selectedPublic, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption, saleOnly]);
 
@@ -93,12 +94,12 @@ export const ShopView: React.FC<ShopViewProps> = ({
     (selectedCategory !== 'all' ? 1 : 0) +
     (selectedColors.length > 0 ? 1 : 0) +
     (inStockOnly ? 1 : 0) +
-    (maxPrice < 80000 ? 1 : 0);
+    (maxPrice < priceCeiling ? 1 : 0);
 
   const clearAllFilters = () => {
     setSelectedColors([]);
     setInStockOnly(false);
-    setMaxPrice(80000);
+    setMaxPrice(Infinity);
     setSearchQuery('');
     if (requestedSlug || initialCategory) onNavigate('/shop');
   };
@@ -345,14 +346,12 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   {/* 3:4 Image Box with Badges */}
                   <div
                     className="relative w-full aspect-[3/4] bg-[#F4EEE5] overflow-hidden cursor-pointer"
-                    onClick={() => onNavigate(`/product/${product.id}`)}
+                    onClick={() => onNavigate(`/product/${product.slug || product.id}`)}
                   >
                     <img
                       src={product.images.full}
-                      alt={product.name}
-                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out ${
-                        !product.inStock ? 'filter grayscale-[25%] opacity-85' : ''
-                      }`}
+                      alt={product.gallery?.find(image=>image.url===product.images.full)?.alt || product.name}
+                      className="w-full h-full object-contain"
                     />
 
                     {/* Saree Weave Tag */}
@@ -362,6 +361,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
                     {/* Wishlist Heart Button */}
                     <button
+                      disabled title="Saved shopping is not available yet"
                       aria-label={`Save ${product.name} to wishlist`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -402,7 +402,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   <div className="p-3 flex-1 flex flex-col justify-between">
                     <div>
                       <h3
-                        onClick={() => onNavigate(`/product/${product.id}`)}
+                        onClick={() => onNavigate(`/product/${product.slug || product.id}`)}
                         className="font-serif text-[14px] leading-snug line-clamp-2 text-[#231919] cursor-pointer hover:text-[#780D24] transition-colors"
                       >
                         {product.name}
@@ -422,23 +422,24 @@ export const ShopView: React.FC<ShopViewProps> = ({
                             {formatINR(product.originalPrice)}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[#5F5552]">{demoEnabled ? 'In Stock' : 'Sample stock'}</span>
+                          <span className="text-[10px] text-[#5F5552]">{product.inStock ? 'In stock' : 'Out of stock'}</span>
                         )}
                       </div>
 
                       {product.inStock ? (
                         <button
+                          disabled title="Online shopping is not available yet; please contact us"
                           onClick={() => onAddToCart(product)}
                           className="w-full mt-2.5 py-2 bg-[#780D24] hover:bg-[#5E091B] text-white rounded text-[11px] font-semibold tracking-wider uppercase font-sans flex items-center justify-center gap-1 active:scale-95 transition-all shadow-xs"
                         >
                           <span className="material-symbols-outlined text-[14px]">
                             shopping_bag
                           </span>
-                          <span>Add to Bag</span>
+                          <span>Bag unavailable</span>
                         </button>
                       ) : (
                         <div className="w-full mt-2.5 py-1.5 text-center text-[10px] font-sans uppercase tracking-wider text-[#780D24] font-medium">
-                          Sample unavailable item
+                          Out of stock
                         </div>
                       )}
                     </div>
@@ -488,22 +489,22 @@ export const ShopView: React.FC<ShopViewProps> = ({
                     Price Spectrum
                   </span>
                   <span className="font-sans text-[12px] text-[#780D24] font-bold">
-                    Up to {formatINR(maxPrice)}
+                    Up to {formatINR(Math.min(maxPrice, priceCeiling))}
                   </span>
                 </div>
                 <input
                   type="range"
-                  min="6000"
-                  max="80000"
-                  step="1000"
-                  value={maxPrice}
+                  min="0"
+                  max={priceCeiling}
+                  step="1"
+                  value={Math.min(maxPrice, priceCeiling)}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
                   className="w-full accent-[#780D24] cursor-pointer"
                 />
                 <div className="flex justify-between text-[11px] font-sans text-[#5F5552] mt-1">
-                  <span>₹6,000</span>
-                  <span>₹40,000</span>
-                  <span>₹80,000</span>
+                  <span>{formatINR(0)}</span>
+                  <span>{formatINR(priceCeiling / 2)}</span>
+                  <span>{formatINR(priceCeiling)}</span>
                 </div>
               </div>
 

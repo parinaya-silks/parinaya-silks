@@ -1,5 +1,7 @@
 # Administrator access milestone
 
+Product milestone update: [PRODUCTS.md](PRODUCTS.md) documents real Products & Inventory/Add/Edit screens and the authenticated catalog API. The dual administrator authorization policy is unchanged. Permission refresh now preserves the mounted editor hidden/inert until verification succeeds, so focus changes and upload dialogs do not discard unsaved work. Restriction, sign-out and verification errors still remove the protected panel.
+
 Category milestone update: [CATEGORIES.md](CATEGORIES.md) documents the real category module and the current rules. It supersedes this historical milestone's blanket browser-write denial: enabled administrators can create/update categories and their paired slug reservations, and enabled categories are publicly readable. All other business modules retain their unavailable states.
 
 Current storefront scope: [STOREFRONT_REVIEW.md](STOREFRONT_REVIEW.md) supersedes the former blanket preparation gate. Public browsing is available; customer accounts and transactions remain unavailable. The admin authorization mechanism below is unchanged.

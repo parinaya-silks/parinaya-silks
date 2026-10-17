@@ -7,6 +7,7 @@ from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     browser = p.chromium.launch()
     context = browser.new_context()
+    context.route('**/api/catalog*', lambda route: route.fulfill(status=200,content_type='application/json',body='{"items":[],"nextCursor":null}'))
     # The production client must ignore SDK ambient emulator defaults as well.
     context.add_init_script("globalThis.__FIREBASE_DEFAULTS__ = { emulatorHosts: { firestore: '127.0.0.1:8080' } };")
     page = context.new_page()

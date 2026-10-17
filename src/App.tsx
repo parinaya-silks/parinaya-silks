@@ -7,6 +7,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { demoEnabled } from './config/runtime.ts';
 import { normalizePath } from './utils/routing.ts';
 import { storeService } from './services/storeService.ts';
+import { usePublicCatalog } from './products/hooks.ts';
+import { storefrontProduct } from './products/adapter.ts';
+import { PublicProduct } from './products/PublicProduct.tsx';
 import {
   Product,
   CartItem,
@@ -25,7 +28,6 @@ import { MobileBottomNav } from './components/MobileBottomNav.tsx';
 // Customer Views
 import { HomeView } from './views/HomeView.tsx';
 import { ShopView } from './views/ShopView.tsx';
-import { ProductDetailView } from './views/ProductDetailView.tsx';
 import { WishlistView } from './views/WishlistView.tsx';
 import { BagView } from './views/BagView.tsx';
 import { AccountView } from './views/AccountView.tsx';
@@ -53,7 +55,14 @@ function currentAdminPath() {
 export default function App() {
   const [adminPath, setAdminPath] = useState(currentAdminPath);
   useEffect(() => {
-    const update = () => setAdminPath(currentAdminPath());
+    let previous = window.location.pathname + window.location.search;
+    const update = (event?: Event) => {
+      const next = window.location.pathname + window.location.search;
+      if (next !== previous && !(event instanceof PopStateEvent && event.state?.skipUnsaved) && !window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) {
+        window.history.pushState(null, '', previous); return;
+      }
+      previous = next; setAdminPath(currentAdminPath());
+    };
     window.addEventListener('popstate', update);
     window.addEventListener('hashchange', update);
     const legacy = window.location.hash.replace(/^#/, '').split('?')[0];
@@ -79,7 +88,8 @@ function Storefront() {
   });
 
   // Reactive Data State from StoreService
-  const [products, setProducts] = useState<Product[]>(() => storeService.getProducts());
+  const catalog = usePublicCatalog();
+  const products = catalog.items.map(storefrontProduct);
   const [cart, setCart] = useState<CartItem[]>(() => storeService.getCart());
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => storeService.getWishlist());
   const [orders, setOrders] = useState<Order[]>(() => storeService.getOrders());
@@ -95,7 +105,6 @@ function Storefront() {
   // Sync with storeService subscription
   useEffect(() => {
     const unsubscribe = storeService.subscribe(() => {
-      setProducts(storeService.getProducts());
       setCart(storeService.getCart());
       setWishlist(storeService.getWishlist());
       setOrders(storeService.getOrders());
@@ -186,6 +195,8 @@ function Storefront() {
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
         isWishlisted={isWishlisted}
+        catalogState={catalog.state}
+        onRetry={catalog.retry}
       />
     );
   } else if (currentPath === '/shop' || currentPath.startsWith('/shop?') || currentPath === '/collections' || currentPath.startsWith('/collections/') || currentPath === '/sale' || currentPath === '/search' || currentPath.startsWith('/search?')) {
@@ -193,7 +204,7 @@ function Storefront() {
     const categoryParam = urlParams.get('category') || undefined;
     const searchParam = urlParams.get('search') || undefined;
 
-    customerView = (
+    customerView = catalog.state !== 'ready' ? <section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">{catalog.state === 'loading' ? 'Loading products…' : 'Products unavailable'}</h1>{catalog.state === 'error' && <button className="min-h-11 px-5 underline" onClick={catalog.retry}>Retry products</button>}</section> : (
       <ShopView
         key={currentPath}
         products={products}
@@ -208,24 +219,8 @@ function Storefront() {
       />
     );
   } else if (currentPath.startsWith('/product/')) {
-    const prodId = currentPath.replace('/product/', '').split('?')[0];
-    const product = products.find((p) => p.id === prodId && p.status === 'Published');
-    if (!product) {
-      customerView = <MissingRecord label="Product" onNavigate={navigate} />;
-    } else {
-
-    customerView = (
-      <ProductDetailView
-        key={product.id}
-        product={product}
-        allProducts={products}
-        onNavigate={navigate}
-        onAddToCart={handleAddToCart}
-        onToggleWishlist={handleToggleWishlist}
-        isWishlisted={isWishlisted}
-      />
-    );
-    }
+    const slug = currentPath.replace('/product/', '').split('?')[0];
+    customerView = <PublicProduct key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
   } else if (currentPath === '/wishlist') {
     customerView = (
       <WishlistView
@@ -367,6 +362,7 @@ function Storefront() {
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}
+        {catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
       </main>
 
       {/* Storefront Footer */}

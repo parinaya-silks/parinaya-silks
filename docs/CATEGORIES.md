@@ -1,5 +1,7 @@
 # Firestore categories — 17 October 2026
 
+Subsequent product milestone: [PRODUCTS.md](PRODUCTS.md) connects real product CRUD, canonical `categoryId`, inventory and verified Cloudinary media. It supersedes this document's statements that products are unconnected. Category management and deletion denial remain intact; disabling a category hides its published products too.
+
 Implemented locally for `parinaya-silks`, Firestore `(default)`. No live records, rules, indexes or Vercel deployment were changed. Products and other business modules remain unconnected. This guide supersedes older statements that every business module is unavailable or every browser write is denied.
 
 ## Files

@@ -8,6 +8,7 @@ Path('.cache/browser').mkdir(parents=True, exist_ok=True)
 with sync_playwright() as p:
     browser = p.chromium.launch()
     context = browser.new_context(reduced_motion='reduce')
+    context.route('**/api/catalog*', lambda route: route.fulfill(status=404 if 'slug=' in route.request.url else 200, content_type='application/json', body=json.dumps({'code':'not-found','message':'Product not found.'} if 'slug=' in route.request.url else {'items':[],'nextCursor':None})))
     context.route('https://firestore.googleapis.com/**', lambda route: route.abort())
     page = context.new_page()
     errors = []

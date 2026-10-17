@@ -15,7 +15,12 @@ export interface Product {
   sku: string;
   name: string;
   subtitle: string;
-  category: 'Kanjeevaram' | 'Banarasi' | 'Mangalagiri' | 'Tussar' | 'Organza' | 'Ikat';
+  category: string;
+  slug?: string;
+  gallery?: import('../products/model.ts').ProductImage[];
+  variants?: import('../products/model.ts').Variant[];
+  fabric?: string;
+  createdAt?: number;
   categoryLabel: string;
   price: number;
   originalPrice?: number;

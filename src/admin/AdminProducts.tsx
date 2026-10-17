@@ -21,14 +21,13 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
 
-  const categories = ['All', ...new Set(products.map(p => p.category))];
+  const categories = [{id:'All',name:'All'},...new Map(products.map(p=>[p.categoryId||'',{id:p.categoryId||'',name:p.categoryLabel||'Unassigned'}])).values()];
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesCategory =
         selectedCategory === 'All' ||
-        p.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        p.weaveType.toLowerCase().includes(selectedCategory.toLowerCase());
+        p.categoryId === selectedCategory;
 
       const matchesStatus =
         selectedStatus === 'All' || p.status === selectedStatus;
@@ -38,6 +37,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
         !q ||
         p.name.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
+        (p.slug || '').toLowerCase().includes(q) ||
         p.weaveType.toLowerCase().includes(q) ||
         p.colorName.toLowerCase().includes(q);
 
@@ -83,19 +83,19 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Total Catalog</span>
           <div className="mt-1 text-[22px] font-bold text-[#231919]">{unavailable ? '—' : products.length} {unavailable ? '' : 'Sarees'}</div>
-          <span className="text-[11px] text-[#817567]">Not connected</span>
+          <span className="text-[11px] text-[#817567]">{unavailable?'Not connected':'Loaded products'}</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Inventory Value</span>
           <div className="mt-1 text-[22px] font-bold text-[#780D24]">{unavailable ? '—' : formatINR(totalValue)}</div>
-          <span className="text-[11px] text-[#817567]">Not connected</span>
+          <span className="text-[11px] text-[#817567]">{unavailable?'Not connected':'Loaded inventory at selling price'}</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
           <span className="text-[11px] font-bold text-[#5F5552] uppercase">Low Stock Alerts</span>
           <div className="mt-1 text-[22px] font-bold text-amber-700">{unavailable ? '—' : lowStockCount} {unavailable ? '' : 'Sarees'}</div>
-          <span className="text-[11px] text-amber-800 font-medium">Not connected</span>
+          <span className="text-[11px] text-amber-800 font-medium">{unavailable?'Not connected':'Loaded published products'}</span>
         </div>
 
         <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
@@ -103,7 +103,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
           <div className="mt-1 text-[22px] font-bold text-emerald-700">
             {unavailable ? '—' : products.filter((p) => p.status === 'Published').length} {unavailable ? '' : 'Sarees'}
           </div>
-          <span className="text-[11px] text-emerald-800 font-medium">Not connected</span>
+          <span className="text-[11px] text-emerald-800 font-medium">{unavailable?'Not connected':'Loaded published products'}</span>
         </div>
       </div>
 
@@ -152,15 +152,15 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
         <div className="flex items-center gap-2 overflow-x-auto pb-1 border-t border-[#F4EEE5] pt-3 scrollbar-none">
           {categories.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
-                selectedCategory === cat
+                selectedCategory === cat.id
                   ? 'bg-[#780D24] text-white shadow-xs'
                   : 'bg-[#F4EEE5] text-[#5F5552] hover:text-[#231919] hover:bg-[#E8DDD6]'
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
@@ -187,8 +187,8 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                     <span className="material-symbols-outlined text-[36px] text-[#B88A44] mb-2 block">
                       inventory_2
                     </span>
-                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Products are not connected.' : 'No products found.'}</p>
-                    <p className="text-xs text-[#817567] mt-1">{unavailable ? 'This module is unavailable.' : 'Try another search or filter.'}</p>
+                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Products are not connected.' : products.length ? 'No products found.' : 'No products yet.'}</p>
+                    <p className="text-xs text-[#817567] mt-1">{unavailable ? 'This module is unavailable.' : products.length ? 'Try another search or filter.' : 'Add your first product or save a draft.'}</p>
                   </td>
                 </tr>
               ) : (
@@ -198,14 +198,14 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                     <tr key={p.id} className="hover:bg-[#FBF7F0] transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <img
+                          {p.images.full ? <img
                             src={p.images.full}
                             alt={p.name}
-                            className="w-12 h-16 object-cover rounded border border-[#E8DDD6] bg-[#F4EEE5] shrink-0"
-                          />
+                            className="w-12 h-16 object-contain rounded border border-[#E8DDD6] bg-[#F4EEE5] shrink-0"
+                          /> : <span className="w-12 h-16 bg-[#F4EEE5] shrink-0 rounded flex items-center justify-center text-xs">No image</span>}
                           <div className="min-w-0">
                             <h3 className="font-serif text-[14px] font-semibold text-[#231919] leading-snug truncate max-w-xs">
-                              {p.name}
+                              {p.name || 'Untitled draft'}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#5F5552]">
                               <span>{p.weaveType}</span>
@@ -222,7 +222,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                       </td>
 
                       <td className="py-3.5 px-4 font-mono font-bold text-[#780D24] text-xs">
-                        {p.sku}
+                        {p.sku || 'SKU not set'}
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -291,7 +291,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                             <span className="material-symbols-outlined text-[16px]">edit</span>
                           </button>
                           <button
-                            onClick={() => onNavigate(`/product/${p.id}`)}
+                            onClick={() => window.open(`/product/${p.slug || p.id}`, '_blank', 'noopener,noreferrer')}
                             className="p-1.5 rounded border border-[#E8DDD6] hover:border-[#B88A44] text-[#5F5552] hover:bg-[#F4EEE5] transition-colors"
                             title="View on Storefront"
                           >

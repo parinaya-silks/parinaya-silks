@@ -17,6 +17,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
     for origin in ['http://127.0.0.1:3000', 'http://127.0.0.1:4173']:
         context = browser.new_context(viewport={'width':390,'height':844}, reduced_motion='reduce')
+        context.route('**/api/catalog*', lambda route: route.fulfill(status=404 if 'slug=' in route.request.url else 200, content_type='application/json', body=json.dumps({'code':'not-found','message':'Product not found.'} if 'slug=' in route.request.url else {'items':[],'nextCursor':None})))
         errors, backend_requests = [], []
         for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**']:
             context.route(pattern, lambda route: (backend_requests.append(route.request.url),route.abort()))

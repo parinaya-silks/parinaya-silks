@@ -1,8 +1,8 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories now use Firestore; other business repositories and trusted checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Other business modules, customer login and checkout remain unconnected.
 
-See [category management, rules and acceptance steps](docs/CATEGORIES.md) for this milestone. Owner rule publication and application release remain necessary. No live test records were created.
+See [Product CRUD configuration and acceptance](docs/PRODUCTS.md) for the current milestone and [category management](docs/CATEGORIES.md) for its foundation. Product setup requires the local API server and server-only credentials. Owner rules/index publication, server configuration and application release remain necessary. No live test records or uploads were created.
 
 ## Administrator access
 

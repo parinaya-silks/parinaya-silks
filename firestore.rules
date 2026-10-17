@@ -57,6 +57,17 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/categories/$(request.resource.data.categoryId)).data.slug == slug;
       allow update, delete: if false;
     }
+    // Product mutations and listing use the trusted catalog API. Direct public
+    // gets still enforce publication and the CURRENT category visibility.
+    match /products/{id} {
+      allow get: if administrator() || (resource.data.schemaVersion == 1 && resource.data.status == 'Published'
+        && get(/databases/$(database)/documents/categories/$(resource.data.categoryId)).data.enabled == true);
+      allow list: if administrator();
+      allow write: if false;
+    }
+    match /productSlugs/{slug} { allow read, write: if false; }
+    match /productMedia/{mediaId} { allow read, write: if false; }
+    match /catalogUploadLimits/{id} { allow read, write: if false; }
     // Other business repositories remain unconnected and browser writes denied.
     match /{collection}/{document=**} {
       allow read: if collection in [
