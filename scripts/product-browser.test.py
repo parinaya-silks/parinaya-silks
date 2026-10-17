@@ -37,6 +37,26 @@ with sync_playwright() as p:
     page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
     page.get_by_role('button',name='Sign In',exact=True).click()
     page.get_by_role('heading',name='Add Product',exact=True).wait_for()
+    # A failed function response must stay an error; retry must perform a new
+    # authenticated list request and render the actual empty catalogue.
+    list_attempts={'count':0}
+    def fail_first_list(route):
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='list':
+            list_attempts['count']+=1
+            if list_attempts['count']==1:
+                route.fulfill(status=500,content_type='text/plain',body='FUNCTION_INVOCATION_FAILED')
+                return
+        route.continue_()
+    page.route('**/api/catalog',fail_first_list)
+    page.goto(origin+'/admin/products')
+    page.get_by_role('alert').filter(has_text='Catalog API is unavailable').wait_for()
+    page.get_by_role('button',name='Reload products',exact=True).click()
+    page.get_by_role('heading',name='Products & Stock',exact=True).wait_for()
+    page.get_by_role('alert').wait_for(state='hidden')
+    assert list_attempts['count']==2,'Retry must issue a new list request'
+    page.unroute('**/api/catalog',fail_first_list)
+    page.goto(origin+'/admin/products/new')
+    page.get_by_role('heading',name='Add Product',exact=True).wait_for()
     page.get_by_label('Product name',exact=True).fill('Emulator Saree')
     page.locator('form').evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}')
     page.get_by_role('heading',name='Edit Product',exact=True).wait_for()

@@ -1,5 +1,7 @@
 # Product CRUD milestone
 
+Production catalog startup fix and release requirement: [CATALOG_API_DIAGNOSTICS.md](CATALOG_API_DIAGNOSTICS.md). The current Firebase Admin dependency chain requires Vercel's documented `NODE_OPTIONS=--experimental-require-module` setting and a new deployment.
+
 Target: `parinaya-silks`, Firestore `(default)`. Local preparation only; no live products, uploads, deletions, rule publication or deployment.
 
 ## Schema and trust boundary

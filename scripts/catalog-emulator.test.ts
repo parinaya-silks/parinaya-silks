@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import {readFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import handler from '../api/catalog.ts';
 import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
 import {doc,getDoc,setDoc,updateDoc,deleteDoc} from 'firebase/firestore';
 import {serverFirebase} from '../server/firebase.ts';
@@ -15,6 +18,9 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
   const {database:db,auth}=serverFirebase();
   const tokens:Record<string,string>={};const users:string[]=[];
   let verifyFails=false;
+  const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');
+  const api=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
+  const listing=(token?:string)=>fetch(api,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({action:'list'})});
   const service=catalogService({database:db,auth,media:{sign:ticket=>({public_id:ticket.publicId,timestamp:ticket.timestamp,overwrite:'false',signature:'synthetic'}),verify:async ticket=>{if(verifyFails)throw new Error('Fixture verification failed');return {assetId:'trusted-'+ticket.publicId,publicId:ticket.publicId,url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/fixture.jpg',width:300,height:400,bytes:1000,format:'jpg',version:1};}}});
   try {
     await environment.clearFirestore();
@@ -23,12 +29,17 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
       await auth.createUser({uid,email:`${uid}@example.test`,password});await auth.setCustomUserClaims(uid,{admin:claim});if(enabled)await db.doc(`adminAccess/${uid}`).set({enabled:true});
       const result=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=synthetic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:`${uid}@example.test`,password,returnSecureToken:true})});tokens[role]=(await result.json()).idToken;
     }
+    let response=await listing();assert.equal(response.status,401);assert.equal((await response.json()).code,'unauthorized');
+    response=await listing('synthetic-invalid-token');assert.equal(response.status,401);
+    for(const role of ['customer','claim-only','record-only','disabled']){response=await listing(tokens[role]);assert.equal(response.status,403);}
+    response=await listing(tokens.admin);assert.equal(response.status,200);assert.deepEqual(await response.json(),{items:[],nextCursor:null});
     const categoryId='c'.repeat(20),otherCategory='d'.repeat(20);
     await db.doc(`categories/${categoryId}`).set({name:'Emulator category',enabled:true});await db.doc(`categories/${otherCategory}`).set({name:'Disabled',enabled:false});
     const id=db.collection('products').doc().id,operation=()=>randomUUID().replaceAll('-','');
     const draft={...emptyProduct(),slug:'emulator-saree'};
     const save=(product:unknown,revision:number,operationId=operation(),productId=id)=>service.privileged(tokens.admin,{action:'save',id:productId,expectedRevision:revision,operationId,product}) as Promise<ProductRecord>;
     const op=operation();let saved=await save(draft,0,op);assert.equal(saved.revision,1);assert.equal(saved.name,'');
+    response=await listing(tokens.admin);assert.equal(response.status,200);const page=await response.json();assert.equal(page.items.length,1);assert.equal(page.items[0].id,id);
     assert.equal((await save(draft,0,op)).revision,1);
     await assert.rejects(save({...draft,name:'Changed operation'},0,op),{code:'conflict'});
     assert.equal((await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord).slug,draft.slug);
@@ -79,5 +90,5 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await db.doc('adminAccess/crud-admin').update({enabled:'true'});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'permission'});
     await db.doc('adminAccess/crud-admin').update({enabled:true});
     await auth.updateUser('crud-admin',{disabled:true});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'unauthorized'});await auth.updateUser('crud-admin',{disabled:false});
-  } finally {await environment.clearFirestore();for(const uid of users)await auth.deleteUser(uid);await environment.cleanup();}
+  } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await environment.clearFirestore();for(const uid of users)await auth.deleteUser(uid);await environment.cleanup();}
 });

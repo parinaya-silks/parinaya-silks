@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { ServiceAccount } from 'firebase-admin/app';
+import { CatalogConfigurationError } from './errors.ts';
 
 export function firebaseServiceAccount(
   environment: NodeJS.ProcessEnv,
@@ -10,7 +11,7 @@ export function firebaseServiceAccount(
   const key = environment.FIREBASE_PRIVATE_KEY;
   if (email || key) {
     if (!email || !key || environment.FIREBASE_PROJECT_ID !== projectId) {
-      throw new Error('Set all three Firebase server credential variables for parinaya-silks.');
+      throw new CatalogConfigurationError('Set all three Firebase server credential variables for parinaya-silks.', 'firebase-credentials-incomplete');
     }
     return { projectId, clientEmail: email, privateKey: key.replace(/\\n/g, '\n') };
   }
@@ -22,7 +23,7 @@ export function firebaseServiceAccount(
   if (!raw) return undefined;
   let account;
   try { account = JSON.parse(raw); }
-  catch { throw new Error('Invalid Firebase service-account JSON.'); }
-  if (!account || account.project_id !== projectId) throw new Error('Credential project mismatch.');
+  catch { throw new CatalogConfigurationError('Invalid Firebase service-account JSON.', 'firebase-json-invalid'); }
+  if (!account || account.project_id !== projectId) throw new CatalogConfigurationError('Credential project mismatch.', 'firebase-project-mismatch');
   return { projectId, clientEmail: account.client_email, privateKey: account.private_key };
 }

@@ -1,17 +1,13 @@
 import { getAdminClients } from '../services/firebase/adminAuth.ts';
 import { ProductError, type ProductInput, type ProductRecord, type ProductImage } from './model.ts';
+import { catalogResponse, productLoadFailure } from './response.ts';
 
-async function response(result:Response) {
-  let data;
-  try {data=await result.json();} catch {throw new ProductError('unavailable','Catalog API is unavailable. Start the local API server or contact the store owner.');}
-  if(!result.ok)throw new ProductError(data.code||'unavailable',data.message||'Catalog request failed.',data.fields||{});
-  return data;
-}
+const response=(result:Response)=>catalogResponse(result,import.meta.env.DEV);
 export async function catalogAction<T>(body:Record<string,unknown>):Promise<T> {
   const user=getAdminClients().auth.currentUser;
   if(!user)throw new ProductError('unauthorized','Sign in again to continue.');
   try {return await response(await fetch('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)}));}
-  catch(error){if(error instanceof ProductError)throw error;throw new ProductError('unavailable','The server could not confirm this operation. Your changes are kept; retry or check your connection.');}
+  catch(error){if(error instanceof ProductError)throw error;throw new ProductError('unavailable',body.action==='list'?productLoadFailure:'The server could not confirm this operation. Your changes are kept; retry or check your connection.');}
 }
 export interface CatalogPage {items:ProductRecord[];nextCursor:string|null}
 export async function publicCatalog(cursor?:string):Promise<CatalogPage> {return response(await fetch('/api/catalog'+(cursor?`?cursor=${encodeURIComponent(cursor)}`:''),{cache:'no-store',signal:AbortSignal.timeout(15000)}));}

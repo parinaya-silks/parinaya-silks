@@ -3,6 +3,7 @@ import { FieldPath, FieldValue, type Firestore, type Transaction } from 'firebas
 import type { Auth } from 'firebase-admin/auth';
 import { MAX_IMAGE_BYTES, ProductError, productFields, validateProduct, type ProductRecord, type ProductImage } from '../src/products/model.ts';
 import type { CloudinaryMedia, UploadTicket } from './cloudinary.ts';
+import { CatalogConfigurationError } from './errors.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
@@ -13,7 +14,12 @@ function mediaId(value:unknown):string {if(typeof value!=='string'||!/^[a-f0-9]{
 export function catalogService({database:db,auth,media}:Dependencies) {
   async function administrator(token:string) {
     let user;
-    try { user=await auth.verifyIdToken(token,true); } catch { throw new ProductError('unauthorized','Sign in again to continue.'); }
+    try { user=await auth.verifyIdToken(token,true); } catch(error) {
+      const code=typeof error==='object' && error!==null && 'code' in error ? error.code : '';
+      if(['auth/argument-error','auth/invalid-argument','auth/invalid-id-token','auth/id-token-expired','auth/id-token-revoked','auth/user-disabled','auth/user-not-found'].includes(code as string)) throw new ProductError('unauthorized','Sign in again to continue.');
+      if(['app/invalid-credential','auth/invalid-credential','auth/insufficient-permission'].includes(code as string)) throw new CatalogConfigurationError('Firebase token verification is not configured.', 'firebase-auth-configuration', {cause:error});
+      throw error;
+    }
     if(user.aud!=='parinaya-silks' || user.admin!==true || (await db.doc(`adminAccess/${user.uid}`).get()).data()?.enabled!==true) throw new ProductError('permission','Active administrator permission is required.');
     return user.uid;
   }
