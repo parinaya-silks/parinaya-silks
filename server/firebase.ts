@@ -1,7 +1,7 @@
 import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { readFileSync } from 'node:fs';
+import { firebaseServiceAccount } from './credentials.ts';
 
 export function serverFirebase() {
   const projectId='parinaya-silks';
@@ -13,9 +13,8 @@ export function serverFirebase() {
   if(!app) {
     let credential;
     if(!emulator) {
-      const raw=process.env.FIREBASE_SERVICE_ACCOUNT_JSON || (process.env.GOOGLE_APPLICATION_CREDENTIALS ? readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS,'utf8') : '');
-      if(raw) {const account=JSON.parse(raw);if(account.project_id!==projectId) throw new Error('Credential project mismatch.');credential=cert(account);}
-      else credential=applicationDefault();
+      const account=firebaseServiceAccount(process.env);
+      credential=account ? cert(account) : applicationDefault();
     }
     app=initializeApp({projectId,...(credential?{credential}:{})},'parinaya-catalog');
   }
