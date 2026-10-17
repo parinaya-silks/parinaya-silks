@@ -9,6 +9,7 @@ async function run(command: string, args: string[], environment = process.env) {
   await new Promise<void>((resolve, reject) => { const child = spawn(command, args, { stdio: 'inherit', env: environment }); child.on('error', reject); child.on('exit', code => code === 0 ? resolve() : reject(new Error(`Test command exited ${code}`))); });
 }
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/admin-rules.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/category-rules.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -36,4 +37,5 @@ try {
   }
   if (!ready) throw new Error('Local test server unavailable.');
   await run('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await run('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); }

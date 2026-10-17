@@ -1,5 +1,7 @@
 # Administrator access milestone
 
+Category milestone update: [CATEGORIES.md](CATEGORIES.md) documents the real category module and the current rules. It supersedes this historical milestone's blanket browser-write denial: enabled administrators can create/update categories and their paired slug reservations, and enabled categories are publicly readable. All other business modules retain their unavailable states.
+
 Current storefront scope: [STOREFRONT_REVIEW.md](STOREFRONT_REVIEW.md) supersedes the former blanket preparation gate. Public browsing is available; customer accounts and transactions remain unavailable. The admin authorization mechanism below is unchanged.
 
 Target: `parinaya-silks`, Cloud Firestore `(default)`. Entry: `https://parinayasilks.vercel.app/admin`. First approved account: `parinayasilks.in@gmail.com`.
@@ -35,7 +37,7 @@ Access requires BOTH:
 
 The frontend uses the actual authenticated UID/token, not an email comparison, customer profile role, localStorage flag or demo session. Only the trusted provisioning procedure creates/updates the access document or custom claim. Creating an Auth account by itself grants no administrator permission. There is no public administrator registration.
 
-Firestore rules check the same claim and access record before allowing reads of the explicitly named business collections. Every browser write is denied for this milestone, including administrator writes. Each signed-in account can get/listen to only its own access record; no client can list or modify access records. Undeclared collections remain denied. There is no established customer Firestore repository/access model yet to preserve: the previous rule was a global test-mode grant, while customer data still comes from isolated local mocks. Public catalog/owner-specific customer access will need separate reviewed rules when those features are connected.
+Firestore rules check the same claim and access record for private business collections. The category milestone permits validated administrator category writes and enabled-only public category reads; other business writes remain denied. Each signed-in account can get/listen to only its own access record; no client can list or modify access records. Undeclared collections remain denied. Customer account repositories are still unconnected; public product and owner-specific customer access require separate reviewed rules.
 
 The access record provides a revocation mechanism independent of a previously issued token. The revoke procedure disables that record first, then removes the claim and revokes refresh tokens. Existing data access is denied by rules immediately after the record is disabled; the UI listener removes protected content. Claim changes alone are detected on token change, browser focus/visibility and a visible-page refresh every 60 seconds; Firebase token refresh propagation is not instantaneous. A cached/offline permission snapshot never authorizes the UI. Initial checks and refreshes show loading and have a ten-second failure deadline.
 
@@ -56,7 +58,7 @@ The existing admin layout, colors, typography, sidebar and mobile menu are retai
 | Coupons & Loyalty | Unavailable state. The sample loyalty engine is not described as active. Existing editor code is retained. |
 | Store Settings | Unavailable state; no fictional shipping values and no localStorage save/reset presented as a live store update. Existing form code is retained. |
 
-All eight areas remain unconnected business modules. This is deliberate; authentication readiness does not imply that their data or mutation behavior has been released. Customer navigation contains no administrator shortcut.
+The category module now has its own protected route and Manage Categories entry from Products & Inventory. The other areas above remain unconnected business modules. Authentication readiness does not imply their mutation behavior has been released. Customer navigation contains no administrator shortcut.
 
 ## Firebase Console setup (owner actions)
 
@@ -71,7 +73,7 @@ All eight areas remain unconnected business modules. This is deliberate; authent
 npx.cmd firebase deploy --only firestore:rules --project parinaya-silks
 ```
 
-No rule deployment command was executed by this task. Deploying this replacement disables all unauthenticated access and all browser writes. If an external integration not present in this repository relies on the test-mode grant, identify and review its exact access before deployment; do not retain the broad grant.
+No rule deployment command was executed by this task. The current replacement permits enabled-only public category reads and validated administrator category writes; other private data and business mutation restrictions remain. If an external integration not present in this repository relies on the test-mode grant, review its exact access before deployment; do not retain the broad grant. See CATEGORIES.md for the current release procedure.
 
 See [Firebase password authentication](https://firebase.google.com/docs/auth/web/password-auth) and [custom claims](https://firebase.google.com/docs/auth/admin/custom-claims).
 

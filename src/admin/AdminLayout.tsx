@@ -21,6 +21,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { path: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
     { path: '/admin/orders', label: 'Orders', icon: 'local_mall' },
     { path: '/admin/products', label: 'Products & Inventory', icon: 'inventory_2' },
+    { path: '/admin/categories', label: 'Categories', icon: 'category' },
     { path: '/admin/customers', label: 'Customers', icon: 'group' },
     { path: '/admin/coupons', label: 'Coupons & Loyalty', icon: 'loyalty' },
     { path: '/admin/settings', label: 'Store Settings', icon: 'settings' },

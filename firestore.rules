@@ -16,11 +16,51 @@ service cloud.firestore {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, create, update, delete: if false;
     }
-    // Business repositories are not connected in this milestone. Administrator
-    // reads are scoped to these areas; ALL browser writes remain disabled.
+    function validCategory(data) {
+      return data.keys().hasAll(['name', 'slug', 'enabled', 'displayOrder', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'slug', 'description', 'enabled', 'displayOrder', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.name.matches('\\S(?:.*\\S)?')
+        && data.name.matches('[^\\x00-\\x1F\\x7F]+')
+        && data.slug is string && data.slug.size() <= 80
+        && data.slug.matches('[a-z0-9]+(-[a-z0-9]+)*')
+        && (!('description' in data) || (data.description is string && data.description.size() <= 240 && data.description.matches('[^\\x00-\\x1F\\x7F]*')))
+        && data.enabled is bool
+        && data.displayOrder is int && data.displayOrder >= 0 && data.displayOrder <= 9999
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+    match /categories/{id} {
+      allow read: if administrator() || resource.data.enabled == true;
+      allow create: if administrator() && id.matches('[A-Za-z0-9]{20}')
+        && validCategory(request.resource.data)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && !exists(/databases/$(database)/documents/categorySlugs/$(request.resource.data.slug))
+        && getAfter(/databases/$(database)/documents/categorySlugs/$(request.resource.data.slug)).data.categoryId == id
+        && getAfter(/databases/$(database)/documents/categorySlugs/$(request.resource.data.slug)).data.createdAt == request.time;
+      allow update: if administrator() && validCategory(request.resource.data)
+        && request.resource.data.slug == resource.data.slug
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && get(/databases/$(database)/documents/categorySlugs/$(resource.data.slug)).data.categoryId == id;
+      // Products are not connected yet. Do not claim an unused category until
+      // a trusted product-reference invariant exists. Disable it instead.
+      allow delete: if false;
+    }
+    match /categorySlugs/{slug} {
+      allow read: if administrator();
+      allow create: if administrator()
+        && request.resource.data.keys().hasAll(['categoryId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['categoryId', 'createdAt'])
+        && request.resource.data.categoryId is string && request.resource.data.categoryId.matches('[A-Za-z0-9]{20}')
+        && request.resource.data.createdAt == request.time
+        && !exists(/databases/$(database)/documents/categories/$(request.resource.data.categoryId))
+        && getAfter(/databases/$(database)/documents/categories/$(request.resource.data.categoryId)).data.slug == slug;
+      allow update, delete: if false;
+    }
+    // Other business repositories remain unconnected and browser writes denied.
     match /{collection}/{document=**} {
       allow read: if collection in [
-        'products', 'categories', 'collections', 'orders', 'customers',
+        'products', 'collections', 'orders', 'customers',
         'coupons', 'loyalty', 'settings', 'banners', 'inventory'
       ] && administrator();
       allow write: if false;

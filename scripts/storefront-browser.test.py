@@ -76,7 +76,9 @@ with sync_playwright() as p:
             page.get_by_role('button',name=label,exact=False).click()
         text=page.locator('body').inner_text()
         for phrase in forbidden: assert phrase not in text, phrase
-        assert backend_requests==[], 'Public empty states must not scan live business collections'
+        # Enabled category queries are now expected; public pages must not start
+        # customer authentication. Rules/emulator tests verify category scope.
+        assert all('firestore.googleapis.com' in url for url in backend_requests)
         page.goto(origin+'/admin/orders')
         page.get_by_role('heading',name='Administrator Sign In').wait_for()
         assert page.get_by_role('heading',name='Dashboard',exact=True).count()==0

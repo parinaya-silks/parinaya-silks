@@ -8,6 +8,7 @@ test('admin paths are anchored and return destinations are strictly internal', (
   assert.ok(isAdminLocation('/admin/orders/example'));
   for (const destination of ['https://evil.example', '//evil.example', '/admin/../../outside', '/admin\\evil', '/admin/%2f%2fevil', '/admin/orders/x?returnTo=https://evil.example', '/account']) assert.equal(safeAdminDestination(destination), '/admin/dashboard');
   assert.equal(safeAdminDestination('/admin/products/edit/sku-1'), '/admin/products/edit/sku-1');
+  assert.equal(safeAdminDestination('/admin/categories'), '/admin/categories');
 });
 test('admin access requires a literal true claim and unexpired token', () => {
   const future = new Date(Date.now() + 60000).toISOString();

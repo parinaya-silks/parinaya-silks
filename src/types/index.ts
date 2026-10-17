@@ -9,6 +9,8 @@ export type FulfilmentStatus =
 export type PaymentStatus = 'Paid' | 'Pending' | 'Failed' | 'Refunded';
 
 export interface Product {
+  // Future product persistence will use this stable reference, not a category name.
+  categoryId?: string;
   id: string;
   sku: string;
   name: string;

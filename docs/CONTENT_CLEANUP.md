@@ -1,5 +1,7 @@
 # Empty content milestone — 17 October 2026
 
+Subsequent category milestone: [CATEGORIES.md](CATEGORIES.md) connects real enabled Firestore categories to the existing shop controls. Products and other business records remain empty/unconnected. No sample categories or products are seeded.
+
 The public website stays visible. No product CRUD, customer login, business repositories or payment integrations were added. This document supersedes the sample-catalogue behavior described in `STOREFRONT_REVIEW.md`.
 
 ## Sources removed from displayed content

@@ -1,6 +1,8 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Business records are empty until their integrations are implemented. Administrator routes use clean URLs, real Firebase Authentication and server-managed permissions. Business repositories and trusted checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories now use Firestore; other business repositories and trusted checkout remain unconnected.
+
+See [category management, rules and acceptance steps](docs/CATEGORIES.md) for this milestone. Owner rule publication and application release remain necessary. No live test records were created.
 
 ## Administrator access
 
@@ -12,7 +14,7 @@ Run npm.cmd run test:admin for isolated emulator tests. Provisioning is a separa
 
 ## Firebase connection — Step 1
 
-Confirmed target: project `parinaya-silks`, Cloud Firestore database `(default)`. [Firebase setup and verification](docs/FIREBASE_SETUP.md) lists the exact local/Vercel variables and development-only read checks. The supplied browser configuration is in ignored `.env.local`; `.env.example` contains placeholders. Customer page loading does not read Firestore. Signed-in administrator access checks its own permission record. No mock data is migrated or seeded.
+Confirmed target: project `parinaya-silks`, Cloud Firestore database `(default)`. [Firebase setup and verification](docs/FIREBASE_SETUP.md) lists the exact local/Vercel variables and development-only read checks. The supplied browser configuration is in ignored `.env.local`; `.env.example` contains placeholders. Public category listings read enabled Firestore categories. Signed-in administrator access checks its own permission record. No mock data is migrated or seeded.
 
 ```powershell
 npm.cmd run firebase:check

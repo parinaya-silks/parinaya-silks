@@ -188,7 +188,7 @@ function Storefront() {
         isWishlisted={isWishlisted}
       />
     );
-  } else if (currentPath === '/shop' || currentPath.startsWith('/shop?') || currentPath === '/collections' || currentPath === '/sale' || currentPath === '/search' || currentPath.startsWith('/search?')) {
+  } else if (currentPath === '/shop' || currentPath.startsWith('/shop?') || currentPath === '/collections' || currentPath.startsWith('/collections/') || currentPath === '/sale' || currentPath === '/search' || currentPath.startsWith('/search?')) {
     const urlParams = new URLSearchParams(currentPath.includes('?') ? currentPath.split('?')[1] : '');
     const categoryParam = urlParams.get('category') || undefined;
     const searchParam = urlParams.get('search') || undefined;
@@ -199,6 +199,7 @@ function Storefront() {
         products={products}
         initialCategory={categoryParam}
         initialSearch={searchParam}
+        categorySlug={currentPath.startsWith('/collections/') ? currentPath.slice('/collections/'.length).split('?')[0] : undefined}
         saleOnly={currentPath === '/sale'}
         onNavigate={navigate}
         onAddToCart={handleAddToCart}

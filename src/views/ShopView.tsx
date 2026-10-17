@@ -2,11 +2,13 @@ import { demoEnabled } from '../config/runtime.ts';
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
+import { useCategories } from '../categories/useCategories.ts';
 
 interface ShopViewProps {
   products: Product[];
   initialCategory?: string;
   initialSearch?: string;
+  categorySlug?: string;
   saleOnly?: boolean;
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product) => void;
@@ -18,13 +20,13 @@ export const ShopView: React.FC<ShopViewProps> = ({
   products,
   initialCategory,
   initialSearch = '',
+  categorySlug: requestedSlug,
   saleOnly = false,
   onNavigate,
   onAddToCart,
   onToggleWishlist,
   isWishlisted,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [sortOption, setSortOption] = useState<'featured' | 'newest' | 'price-asc' | 'price-desc'>('featured');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -35,7 +37,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number>(80000);
 
-  const categories = [{ id: 'all', label: 'All Sarees' }, ...Array.from(new Set(products.map(p => p.category))).map(category => ({ id: category, label: category }))];
+  const { state: categoryState, retry: retryCategories } = useCategories();
+  const publicCategories = categoryState.status === 'ready' ? categoryState.items : [];
+  const selectedPublic = requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
+  const selectedCategory = selectedPublic?.id || 'all';
+  const categories = [{ id: 'all', label: 'All Sarees' }, ...publicCategories.map(category => ({ id: category.id, label: category.name }))];
   const colorOptions = Array.from(new Map(products.map(p => [p.colorName, { name: p.colorName, hex: p.colorHex }])).values());
 
   // Filtered & Sorted products
@@ -44,11 +50,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
       .filter((p) => p.status === 'Published')
       .filter((p) => {
         // Category filter
-        if (selectedCategory === 'all') return true;
-        if (selectedCategory === 'bridal') {
-          return p.tags.includes('Bridal') || p.tags.includes('Heirloom');
-        }
-        return p.category.toLowerCase() === selectedCategory.toLowerCase();
+        return !selectedPublic || p.categoryId === selectedPublic.id;
       })
       .filter((p) => {
         // Search query
@@ -85,7 +87,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         if (sortOption === 'newest') return b.id.localeCompare(a.id);
         return 0; // featured default
       });
-  }, [products, selectedCategory, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption, saleOnly]);
+  }, [products, selectedCategory, selectedPublic, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption, saleOnly]);
 
   const activeFilterCount =
     (selectedCategory !== 'all' ? 1 : 0) +
@@ -94,11 +96,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
     (maxPrice < 80000 ? 1 : 0);
 
   const clearAllFilters = () => {
-    setSelectedCategory('all');
     setSelectedColors([]);
     setInStockOnly(false);
     setMaxPrice(80000);
     setSearchQuery('');
+    if (requestedSlug || initialCategory) onNavigate('/shop');
   };
 
   const getSortLabel = () => {
@@ -121,7 +123,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         <div className="max-w-7xl mx-auto flex items-baseline justify-between">
           <div className="flex items-baseline gap-2.5">
             <h1 className="font-serif text-[20px] sm:text-[24px] text-[#231919] font-semibold tracking-tight">
-              {searchQuery ? `Search: "${searchQuery}"` : 'Shop All Sarees'}
+              {selectedPublic ? selectedPublic.name : searchQuery ? `Search: "${searchQuery}"` : 'Shop All Sarees'}
             </h1>
             <span className="font-sans text-[11px] sm:text-[12px] text-[#5F5552] uppercase tracking-wider">
               {filteredProducts.length} Sarees
@@ -133,6 +135,13 @@ export const ShopView: React.FC<ShopViewProps> = ({
         </div>
       </section>
 
+      <div className="max-w-7xl mx-auto px-4 text-sm text-[#5F5552]">
+        {categoryState.status === 'loading' && <p role="status">Loading categories…</p>}
+        {categoryState.status === 'error' && <div role="alert"><p>Categories are unavailable right now.</p><button className="min-h-11 underline text-[#780D24]" onClick={retryCategories}>Retry categories</button></div>}
+        {categoryState.status === 'ready' && publicCategories.length === 0 && !requestedSlug && !initialCategory && <p>No categories available yet.</p>}
+        {selectedPublic?.description && <p>{selectedPublic.description}</p>}
+      </div>
+
       {/* Category Pills Horizontal Scroll */}
       <section className="bg-[#FBF7F0] border-b border-[#E8DDD6] px-4 py-2.5 overflow-x-auto no-scrollbar">
         <div className="max-w-7xl mx-auto flex items-center gap-2">
@@ -141,9 +150,9 @@ export const ShopView: React.FC<ShopViewProps> = ({
             return (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => { if (cat.id === 'all') onNavigate('/shop'); else { const category = publicCategories.find(item => item.id === cat.id); if (category) onNavigate(`/collections/${category.slug}`); } }}
                 className={`px-4 py-1.5 rounded-full font-sans text-[12px] tracking-wider uppercase flex-shrink-0 transition-all font-semibold ${
-                  isActive
+                  (selectedPublic?.id === cat.id || (!selectedPublic && isActive))
                     ? 'bg-[#780D24] text-white shadow-xs'
                     : 'bg-white text-[#231919] border border-[#E8DDD6] hover:border-[#B88A44]'
                 }`}
@@ -263,8 +272,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
               {selectedCategory !== 'all' && (
                 <div className="inline-flex items-center bg-[#F4EEE5] border border-[#B88A44]/30 rounded px-2.5 py-0.5 gap-1 shrink-0 text-[11px] font-sans">
-                  <span>Category: {selectedCategory}</span>
-                  <button onClick={() => setSelectedCategory('all')}>
+                  <span>Category: {selectedPublic?.name}</span>
+                  <button aria-label="Clear category" onClick={() => onNavigate('/shop')}>
                     <span className="material-symbols-outlined text-[14px]">close</span>
                   </button>
                 </div>
@@ -303,22 +312,25 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
       {/* 2-Column Mobile / 4-Column Desktop Product Grid */}
       <main className="max-w-7xl mx-auto px-4 py-2">
-        {filteredProducts.length === 0 ? (
+        {(requestedSlug || initialCategory) && (categoryState.status !== 'ready' || !selectedPublic) ? <section className="py-8 text-center space-y-3">
+          <h2 className="font-serif text-xl">{categoryState.status === 'ready' ? 'Category not found.' : categoryState.status === 'error' ? 'Category unavailable' : 'Loading category…'}</h2>
+          {categoryState.status === 'ready' && <button className="min-h-11 px-5 text-[#780D24] underline" onClick={() => onNavigate('/shop')}>Continue Shopping</button>}
+        </section> : filteredProducts.length === 0 ? (
           <div className="max-w-xl mx-auto bg-white rounded-xl border border-[#E8DDD6] p-6 text-center my-6 space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EEE5] border border-[#B88A44] flex items-center justify-center text-[#780D24]">
               <span className="material-symbols-outlined text-[32px]">inventory_2</span>
             </div>
             <h2 className="font-serif text-[20px] text-[#231919] font-medium">
-              {searchQuery || activeFilterCount > 0 ? 'No products found.' : 'No products available yet.'}
+              {searchQuery || (products.length > 0 && activeFilterCount > 0) ? 'No products found.' : 'No products available yet.'}
             </h2>
             <p className="font-sans text-[14px] text-[#5F5552] max-w-sm mx-auto">
-              {searchQuery || activeFilterCount > 0 ? 'Try another search or clear your filters.' : 'Please check back or contact us for more information.'}
+              {searchQuery || (products.length > 0 && activeFilterCount > 0) ? 'Try another search or clear your filters.' : 'Please check back or contact us for more information.'}
             </p>
             <button
-              onClick={() => searchQuery || activeFilterCount > 0 ? clearAllFilters() : onNavigate('/contact')}
+              onClick={() => searchQuery || (products.length > 0 && activeFilterCount > 0) ? clearAllFilters() : onNavigate('/contact')}
               className="px-6 py-2.5 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[12px] font-bold tracking-wider uppercase rounded-lg shadow-sm active:scale-95 transition-all"
             >
-              {searchQuery || activeFilterCount > 0 ? 'Clear filters' : 'Contact Us'}
+              {searchQuery || (products.length > 0 && activeFilterCount > 0) ? 'Clear filters' : 'Contact Us'}
             </button>
           </div>
         ) : (
@@ -504,7 +516,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
+                      onClick={() => { const category = publicCategories.find(item => item.id === cat.id); onNavigate(category ? `/collections/${category.slug}` : '/shop'); }}
                       className={`px-3 py-1.5 rounded-lg text-[12px] font-sans tracking-wide transition-all ${
                         selectedCategory === cat.id
                           ? 'bg-[#780D24] text-white font-semibold shadow-xs'

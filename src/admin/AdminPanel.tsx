@@ -4,6 +4,7 @@ import { AdminDashboard } from './AdminDashboard.tsx';
 import { AdminOrders } from './AdminOrders.tsx';
 import { AdminProducts } from './AdminProducts.tsx';
 import { AdminCustomers } from './AdminCustomers.tsx';
+import { AdminCategories } from './AdminCategories.tsx';
 import { safeAdminDestination } from './accessPolicy.ts';
 
 function unavailableWrite(): never { throw new Error('This module is not connected. No live changes were saved.'); }
@@ -18,10 +19,12 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   let content: React.ReactNode;
   if (path === '/admin' || path === '/admin/dashboard' || path === '/admin/login') {
     content = <AdminDashboard unavailable orders={[]} products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} />;
+  } else if (path === '/admin/categories') {
+    content = <AdminCategories onNavigate={navigate} />;
   } else if (path === '/admin/orders') {
     content = <fieldset disabled className="min-w-0"><AdminOrders unavailable orders={[]} onNavigate={navigate} onUpdateStatus={unavailableWrite} onBulkUpdateStatus={unavailableWrite} /></fieldset>;
   } else if (path === '/admin/products') {
-    content = <><button className="min-h-11 px-4 mb-4 rounded-lg border border-[#B88A44] text-[#780D24]" onClick={() => navigate('/admin/products/new')}>Open product editor</button><fieldset disabled className="min-w-0"><AdminProducts unavailable products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} onToggleStatus={unavailableWrite} /></fieldset></>;
+    content = <><div className="flex flex-wrap gap-2 mb-4"><button className="min-h-11 px-4 rounded-lg border border-[#B88A44] text-[#780D24]" onClick={() => navigate('/admin/categories')}>Manage Categories</button><button className="min-h-11 px-4 rounded-lg border border-[#B88A44] text-[#780D24]" onClick={() => navigate('/admin/products/new')}>Open product editor</button></div><fieldset disabled className="min-w-0"><AdminProducts unavailable products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} onToggleStatus={unavailableWrite} /></fieldset></>;
   } else if (path === '/admin/customers') {
     content = <fieldset disabled className="min-w-0"><AdminCustomers unavailable customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
   } else {
@@ -29,7 +32,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     content = <ModuleUnavailable title={title} />;
   }
   return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email}>
-    <div role="note" className="mb-5 rounded-lg border border-[#B88A44]/40 bg-[#F4EEE5] p-4 text-sm text-[#5F5552]">Administrator access is active. Business modules are not connected yet. No live records are displayed and no changes can be saved.</div>
+    {path !== '/admin/categories' && <div role="note" className="mb-5 rounded-lg border border-[#B88A44]/40 bg-[#F4EEE5] p-4 text-sm text-[#5F5552]">Administrator access is active. This business module is not connected yet. No live records are displayed and no changes can be saved.</div>}
     <div key={path}>{content}</div>
   </AdminLayout>;
 }

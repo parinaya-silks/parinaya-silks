@@ -1,5 +1,6 @@
 import { initializeAuth, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, connectAuthEmulator, onIdTokenChanged, getIdTokenResult, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, type Auth, type User } from 'firebase/auth';
-import { initializeFirestore, connectFirestoreEmulator, doc, onSnapshot, type Firestore } from 'firebase/firestore';
+import { doc, onSnapshot, type Firestore } from 'firebase/firestore';
+import { getDatabaseClient } from './database.ts';
 import { getFirebaseApp } from './app.ts';
 import { hasAdminClaim, adminErrorMessage } from '../../admin/accessPolicy.ts';
 
@@ -15,11 +16,10 @@ export function getAdminClients(): Clients {
   const cached = clients.get(app.app.name);
   if (cached) return cached;
   const auth = initializeAuth(app.app, { persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence] });
-  const database = initializeFirestore(app.app, { host: 'firestore.googleapis.com', ssl: true });
+  const database = getDatabaseClient();
   // Explicit local test mode only. This branch is removed from production builds.
   if (import.meta.env.DEV && import.meta.env.MODE === 'admin-test') {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(database, '127.0.0.1', 8080);
   }
   const result = { auth, database };
   clients.set(app.app.name, result);
