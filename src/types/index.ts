@@ -17,8 +17,8 @@ export interface Product {
   subtitle: string;
   category: string;
   slug?: string;
-  gallery?: import('../products/model.ts').ProductImage[];
-  variants?: import('../products/model.ts').Variant[];
+  gallery?: import('../products/model.ts').PublicProductImage[];
+  variants?: Omit<import('../products/model.ts').Variant,'sku'>[];
   fabric?: string;
   createdAt?: number;
   categoryLabel: string;

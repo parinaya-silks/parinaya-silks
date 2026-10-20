@@ -8,6 +8,21 @@ test('drafts can be incomplete; money, publication and field constraints are enf
   assert.equal(discount({pricePaise:75000,originalPricePaise:100000}),25);
   for(const change of [{status:'Published'},{pricePaise:1.5},{pricePaise:-1},{originalPricePaise:0},{slug:'Bad slug'},{stockCount:99},{revision:99},{images:[{mediaId:'a'.repeat(32),alt:'x',url:'https://evil.example'}]},{inventory:{mode:'simple',quantity:-1,variants:[]}},{inventory:{mode:'simple',quantity:0.5,variants:[]}}])assert.throws(()=>validateProduct({...draft,...change}));
 });
+
+test('inventory writes contain only the active stock source while legacy neutral fields remain readable',()=>{
+  const draft={...emptyProduct(),slug:'inventory'};
+  assert.deepEqual(validateProduct({...draft,inventory:{mode:'simple',quantity:35,variants:[]}}).inventory,{mode:'simple',quantity:35});
+  const variants=[{id:'wine',sku:'WINE-1',name:'Wine',hex:'#780D24',quantity:3}];
+  assert.deepEqual(validateProduct({...draft,inventory:{mode:'variants',quantity:0,variants}}).inventory,{mode:'variants',variants});
+  assert.deepEqual(validateProduct({...draft,inventory:{mode:'variants',variants}}).inventory,{mode:'variants',variants});
+  assert.throws(()=>validateProduct({...draft,inventory:{mode:'simple',quantity:35,variants}}),{code:'invalid'});
+});
+
+test('a simple saree can publish without optional fabric, weave, length or care fields',()=>{
+  const mediaId='a'.repeat(32);
+  const product={...emptyProduct(),slug:'simple-saree',sku:'PS-unique',name:'Simple saree',description:'Owner description',categoryId:'a'.repeat(20),status:'Published',pricePaise:150000,images:[{mediaId,alt:'Simple saree'}],coverMediaId:mediaId};
+  assert.equal(validateProduct(product).status,'Published');
+});
 test('variants have one stock source and unique stable identifiers and SKUs',()=>{
   const variants=[{id:'wine',sku:'WINE-1',name:'Wine',hex:'#780D24',quantity:2},{id:'gold',sku:'GOLD-1',name:'Gold',hex:'#B88A44',quantity:3}];
   const draft={...emptyProduct(),slug:'variants',inventory:{mode:'variants' as const,quantity:0,variants}};

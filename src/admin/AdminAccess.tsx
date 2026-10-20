@@ -3,6 +3,7 @@ import { AdminAccessFrame, AdminLogin } from './AdminLogin.tsx';
 import { AdminPanel } from './AdminPanel.tsx';
 import { adminSignOut, watchAdminSession, type AdminSession } from '../services/firebase/adminAuth.ts';
 import { safeAdminDestination } from './accessPolicy.ts';
+import {AdminPermissionContext} from './permission.tsx';
 
 export default function AdminAccess({ requestedPath }: { requestedPath: string }) {
   const [session, setSession] = useState<AdminSession>({ status: 'checking' });
@@ -10,7 +11,6 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
   const [signingOut, setSigningOut] = useState(false);
   const refresh = useRef<(() => Promise<void>) | undefined>(undefined);
   const signOutLock = useRef(false);
-  const previousUser = useRef<Extract<AdminSession, { status: 'authorized' }>['user'] | null>(null);
   useEffect(() => {
     setSession({ status: 'checking' });
     try {
@@ -35,13 +35,14 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
     catch { setSession({ status: 'error', message: 'Unable to sign out. Retry or close this session before leaving a shared device.' }); }
     finally { setSigningOut(false); signOutLock.current = false; }
   };
-  if (session.status === 'authorized') previousUser.current = session.user;
-  else if (session.status !== 'checking') previousUser.current = null;
-  const checking = signingOut || session.status === 'checking';
-  if (previousUser.current && (session.status === 'authorized' || session.status === 'checking')) {
-    // Preserve editor state across token/focus refreshes while keeping the
-    // previously verified panel hidden and inert until the fresh check passes.
-    return <><div hidden={checking} inert={checking || undefined} aria-hidden={checking || undefined}><AdminPanel key={previousUser.current.uid} path={safeAdminDestination(requestedPath)} email={previousUser.current.email || 'Administrator'} onSignOut={() => void leave()} /></div>{checking && <AdminAccessFrame><p role="status">Checking administrator access…</p></AdminAccessFrame>}</>;
+  const checking = session.status === 'checking';
+  if(session.status==='authorized') {
+    const writable=!signingOut&&session.verification!=='blocked';
+    return <AdminPermissionContext.Provider value={writable}>
+      {session.verification==='blocked'&&<div role="alert" className="p-4 bg-amber-50 text-sm text-[#780D24]"><p>{session.message}</p><button className="min-h-11 underline mr-5" onClick={()=>void refresh.current?.()}>Retry permissions</button><button className="min-h-11 underline" onClick={()=>void leave()}>Sign out</button></div>}
+      {signingOut&&<p role="status" className="p-3 text-sm">Signing out…</p>}
+      <fieldset disabled={!writable} className="min-w-0 m-0 p-0 border-0"><AdminPanel key={session.user.uid} path={safeAdminDestination(requestedPath)} email={session.user.email||'Administrator'} onSignOut={()=>void leave()}/></fieldset>
+    </AdminPermissionContext.Provider>;
   }
   if (checking) return <AdminAccessFrame><h1 className="font-serif text-2xl text-[#780D24]">PARINAYA SILKS</h1><p role="status">{signingOut ? 'Signing out…' : 'Checking administrator access…'}</p></AdminAccessFrame>;
   if (session.status === 'signed-out') return <AdminLogin />;
@@ -59,5 +60,5 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
     <button className="min-h-11 w-full underline" onClick={() => window.location.reload()}>Reload page</button>
     <button className="min-h-11 w-full underline" onClick={() => void leave()}>Sign out</button>
   </AdminAccessFrame>;
-  return <AdminPanel key={session.user.uid} path={safeAdminDestination(requestedPath)} email={session.user.email || 'Administrator'} onSignOut={() => void leave()} />;
+  return null;
 }

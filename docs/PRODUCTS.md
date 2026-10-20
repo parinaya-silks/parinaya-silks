@@ -1,5 +1,7 @@
 # Product CRUD milestone
 
+Current workflow and confirmed missing Production index: [PRODUCT_WORKFLOW.md](PRODUCT_WORKFLOW.md) (20 October 2026). It supersedes the older form labels, mandatory optional saree details and dual-field inventory shape below.
+
 Production catalog startup fix and release requirement: [CATALOG_API_DIAGNOSTICS.md](CATALOG_API_DIAGNOSTICS.md). The current Firebase Admin dependency chain requires Vercel's documented `NODE_OPTIONS=--experimental-require-module` setting and a new deployment.
 
 Target: `parinaya-silks`, Firestore `(default)`. Local preparation only; no live products, uploads, deletions, rule publication or deployment.
@@ -8,9 +10,9 @@ Target: `parinaya-silks`, Firestore `(default)`. Local preparation only; no live
 
 `products/{autoId}` is canonical. Stable unique `slug` is reserved in `productSlugs/{slug}` and never changes on rename. Product writes use the authenticated `/api/catalog` server endpoint; direct browser writes remain denied. Money is integer paise (`pricePaise`, optional `originalPricePaise`); discount and stock totals are derived, not independently editable.
 
-The model includes name, SKU, description, permanent `categoryId`, ordered verified image metadata, `coverMediaId`, simple or colour-variant inventory, low-stock threshold, fabric, weave/zari, colour, saree length, blouse inclusion/details, care, optional weight, featured/new-arrival flags and Draft/Published/Archived status. Server metadata includes `schemaVersion`, creation/update timestamps, revision and last save operation ID. Drafts may be incomplete. Publication requires name, SKU, description, enabled category, positive price, fabric, weave, saree length, care and a verified cover image with alt text.
+The model includes name, SKU, description, permanent `categoryId`, ordered verified image metadata, `coverMediaId`, simple or colour-variant inventory, low-stock threshold, optional saree details, featured/new-arrival flags and Draft/Published/Archived status. Server metadata includes `schemaVersion`, creation/update timestamps, revision and last save operation ID. Drafts may be incomplete. Publication requires name, SKU, description, enabled category, positive price and a verified cover image with photo descriptions. The editor generates a default product code and permanent link. Fabric, weave, length and care are optional.
 
-Inventory has one source: simple `quantity` with no variants, or up to 20 variants with unique IDs/SKUs, colour and integer quantities (simple quantity must be zero). No sizes are required. Optimistic revisions and transactions reject stale edits rather than overwrite concurrent stock changes. Reservation/checkout state is not implemented; future trusted reservations must integrate this revision/inventory policy.
+Inventory has one source: `{mode:'simple', quantity}` or `{mode:'variants', variants}` with up to 20 unique IDs/codes, colour names and integer quantities. The inactive field is omitted. Legacy empty variants/zero simple totals remain readable but are normalized on save; actual contradictions fail. No sizes are required. Optimistic revisions and transactions reject stale edits rather than overwrite concurrent stock changes. Reservation/checkout state is not implemented; future trusted reservations must integrate this revision/inventory policy.
 
 `productMedia/{mediaId}` records upload intent, product ownership, fixed Cloudinary public ID, verification and durable metadata. Media is restricted to one product. Product save resolves references from these trusted records. Remove/replace detaches an image; it never destroys an asset. Abandoned uploads and detached media are retained for owner review. Automatic cleanup and permanent product deletion remain unavailable until cross-record/history reference checks exist. Category deletion stays denied. Archive preserves identity and media.
 

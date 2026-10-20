@@ -1,5 +1,5 @@
 import { getAdminClients } from '../services/firebase/adminAuth.ts';
-import { ProductError, type ProductInput, type ProductRecord, type ProductImage } from './model.ts';
+import { ProductError, type ProductInput, type ProductRecord, type ProductImage, type PublicProductRecord } from './model.ts';
 import { catalogResponse, productLoadFailure } from './response.ts';
 
 const response=(result:Response)=>catalogResponse(result,import.meta.env.DEV);
@@ -9,9 +9,9 @@ export async function catalogAction<T>(body:Record<string,unknown>):Promise<T> {
   try {return await response(await fetch('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)}));}
   catch(error){if(error instanceof ProductError)throw error;throw new ProductError('unavailable',body.action==='list'?productLoadFailure:'The server could not confirm this operation. Your changes are kept; retry or check your connection.');}
 }
-export interface CatalogPage {items:ProductRecord[];nextCursor:string|null}
-export async function publicCatalog(cursor?:string):Promise<CatalogPage> {return response(await fetch('/api/catalog'+(cursor?`?cursor=${encodeURIComponent(cursor)}`:''),{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
-export async function publicProduct(slug:string):Promise<ProductRecord> {return response(await fetch(`/api/catalog?slug=${encodeURIComponent(slug)}`,{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
+export interface CatalogPage<T=ProductRecord> {items:T[];nextCursor:string|null}
+export async function publicCatalog(cursor?:string):Promise<CatalogPage<PublicProductRecord>> {return response(await fetch('/api/catalog'+(cursor?`?cursor=${encodeURIComponent(cursor)}`:''),{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
+export async function publicProduct(slug:string):Promise<PublicProductRecord> {return response(await fetch(`/api/catalog?slug=${encodeURIComponent(slug)}`,{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
 export const newOperation=()=>crypto.randomUUID().replaceAll('-','');
 export const saveProduct=(id:string,expectedRevision:number,operationId:string,product:ProductInput)=>catalogAction<ProductRecord>({action:'save',id,expectedRevision,operationId,product});
 export async function uploadImage(file:File,productId:string,mediaId:string,onProgress:(progress:number)=>void) {

@@ -64,42 +64,47 @@ with sync_playwright() as p:
     assert len(saves)==1,'Repeated submit must save one stable product'
     edit_url=page.url
     assert '/admin/products/edit/' in edit_url
+    slug=saves[-1]['product']['slug']
+    assert saves[-1]['product']['inventory']=={'mode':'simple','quantity':0}
     page.reload()
     page.get_by_label('Product name',exact=True).wait_for()
     assert page.get_by_label('Product name',exact=True).input_value()=='Emulator Saree'
-    assert page.get_by_label('SKU',exact=True).input_value()==''
-    page.get_by_label('Status',exact=True).select_option('Published')
-    page.get_by_role('button',name='Save product',exact=True).click()
+    assert page.get_by_label('Product code (optional)',exact=True).input_value().startswith('PS-')
+    page.get_by_role('button',name='Publish Product',exact=True).click()
     page.get_by_role('alert').filter(has_text='Check the highlighted fields').wait_for()
     assert len(saves)==1,'Invalid publication must not call persistence'
     # Reset errors by editing status and submitting valid information below.
-    page.get_by_label(re.compile('^SKU')).fill('PS-EMULATOR-UI')
+    page.get_by_text('Product code & link',exact=True).click()
+    page.get_by_label('Product code (optional)',exact=True).fill('PS-EMULATOR-UI')
     page.get_by_label(re.compile('^Description')).fill('Emulator-only saree description')
     page.get_by_label(re.compile('^Category')).select_option(label='Browser Beta')
-    for label,value in [('Fabric','Silk'),('Weave / type','Handloom'),('Saree length','6 metres'),('Wash / care instructions','Dry clean only')]:
+    page.get_by_text('More saree details',exact=True).click()
+    for label,value in [('Fabric (optional)','Silk'),('Weave (optional)','Handloom'),('Saree length (optional)','6 metres'),('Care instructions (optional)','Dry clean only')]:
         page.get_by_label(re.compile('^'+re.escape(label))).fill(value)
     page.get_by_label(re.compile('^Selling price')).fill('1250.05')
     page.get_by_label(re.compile('^Original price')).fill('1500.00')
     page.get_by_label('Stock quantity',exact=True).fill('2')
+    page.get_by_text('Storefront options',exact=True).click()
+    page.get_by_label('Status',exact=True).select_option('Published')
     page.get_by_label('New Arrival',exact=True).check()
-    page.get_by_label('Select images',exact=True).set_input_files([
+    page.get_by_label('Add photos',exact=True).set_input_files([
         {'name':'first.png','mimeType':'image/png','buffer':png},
         {'name':'second.png','mimeType':'image/png','buffer':png}])
     page.get_by_role('button',name='Retry first.png',exact=True).wait_for()
-    page.get_by_label('Image 1 alt text',exact=True).wait_for()
+    page.get_by_label('Photo 1 description',exact=True).wait_for()
     page.get_by_role('button',name='Retry first.png',exact=True).click()
-    page.get_by_label('Image 2 alt text',exact=True).wait_for()
-    page.get_by_label('Image 1 alt text',exact=True).fill('Emulator full saree')
-    page.get_by_label('Image 2 alt text',exact=True).fill('Emulator border detail')
+    page.get_by_label('Photo 2 description',exact=True).wait_for()
+    page.get_by_label('Photo 1 description',exact=True).fill('Emulator full saree')
+    page.get_by_label('Photo 2 description',exact=True).fill('Emulator border detail')
     page.get_by_label('Cover image 2',exact=True).check()
     page.get_by_role('button',name='Move image 2 earlier',exact=True).click()
-    assert page.get_by_label('Image 1 alt text',exact=True).input_value()=='Emulator border detail'
-    page.get_by_role('button',name='Save product',exact=True).click()
+    assert page.get_by_label('Photo 1 description',exact=True).input_value()=='Emulator border detail'
+    page.get_by_role('button',name='Save Changes',exact=True).click()
     page.get_by_text('Product saved.',exact=True).wait_for()
     assert page.get_by_role('button',name='Delete unavailable',exact=True).is_disabled()
     page.reload()
-    page.get_by_label('Image 2 alt text',exact=True).wait_for()
-    assert page.get_by_label('Image 1 alt text',exact=True).input_value()=='Emulator border detail'
+    page.get_by_label('Photo 2 description',exact=True).wait_for()
+    assert page.get_by_label('Photo 1 description',exact=True).input_value()=='Emulator border detail'
     assert page.get_by_label('Cover image 1',exact=True).is_checked()
     assert page.get_by_label('Selling price (₹)',exact=True).input_value()=='1250.05'
 
@@ -113,7 +118,7 @@ with sync_playwright() as p:
     # Category reads here use real emulators, unlike the generic empty-content fixtures.
     public.goto(origin+'/collections/browser-beta')
     public.get_by_role('heading',name='Emulator Saree',exact=True).wait_for()
-    public.goto(origin+'/product/emulator-saree')
+    public.goto(origin+'/product/'+slug)
     public.get_by_role('heading',name='Emulator Saree',exact=True).wait_for()
     public.reload()
     public.get_by_role('heading',name='Emulator Saree',exact=True).wait_for()
@@ -122,20 +127,27 @@ with sync_playwright() as p:
     assert public.locator('img').first.evaluate('(image)=>getComputedStyle(image).objectFit')=='contain'
 
     page.get_by_label('Product name',exact=True).fill('Emulator Renamed')
-    # Re-verification hides protected UI without discarding the open editor.
-    page.evaluate("window.dispatchEvent(new Event('focus'))")
+    # Background checks preserve the same visible focused DOM node.
+    page.get_by_label('Product name',exact=True).focus()
+    page.evaluate("window.__editorInput=document.activeElement;window.__editorScroll=scrollY;for(let i=0;i<12;i++){window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));}")
+    assert page.evaluate("document.activeElement===window.__editorInput && window.__editorInput.isConnected && !window.__editorInput.closest('[hidden],[inert],[aria-hidden=true]') && scrollY===window.__editorScroll")
     page.get_by_role('heading',name='Edit Product',exact=True).wait_for()
     assert page.get_by_label('Product name',exact=True).input_value()=='Emulator Renamed'
-    page.get_by_role('button',name='Save product',exact=True).click()
+    page.get_by_role('button',name='Save Changes',exact=True).click()
     page.get_by_text('Product saved.',exact=True).wait_for()
-    assert page.get_by_label('URL slug',exact=True).input_value()=='emulator-saree'
+    assert saves[-1]['product']['slug']==slug
     public.reload();public.get_by_role('heading',name='Emulator Renamed',exact=True).wait_for()
-    page.once('dialog',lambda dialog:dialog.accept())
-    page.get_by_label('Inventory mode',exact=True).select_option('variants')
-    for label,value in [('Variant 1 id','wine'),('Variant 1 sku','WINE-UI'),('Variant 1 name','Wine'),('Variant 1 quantity','2')]:page.get_by_label(label,exact=True).fill(value)
-    page.get_by_role('button',name='Add colour variant',exact=True).click()
-    for label,value in [('Variant 2 id','gold'),('Variant 2 sku','GOLD-UI'),('Variant 2 name','Gold'),('Variant 2 quantity','0')]:page.get_by_label(label,exact=True).fill(value)
-    page.get_by_role('button',name='Save product',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_label('Stock type',exact=True).select_option('variants')
+    for label,value in [('Colour 1 name','Wine'),('Colour 1 stock','2')]:page.get_by_label(label,exact=True).fill(value)
+    page.get_by_role('button',name='Add colour',exact=True).click()
+    for label,value in [('Colour 2 name','Gold'),('Colour 2 stock','0')]:page.get_by_label(label,exact=True).fill(value)
+    page.get_by_label('Stock type',exact=True).select_option('simple')
+    assert page.get_by_label('Stock quantity',exact=True).input_value()=='2'
+    page.get_by_label('Stock type',exact=True).select_option('variants')
+    assert page.get_by_label('Colour 1 name',exact=True).input_value()=='Wine'
+    assert page.get_by_label('Colour 1 stock',exact=True).input_value()=='2'
+    page.get_by_role('button',name='Save Changes',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    assert 'quantity' not in saves[-1]['product']['inventory']
     public.reload();public.get_by_role('button',name='Gold',exact=True).click();public.get_by_text('Out of stock',exact=True).wait_for()
     assert public.get_by_role('button',name='Increase quantity',exact=True).is_disabled()
 
@@ -144,38 +156,45 @@ with sync_playwright() as p:
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='save':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Synthetic save failure"}')
         else:route.continue_()
     page.route('**/api/catalog',deny_save)
-    page.get_by_role('button',name='Save product',exact=True).click()
+    page.get_by_role('button',name='Save Changes',exact=True).click()
     page.get_by_role('alert').filter(has_text='Synthetic save failure').wait_for()
     assert page.get_by_label('Description',exact=True).input_value()=='Save retry description retained'
     page.unroute('**/api/catalog',deny_save)
-    page.get_by_role('button',name='Save product',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_role('button',name='Save Changes',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_label('Replace photo 2',exact=True).set_input_files({'name':'replacement.png','mimeType':'image/png','buffer':png})
+    page.get_by_text('Photos are uploading. Please wait before saving.',exact=True).wait_for(state='hidden')
+    page.get_by_label('Photo 2 description',exact=True).wait_for()
     page.get_by_role('button',name='Remove image 2',exact=True).click()
-    page.get_by_role('button',name='Save product',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_role('button',name='Save Changes',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
     page.get_by_label('Product name',exact=True).fill('Unsaved product name')
-    page.once('dialog',lambda dialog:dialog.dismiss())
-    page.get_by_role('button',name='Manage Categories',exact=True).click()
+    page.get_by_role('button',name='Manage Categories',exact=True).last.click()
+    page.get_by_role('button',name='Back to product',exact=True).click()
     assert page.url==edit_url
     assert page.get_by_label('Product name',exact=True).input_value()=='Unsaved product name'
+    page.once('dialog',lambda dialog:dialog.dismiss())
+    page.get_by_role('button',name='Back to Products',exact=True).click()
+    assert page.url==edit_url
     page.once('dialog',lambda dialog:dialog.accept())
     page.get_by_role('button',name='Back to Products',exact=True).click()
     page.get_by_role('heading',name='Products & Stock',exact=True).wait_for()
     page.get_by_role('heading',name='Emulator Renamed',exact=True).wait_for()
     assert page.get_by_text('Unsaved product name',exact=True).count()==0
     page.goto(edit_url)
+    page.get_by_text('Storefront options',exact=True).click()
     page.get_by_label('Status',exact=True).select_option('Archived')
-    page.get_by_role('button',name='Save product',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_role('button',name='Save Changes',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
     public.reload();public.get_by_role('heading',name='Product not found',exact=True).wait_for()
     page.get_by_label('Status',exact=True).select_option('Published')
-    page.get_by_role('button',name='Save product',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
-    page.get_by_role('button',name='Manage Categories',exact=True).click()
+    page.get_by_role('button',name='Save Changes',exact=True).click();page.get_by_text('Product saved.',exact=True).wait_for()
+    page.get_by_role('button',name='Manage Categories',exact=True).last.click()
     page.get_by_role('button',name='Edit Browser Beta',exact=True).click()
-    dialog=page.get_by_role('dialog');dialog.get_by_label('Enabled on storefront',exact=True).uncheck()
+    dialog=page.get_by_role('dialog',name='Edit category',exact=True);dialog.get_by_label('Enabled on storefront',exact=True).uncheck()
     dialog.get_by_role('button',name='Save category',exact=True).click();page.get_by_text('Category saved.',exact=True).wait_for()
     public.reload();public.get_by_role('heading',name='Product not found',exact=True).wait_for()
     page.get_by_role('button',name='Edit Browser Beta',exact=True).click()
-    dialog=page.get_by_role('dialog');dialog.get_by_label('Enabled on storefront',exact=True).check()
+    dialog=page.get_by_role('dialog',name='Edit category',exact=True);dialog.get_by_label('Enabled on storefront',exact=True).check()
     dialog.get_by_role('button',name='Save category',exact=True).click();page.get_by_text('Category saved.',exact=True).wait_for()
-    page.goto(edit_url);page.get_by_label('Product name',exact=True).wait_for()
+    page.get_by_role('button',name='Back to product',exact=True).click();page.get_by_label('Product name',exact=True).wait_for()
     public.reload();public.get_by_role('heading',name='Emulator Renamed',exact=True).wait_for()
     Path('.cache/products').mkdir(parents=True,exist_ok=True)
     for width in [360,390,430,768,1024,1440]:

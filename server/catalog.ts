@@ -4,6 +4,7 @@ import type { Auth } from 'firebase-admin/auth';
 import { MAX_IMAGE_BYTES, ProductError, productFields, validateProduct, type ProductRecord, type ProductImage } from '../src/products/model.ts';
 import type { CloudinaryMedia, UploadTicket } from './cloudinary.ts';
 import { CatalogConfigurationError } from './errors.ts';
+import {publicProduct} from './publicProduct.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
@@ -60,7 +61,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     if(!data || data.status!=='Published' || !idPattern.test(data.categoryId))throw new ProductError('not-found','Product not found.');
     const category=await db.doc(`categories/${data.categoryId}`).get();
     if(category.data()?.enabled!==true)throw new ProductError('not-found','Product not found.');
-    return present(document,category.data()!.name);
+    return publicProduct(await present(document,category.data()!.name));
   }
   async function save(uid:string,body:Record<string,unknown>) {
     keys(body,['action','id','expectedRevision','operationId','product']);
@@ -79,7 +80,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       const slug=await transaction.get(slugRef);
       if(slug.exists && slug.data()!.productId!==productId)throw new ProductError('duplicate','That URL slug is already used.',{slug:'Choose another unique slug.'});
       if(old && !slug.exists)throw new ProductError('schema','The saved product slug reservation is missing. Contact the owner.');
-      if(input.categoryId) {const category=await transaction.get(db.doc(`categories/${input.categoryId}`));if(!category.exists || (input.status==='Published' && category.data()!.enabled!==true))throw new ProductError('invalid','Choose an enabled category before publishing.',{categoryId:'This category is missing or disabled.'});}
+      if(input.categoryId) {const category=await transaction.get(db.doc(`categories/${input.categoryId}`));const retainedDraft=input.status==='Draft'&&old?.categoryId===input.categoryId;if((!category.exists&&!retainedDraft) || (input.status==='Published'&&category.data()?.enabled!==true))throw new ProductError('invalid','Choose an enabled category before publishing.',{categoryId:'This category is missing or disabled.'});}
       const images:ProductImage[]=[];
       for(const image of input.images) {
         const record=await transaction.get(db.doc(`productMedia/${image.mediaId}`));
@@ -128,7 +129,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return {...metadata,mediaId:imageId,alt:''};
   }
   return {
-    publicList:(cursor?:unknown)=>list(false,cursor),publicGet,
+    publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
       const uid=await administrator(token);
       switch(body.action) {

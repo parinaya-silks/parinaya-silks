@@ -65,6 +65,10 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await assert.rejects(save({...published,categoryId:otherCategory},1),{code:'invalid'});
     await assert.rejects(save({...published,images:[{mediaId:'b'.repeat(32),alt:'Forged'}],coverMediaId:'b'.repeat(32)},1),{code:'media'});
     saved=await save(published,1);assert.equal(saved.images[0].assetId,'trusted-parinaya-silks/products/'+id+'/'+imageId);assert.equal(saved.pricePaise,123405);
+    assert.deepEqual(saved.inventory,{mode:'simple',quantity:4});
+    response=await fetch(api);assert.equal(response.status,200);let publicPage=await response.json();assert.equal(publicPage.items[0].id,id);
+    response=await fetch(api+'?slug='+draft.slug);assert.equal(response.status,200);let publicDetail=await response.json();assert.deepEqual(publicPage.items[0],publicDetail);
+    assert.equal('revision' in publicDetail,false);assert.equal('updatedAt' in publicDetail,false);assert.equal('assetId' in publicDetail.images[0],false);assert.equal('publicId' in publicDetail.images[0],false);
     assert.equal((await service.publicGet(draft.slug)).id,id);assert.equal((await service.publicList()).items.length,1);
     const guest=environment.unauthenticatedContext().firestore(),customer=environment.authenticatedContext('ordinary').firestore();
     for(const client of [guest,customer]){await assertSucceeds(getDoc(doc(client,'products',id)));await assertFails(setDoc(doc(client,'products',id),published));await assertFails(updateDoc(doc(client,'products',id),{status:'Published'}));await assertFails(getDoc(doc(client,'productMedia',imageId)));}
@@ -72,6 +76,8 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await db.doc(`categories/${categoryId}`).update({enabled:false});
     await assert.rejects(service.publicGet(draft.slug),{code:'not-found'});assert.equal((await service.publicList()).items.length,0);await assertFails(getDoc(doc(guest,'products',id)));
     await db.doc(`categories/${categoryId}`).update({enabled:true});
+    response=await fetch(api);publicPage=await response.json();assert.equal(publicPage.items[0].id,id);
+    response=await fetch(api+'?slug='+draft.slug);assert.equal(response.status,200);
     const renamed={...productInput(saved),name:'Renamed saree'};saved=await save(renamed,saved.revision);assert.equal(saved.slug,draft.slug);
     const stale=saved.revision;
     const stockRace=await Promise.allSettled([save({...productInput(saved),inventory:{mode:'simple',quantity:5,variants:[]}},stale),save({...productInput(saved),inventory:{mode:'simple',quantity:6,variants:[]}},stale)]);assert.equal(stockRace.filter(item=>item.status==='fulfilled').length,1);assert.equal(stockRace.filter(item=>item.status==='rejected').length,1);
@@ -79,6 +85,8 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await assert.rejects(save({...productInput(saved),slug:'renamed-url'},saved.revision),{code:'invalid'});
     const variants=[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:2},{id:'gold',name:'Gold',hex:'#B88A44',sku:'GOLD',quantity:3}];
     saved=await save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants}},saved.revision);assert.equal(quantity(saved),5);
+    assert.equal('quantity' in saved.inventory,false);
+    response=await fetch(api+'?slug='+draft.slug);publicDetail=await response.json();assert.equal('sku' in publicDetail.inventory.variants[0],false);
     await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:5,variants}},saved.revision),{code:'invalid'});
     await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants:[variants[0],variants[0]]}},saved.revision),{code:'invalid'});
     saved=await save({...productInput(saved),status:'Draft'},saved.revision);await assert.rejects(service.publicGet(draft.slug),{code:'not-found'});await assertFails(getDoc(doc(guest,'products',id)));
@@ -90,5 +98,11 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await db.doc('adminAccess/crud-admin').update({enabled:'true'});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'permission'});
     await db.doc('adminAccess/crud-admin').update({enabled:true});
     await auth.updateUser('crud-admin',{disabled:true});await assert.rejects(service.privileged(tokens.admin,{action:'list'}),{code:'unauthorized'});await auth.updateUser('crud-admin',{disabled:false});
+    const orphan=db.collection('products').doc().id,missingCategory='z'.repeat(20),orphanDraft={...draft,slug:'retained-missing-category'};
+    await save(orphanDraft,0,operation(),orphan);
+    await db.doc(`products/${orphan}`).update({categoryId:missingCategory});
+    const retained=await save({...orphanDraft,categoryId:missingCategory},1,operation(),orphan);
+    assert.equal(retained.categoryId,missingCategory);assert.equal(retained.status,'Draft');
+    await assert.rejects(save({...orphanDraft,categoryId:missingCategory,status:'Published'},2,operation(),orphan));
   } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await environment.clearFirestore();for(const uid of users)await auth.deleteUser(uid);await environment.cleanup();}
 });
