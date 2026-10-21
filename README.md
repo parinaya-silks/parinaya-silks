@@ -1,12 +1,12 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Customer login, registration, verification and password recovery use the shared Firebase Auth instance. Other business modules and checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Customer email/password login, registration and password recovery use the shared Firebase Auth instance. Other business modules and checkout remain unconnected.
 
 See [Product CRUD configuration and acceptance](docs/PRODUCTS.md) for the current milestone and [category management](docs/CATEGORIES.md) for its foundation. Product setup requires the local API server and server-only credentials. Owner rules/index publication, server configuration and application release remain necessary. No live test records or uploads were created.
 
 ## Customer authentication
 
-See [customer authentication, private profile rules and release acceptance](docs/CUSTOMER_AUTH.md). The approved responsive login design is implemented with real Firebase flows and emulator-only automated accounts. Owner review/publication of the narrow profile rules, authorized-domain/email-action settings and Vercel acceptance remain necessary. No production changes were made.
+See [customer authentication, private profile rules and release acceptance](docs/CUSTOMER_AUTH.md). The approved responsive login design is implemented with real Firebase flows and emulator-only automated accounts. Customer email verification is not required or sent; password-reset emails remain enabled. This simplification does not change Firestore rules or require new rule publication. Owner review/publication of the narrow profile rules, authorized-domain/email-action settings and Vercel acceptance remain necessary. No production changes were made.
 
 ## Administrator access
 

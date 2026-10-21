@@ -4,14 +4,14 @@ import {AuthFrame} from './AuthFrame.tsx';
 import {useCustomerAuth} from './CustomerAuth.tsx';
 import {CustomerAccount} from './CustomerAccount.tsx';
 import {CustomerError,customerErrorMessage,safeCustomerReturn,validateCustomerFields} from './policy.ts';
-import {customerSignIn,customerRegister,customerPasswordReset,markVerificationSent} from './service.ts';
+import {customerSignIn,customerRegister,customerPasswordReset} from './service.ts';
 import {getAuthClients} from '../services/firebase/auth.ts';
 
-export type CustomerMode='login'|'register'|'reset'|'verify'|'account';
+export type CustomerMode='login'|'register'|'reset'|'account';
 export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerMode;currentPath:string;onNavigate:(path:string)=>void}) {
   const session=useCustomerAuth();
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[name,setName]=useState(''),[remember,setRemember]=useState(false),[visible,setVisible]=useState(false);
-  const [busy,setBusy]=useState(false),[errors,setErrors]=useState<Record<string,string>>({}),[error,setError]=useState(''),[notice,setNotice]=useState(''),[registration,setRegistration]=useState<Awaited<ReturnType<typeof customerRegister>>|null>(null);
+  const [busy,setBusy]=useState(false),[errors,setErrors]=useState<Record<string,string>>({}),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const lock=useRef(false),form=useRef<HTMLFormElement>(null),redirected=useRef(false),mounted=useRef(true);
   const previousUid=useRef<string|null>(null);
   const destination=safeCustomerReturn(new URLSearchParams(currentPath.split('?')[1]||'').get('returnTo'));
@@ -19,12 +19,12 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   useEffect(()=>{
     const uid=session.user?.uid||null;
-    if(previousUid.current&&previousUid.current!==uid){setRegistration(null);setEmail('');setName('');setPassword('');setConfirm('');setNotice('');setError('');setErrors({});}
+    if(previousUid.current&&previousUid.current!==uid){setEmail('');setName('');setPassword('');setConfirm('');setNotice('');setError('');setErrors({});}
     previousUid.current=uid;
   },[session.user?.uid]);
   useEffect(()=>{
-    if(session.status==='signed-in'&&(mode==='login'||mode==='register')&&!busy&&!registration&&!redirected.current){redirected.current=true;onNavigate(destination);}
-  },[session.status,mode,busy,registration,destination,onNavigate]);
+    if(session.status==='signed-in'&&(mode==='login'||mode==='register')&&!busy&&!redirected.current){redirected.current=true;onNavigate(destination);}
+  },[session.status,mode,busy,destination,onNavigate]);
   const showFailure=(failure:unknown)=>{
     setError(customerErrorMessage(failure));setErrors(failure instanceof CustomerError?failure.fields:{});
     requestAnimationFrame(()=>form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
@@ -37,8 +37,11 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
       if(mode==='reset'){await customerPasswordReset(email);if(mounted.current)setNotice('If an account can receive email at this address, password reset instructions will be sent.');}
       else if(mode==='register'){
         const result=await customerRegister(name,email,password,confirm);
-        if(result.emailSent)markVerificationSent(result.user.uid);
-        if(mounted.current&&getAuthClients().auth.currentUser?.uid===result.user.uid){setRegistration(result);setPassword('');setConfirm('');}
+        if(mounted.current&&getAuthClients().auth.currentUser?.uid===result.user.uid){
+          setPassword('');setConfirm('');redirected.current=true;
+          // A partial profile save belongs on the recoverable account screen.
+          onNavigate(result.nameSaved&&result.profileSaved?destination:'/account');
+        }
       }else {
         await customerSignIn(email,password,remember);
         if(mounted.current){setPassword('');redirected.current=true;onNavigate(destination);}
@@ -51,15 +54,13 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
     const secret=key==='password'||key==='confirm';
     return <div className="customer-auth-field"><label htmlFor={'customer-'+key}>{label}</label><span className={secret?'customer-auth-password':''}><input id={'customer-'+key} name={key} aria-label={label} type={secret?(visible?'text':'password'):key==='email'?'email':'text'} autoComplete={key==='email'?'username':key==='name'?'name':mode==='register'?'new-password':'current-password'} autoCapitalize={key==='email'?'none':undefined} spellCheck={key==='email'?false:undefined} maxLength={key==='email'?254:key==='name'?100:undefined} value={values[key]} onChange={event=>setters[key](event.target.value)} placeholder={placeholder} required disabled={busy} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key]?'customer-error-'+key:undefined}/>{key==='password'&&<button type="button" aria-label={visible?'Hide password':'Show password'} aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?<EyeOff size={24}/>:<Eye size={24}/>}</button>}</span>{errors[key]&&<span id={'customer-error-'+key} className="customer-auth-error">{errors[key]}</span>}</div>;
   }
-  const currentRegistration=registration?.user.uid===session.user?.uid?registration:null;
-  const account=session.status==='signed-in'&&(mode==='account'||mode==='verify'||currentRegistration);
-  const title=account?(registration?'Your account is ready':mode==='verify'?'Verify your email':'Your account'):mode==='register'?'Create an account':mode==='reset'?'Forgot password?':mode==='verify'?'Verify your email':'Welcome back';
-  const subtitle=account?'Welcome to Parinaya Silks.':mode==='register'?'Create your account to stay connected with Parinaya.':mode==='reset'?'Enter your email and we’ll send reset instructions.':mode==='verify'?'Sign in to check your verification status.':'Sign in to view your orders and saved favourites.';
+  const account=session.status==='signed-in'&&mode==='account';
+  const title=account?'Your account':mode==='register'?'Create an account':mode==='reset'?'Forgot password?':'Welcome back';
+  const subtitle=account?'Welcome to Parinaya Silks.':mode==='register'?'Create your account to stay connected with Parinaya.':mode==='reset'?'Enter your email and we will send reset instructions.':'Sign in to view your orders and saved favourites.';
   if(session.status==='checking')return <AuthFrame title="Your account" subtitle="Restoring your session…" onNavigate={onNavigate}><p role="status" className="customer-auth-loading">Please wait…</p></AuthFrame>;
   if(session.status==='error')return <AuthFrame title="Sign-in unavailable" subtitle="Please try again." onNavigate={onNavigate}><p role="alert" className="customer-auth-notice">{session.message}</p><div className="customer-auth-actions"><button type="button" onClick={session.retry}>Retry sign-in setup</button></div></AuthFrame>;
   return <AuthFrame title={title} subtitle={subtitle} onNavigate={onNavigate}>
-    {account&&session.user?<><CustomerAccount key={session.user.uid} onNavigate={onNavigate} recoveryName={currentRegistration?name:''} profileIssue={Boolean(currentRegistration&&(!currentRegistration.profileSaved||!currentRegistration.nameSaved))} emailSent={currentRegistration?.emailSent}/>{currentRegistration&&!currentRegistration.emailSent&&<p role="alert" className="customer-auth-notice mt-4">Your account was created, but the verification email was not sent. Use Resend verification email above.</p>}</>:
-      mode==='verify'?<p className="customer-auth-switch"><a href="/login" onClick={event=>{event.preventDefault();onNavigate('/login');}}>Sign in to check verification</a></p>:
+    {account&&session.user?<CustomerAccount key={session.user.uid} onNavigate={onNavigate}/>:
       <>
         {error&&<div role="alert" className="customer-auth-notice"><p>{error}</p>{Object.keys(errors).length>0&&<ul>{Object.values(errors).map((message,index)=><li key={index}>{message}</li>)}</ul>}</div>}
         {notice&&<p role="status" className="customer-auth-notice">{notice}</p>}

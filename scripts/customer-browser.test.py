@@ -80,10 +80,13 @@ with sync_playwright() as p:
 
     ctx=context(viewport={'width':390,'height':844})
     page=ctx.new_page();page.on('pageerror',lambda error:errors.append(str(error)))
-    page.clock.install()
     email='customer-ui-'+uuid.uuid4().hex[:10]+'@example.test'
     password='Saree-'+uuid.uuid4().hex+'9!  '
-    signups=[]
+    signups=[];mail_actions=[]
+    def track_mail(request):
+        if '/accounts:sendOobCode' in request.url:
+            mail_actions.append(request.post_data_json.get('requestType'))
+    ctx.on('request',track_mail)
     page.on('request',lambda request:signups.append(1) if '/accounts:signUp' in request.url else None)
     page.goto(origin+'/register');page.get_by_role('heading',name='Create an account',exact=True).wait_for()
     page.get_by_label('Name',exact=True).fill('Customer Fixture')
@@ -104,7 +107,8 @@ with sync_playwright() as p:
     def deny_profile(route):route.fulfill(status=403,content_type='application/json',body='{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Synthetic profile denial"}}')
     page.route('**/documents:commit*',deny_profile)
     page.get_by_role('form',name='Create customer account',exact=True).evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}')
-    page.get_by_role('heading',name='Your account is ready',exact=True).wait_for(timeout=25000)
+    page.wait_for_url(origin+'/account',timeout=25000)
+    page.get_by_role('heading',name='Your account',exact=True).wait_for()
     assert len(signups)==1,'Auth creation must not repeat after a profile failure'
     page.get_by_role('alert').filter(has_text='Your account already exists').wait_for()
     assert page.get_by_role('button',name='Retry profile setup',exact=True).is_visible()
@@ -113,20 +117,30 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Retry profile setup',exact=True).wait_for(state='hidden')
     page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
     before=inspect_fixture(email);assert before['profileExists'] and not before['adminClaim'] and not before['adminAccessExists']
-    resend=page.get_by_role('button',name='Resend email in',exact=False)
-    assert resend.is_disabled()
-    page.clock.fast_forward(61000)
-    page.get_by_role('button',name='Resend verification email',exact=True).click()
-    page.get_by_role('status').filter(has_text='A verification email has been sent').wait_for()
-    oob=ctx.request.get('http://127.0.0.1:9099/emulator/v1/projects/parinaya-silks/oobCodes').json()
-    codes=[item for item in oob['oobCodes'] if item.get('email')==email and item.get('requestType')=='VERIFY_EMAIL']
-    assert codes,'Emulator must generate a real verification action'
-    verified=ctx.request.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=synthetic',data={'oobCode':codes[-1]['oobCode']})
-    assert verified.status==200
-    page.get_by_role('button',name='I’ve verified my email',exact=True).click()
-    page.get_by_text('Verified',exact=True).wait_for()
+    assert before['emailVerified'] is False,'Registration must not change Firebase verification status'
+    def assert_clean_account():
+        page.get_by_role('button',name='Sign out',exact=True).wait_for()
+        page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
+        assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address']
+        assert page.locator('.customer-account-details + .customer-auth-actions button').all_text_contents()==['Browse sarees','Sign out']
+        assert 'verif' not in page.locator('main').inner_text().lower()
+        assert 'VERIFY_EMAIL' not in mail_actions,'No verification email request is permitted'
+    assert_clean_account()
+    for width in [320,375,390,768,1024,1440]:
+        page.set_viewport_size({'width':width,'height':900})
+        assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
+        details=page.locator('.customer-account-details dd').last.bounding_box()
+        actions=page.locator('.customer-account-details + .customer-auth-actions').bounding_box()
+        assert 0<=actions['y']-(details['y']+details['height'])<=32,'No leftover verification gap'
+        control=page.get_by_role('button',name='Sign out',exact=True)
+        control.evaluate('(el)=>el.scrollIntoView({block:"center",behavior:"instant"})')
+        bounds=control.bounding_box()
+        assert bounds['y']>=56 and bounds['y']+bounds['height']<=900-(64 if width<1024 else 0),width
+        page.screenshot(path=str(screens/f'account-{width}.png'),full_page=True)
+    page.goto(origin+'/verify-email');assert_clean_account()
+    page.goto(origin+'/account');assert_clean_account()
     page.get_by_role('button',name='Sign out',exact=True).click()
-    page.get_by_role('heading',name='Create an account',exact=True).wait_for()
+    page.get_by_role('heading',name='Welcome back',exact=True).wait_for()
     assert page.get_by_label('Email address',exact=True).input_value()==''
     assert page.get_by_label('Password',exact=True).input_value()==''
 
@@ -146,11 +160,12 @@ with sync_playwright() as p:
     page.get_by_label('Password',exact=True).press('Enter')
     page.get_by_role('heading',name='Your account',exact=True).wait_for()
     assert page.url==origin+'/account','Unsafe return must use the account default'
-    assert page.get_by_text('Verified',exact=True).is_visible()
+    assert_clean_account()
+    assert inspect_fixture(email)['emailVerified'] is False,'Existing unverified customers can sign in unchanged'
     storage=page.evaluate('({local:Object.keys(localStorage).filter(k=>k.startsWith("firebase:authUser:")).length,session:Object.keys(sessionStorage).filter(k=>k.startsWith("firebase:authUser:")).length})')
     assert storage=={'local':0,'session':1}
     page.add_init_script('new MutationObserver(()=>{if([...document.querySelectorAll("h1")].some(e=>e.textContent==="Welcome back"))window.__loginFlash=true;}).observe(document,{subtree:true,childList:true});')
-    page.reload();page.get_by_role('heading',name='Your account',exact=True).wait_for()
+    page.reload();assert_clean_account()
     assert not page.evaluate('Boolean(window.__loginFlash)')
     other=ctx.new_page();other.goto(origin+'/account');other.get_by_role('heading',name='Welcome back',exact=True).wait_for();other.close()
     page.get_by_role('button',name='Sign out',exact=True).click()
@@ -179,6 +194,30 @@ with sync_playwright() as p:
         page.get_by_label('Email address',exact=True).fill(target)
         page.get_by_role('button',name='Send reset instructions',exact=True).click()
         page.get_by_role('status').filter(has_text='If an account can receive email at this address').wait_for()
+    oob=ctx.request.get('http://127.0.0.1:9099/emulator/v1/projects/parinaya-silks/oobCodes').json()
+    assert any(item.get('email')==email and item.get('requestType')=='PASSWORD_RESET' for item in oob['oobCodes']),'Password reset must generate a real email action'
+    assert 'PASSWORD_RESET' in mail_actions
+    # Complete registration routes: default account and validated browsing return.
+    for destination in ['/account','/shop?search=registration']:
+        fresh='customer-new-'+uuid.uuid4().hex[:10]+'@example.test'
+        path='/register' if destination=='/account' else '/register?returnTo=%2Fshop%3Fsearch%3Dregistration'
+        page.goto(origin+path)
+        page.get_by_label('Name',exact=True).fill('New Customer')
+        page.get_by_label('Email address',exact=True).fill(fresh)
+        page.get_by_label('Password',exact=True).fill(password)
+        page.get_by_label('Confirm password',exact=True).fill(password)
+        page.get_by_role('button',name='Create account',exact=True).click()
+        page.wait_for_url(origin+destination)
+        snapshot=inspect_fixture(fresh)
+        assert snapshot['profileExists'] and snapshot['emailVerified'] is False
+        assert not snapshot['adminClaim'] and not snapshot['adminAccessExists']
+        if destination!='/account':page.goto(origin+'/account')
+        assert_clean_account()
+        page.get_by_role('button',name='Sign out',exact=True).click()
+        page.get_by_role('heading',name='Welcome back',exact=True).wait_for()
+    assert 'VERIFY_EMAIL' not in mail_actions
+    oob=ctx.request.get('http://127.0.0.1:9099/emulator/v1/projects/parinaya-silks/oobCodes').json()
+    assert all(item.get('requestType')!='VERIFY_EMAIL' for item in oob['oobCodes'])
     assert not errors,errors
-    print('Customer browser: responsive approved layouts, resize/input preservation, validation, real registration/sign-in/reset/verification, profile failure/recovery/idempotence, persistence, safe returns, shared session and admin denial passed (emulators only)')
+    print('Customer browser: responsive approved layouts, resize/input preservation, validation, real registration and unverified sign-in without verification prompts/requests, password reset, clean account layout, profile failure/recovery/idempotence, persistence, safe returns, shared session and admin denial passed (emulators only)')
     ctx.close();browser.close()

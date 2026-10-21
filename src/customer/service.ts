@@ -1,4 +1,4 @@
-import {setPersistence,browserLocalPersistence,browserSessionPersistence,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,sendEmailVerification,sendPasswordResetEmail,validatePassword,reload,type User} from 'firebase/auth';
+import {setPersistence,browserLocalPersistence,browserSessionPersistence,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,sendPasswordResetEmail,validatePassword} from 'firebase/auth';
 import {getAuthClients} from '../services/firebase/auth.ts';
 import {CustomerError,passwordPolicyMessage,validateCustomerFields} from './policy.ts';
 import {ensureCustomerProfile} from './profile.ts';
@@ -22,34 +22,14 @@ export async function customerRegister(name:string,email:string,password:string,
   if(auth.currentUser)throw new CustomerError('Your session changed. Open your account before continuing.');
   const {user}=await createUserWithEmailAndPassword(auth,cleanEmail,password);
   // Account creation has succeeded. Never retry registration or delete the
-  // account because a later profile/email operation fails.
-  let nameSaved=true,profileSaved=true,emailSent=true;
+  // account because a later profile operation fails.
+  let nameSaved=true,profileSaved=true;
   try{await updateProfile(user,{displayName:name.trim()});}catch{nameSaved=false;}
   try{await ensureCustomerProfile(database,user,name);}catch{profileSaved=false;}
-  try{await sendEmailVerification(user,actionSettings('/verify-email'));}catch{emailSent=false;}
-  return {user,nameSaved,profileSaved,emailSent};
+  return {user,nameSaved,profileSaved};
 }
 export async function customerPasswordReset(email:string) {
   const clean=validateCustomerFields({email});
   try{await sendPasswordResetEmail(getAuthClients().auth,clean,actionSettings('/login'));}
   catch(error){if((error as {code?:string}).code!=='auth/user-not-found')throw error;}
-}
-// In-memory cooldown only; Firebase remains the rate-limit authority.
-const verificationSends=new Map<string,number>();
-export function verificationWait(uid:string){return Math.max(0,Math.ceil(((verificationSends.get(uid)||0)-Date.now())/1000));}
-export async function resendCustomerVerification(user:User) {
-  if(user.uid!==getAuthClients().auth.currentUser?.uid)throw new CustomerError('Sign in again before requesting an email.');
-  if(user.emailVerified)return;
-  if(verificationWait(user.uid))throw new CustomerError('Please wait before requesting another verification email.');
-  verificationSends.set(user.uid,Date.now()+60000);
-  await sendEmailVerification(user,actionSettings('/verify-email'));
-}
-export function markVerificationSent(uid:string){verificationSends.set(uid,Date.now()+60000);}
-export async function refreshCustomerVerification(user:User) {
-  const auth=getAuthClients().auth;
-  if(auth.currentUser?.uid!==user.uid)throw new CustomerError('Sign in again to check verification.');
-  await reload(user);
-  if(auth.currentUser?.uid!==user.uid)throw new CustomerError('Your session changed. Please try again.');
-  await user.getIdToken(true);
-  return user.emailVerified;
 }
