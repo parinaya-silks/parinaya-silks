@@ -32,6 +32,7 @@ with sync_playwright() as p:
     assert page.get_by_label('Password',exact=True).get_attribute('type')=='text'
     page.get_by_label('Remember me',exact=True).check()
     page.evaluate('document.fonts.ready')
+    page.evaluate('document.fonts.ready')
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900})
         assert page.get_by_label('Email address',exact=True).input_value()=='visual@example.test'
@@ -92,6 +93,7 @@ with sync_playwright() as p:
     page.get_by_label('Name',exact=True).fill('Customer Fixture')
     page.get_by_label('Email address',exact=True).fill(email)
     page.get_by_label('Password',exact=True).fill(password)
+    page.get_by_label('Mobile number',exact=True).fill('98765 43210')
     page.get_by_label('Confirm password',exact=True).fill('different')
     page.get_by_role('button',name='Create account',exact=True).click()
     page.get_by_role('alert').filter(has_text='The passwords do not match.').wait_for()
@@ -104,6 +106,12 @@ with sync_playwright() as p:
     assert signups==[],'Weak passwords must fail the configured SDK policy before account creation'
     page.get_by_label('Password',exact=True).fill(password)
     page.get_by_label('Confirm password',exact=True).fill(password)
+    for invalid_mobile in ['', '12345', '+91 1234567890']:
+        page.get_by_label('Mobile number',exact=True).fill(invalid_mobile)
+        page.get_by_role('button',name='Create account',exact=True).click()
+        page.get_by_role('alert').filter(has_text='Please check your mobile number').wait_for()
+        assert signups==[], 'Mobile validation must precede Auth creation'
+    page.get_by_label('Mobile number',exact=True).fill('+91 (98765) 43210')
     def deny_profile(route):route.fulfill(status=403,content_type='application/json',body='{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Synthetic profile denial"}}')
     page.route('**/documents:commit*',deny_profile)
     page.get_by_role('form',name='Create customer account',exact=True).evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}')
@@ -112,26 +120,29 @@ with sync_playwright() as p:
     assert len(signups)==1,'Auth creation must not repeat after a profile failure'
     page.get_by_role('alert').filter(has_text='Your account already exists').wait_for()
     assert page.get_by_role('button',name='Retry profile setup',exact=True).is_visible()
+    page.reload()
+    page.get_by_role('button',name='Retry profile setup',exact=True).wait_for()
+    assert page.get_by_label('Mobile number',exact=True).input_value()=='+919876543210','Pending contact survives reload without password storage'
     page.unroute('**/documents:commit*',deny_profile)
     page.get_by_role('button',name='Retry profile setup',exact=True).click()
     page.get_by_role('button',name='Retry profile setup',exact=True).wait_for(state='hidden')
     page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
     before=inspect_fixture(email);assert before['profileExists'] and not before['adminClaim'] and not before['adminAccessExists']
-    assert before['emailVerified'] is False,'Registration must not change Firebase verification status'
+    assert before['emailVerified'] is False and before['mobileNumber']=='+919876543210','Registration must not change Firebase verification status'
     def assert_clean_account():
         page.get_by_role('button',name='Sign out',exact=True).wait_for()
         page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
-        assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address']
+        assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address','Mobile number']
         assert page.locator('.customer-account-details + .customer-auth-actions button').all_text_contents()==['Browse sarees','Sign out']
         assert 'verif' not in page.locator('main').inner_text().lower()
         assert 'VERIFY_EMAIL' not in mail_actions,'No verification email request is permitted'
     assert_clean_account()
+    page.evaluate('document.fonts.ready')
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900})
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
-        details=page.locator('.customer-account-details dd').last.bounding_box()
-        actions=page.locator('.customer-account-details + .customer-auth-actions').bounding_box()
-        assert 0<=actions['y']-(details['y']+details['height'])<=32,'No leftover verification gap'
+        gap=page.evaluate('document.querySelector(".customer-account-details + .customer-auth-actions").getBoundingClientRect().top-document.querySelector(".customer-account-details div:last-child dd").getBoundingClientRect().bottom')
+        assert 0<=gap<=32,('No leftover verification gap',width,gap)
         control=page.get_by_role('button',name='Sign out',exact=True)
         control.evaluate('(el)=>el.scrollIntoView({block:"center",behavior:"instant"})')
         bounds=control.bounding_box()
@@ -203,6 +214,7 @@ with sync_playwright() as p:
         path='/register' if destination=='/account' else '/register?returnTo=%2Fshop%3Fsearch%3Dregistration'
         page.goto(origin+path)
         page.get_by_label('Name',exact=True).fill('New Customer')
+        page.get_by_label('Mobile number',exact=True).fill('98765-43210')
         page.get_by_label('Email address',exact=True).fill(fresh)
         page.get_by_label('Password',exact=True).fill(password)
         page.get_by_label('Confirm password',exact=True).fill(password)
@@ -215,6 +227,14 @@ with sync_playwright() as p:
         assert_clean_account()
         page.get_by_role('button',name='Sign out',exact=True).click()
         page.get_by_role('heading',name='Welcome back',exact=True).wait_for()
+    page.goto(origin+'/login')
+    page.get_by_label('Email address',exact=True).fill('legacy-customer@example.test')
+    page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
+    page.get_by_role('button',name='Sign In',exact=True).click()
+    page.wait_for_url(origin+'/account')
+    page.get_by_text('Not provided',exact=True).wait_for()
+    assert inspect_fixture('legacy-customer@example.test').get('mobileNumber') is None
+    page.get_by_role('button',name='Sign out',exact=True).click()
     assert 'VERIFY_EMAIL' not in mail_actions
     oob=ctx.request.get('http://127.0.0.1:9099/emulator/v1/projects/parinaya-silks/oobCodes').json()
     assert all(item.get('requestType')!='VERIFY_EMAIL' for item in oob['oobCodes'])

@@ -1,6 +1,7 @@
 import React,{createContext,useCallback,useContext,useEffect,useRef,useState} from 'react';
 import {onIdTokenChanged,signOut,type User} from 'firebase/auth';
 import {getAuthClients} from '../services/firebase/auth.ts';
+import {clearPendingProfile} from './pendingProfile.ts';
 import {customerErrorMessage} from './policy.ts';
 
 type Session={status:'checking'|'signed-out'|'signed-in'|'error';user:User|null;version:number;message?:string};
@@ -19,7 +20,7 @@ export function CustomerAuthProvider({children}:{children:React.ReactNode}) {
     }catch(error){setSession({status:'error',user:null,version:0,message:customerErrorMessage(error)});}
     return()=>{active=false;};
   },[attempt]);
-  const leave=useCallback(async()=>{await signOut(getAuthClients().auth);if(mounted.current)setSession(previous=>({status:'signed-out',user:null,version:previous.version+1}));},[]);
+  const leave=useCallback(async()=>{const uid=getAuthClients().auth.currentUser?.uid;await signOut(getAuthClients().auth);if(uid)clearPendingProfile(uid);if(mounted.current)setSession(previous=>({status:'signed-out',user:null,version:previous.version+1}));},[]);
   return <Context.Provider value={{...session,retry:()=>{setSession({status:'checking',user:null,version:0});setAttempt(value=>value+1);},leave}}>{children}</Context.Provider>;
 }
 export function useCustomerAuth(){const value=useContext(Context);if(!value)throw new Error('Customer auth provider is missing.');return value;}

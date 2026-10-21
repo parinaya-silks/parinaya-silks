@@ -22,8 +22,11 @@ service cloud.firestore {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, update, delete: if false;
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasAll(['uid','displayName','createdAt','updatedAt'])
-        && request.resource.data.keys().hasOnly(['uid','displayName','createdAt','updatedAt'])
+        && request.resource.data.keys().hasAll(['uid','displayName','mobileNumber','createdAt','updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid','displayName','mobileNumber','createdAt','updatedAt'])
+        && request.resource.data.mobileNumber is string
+        && request.resource.data.mobileNumber.matches('\\+[1-9][0-9]{7,14}')
+        && (!request.resource.data.mobileNumber.matches('\\+91.*') || request.resource.data.mobileNumber.matches('\\+91[6-9][0-9]{9}'))
         && request.resource.data.uid == uid
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() >= 1 && request.resource.data.displayName.size() <= 100
@@ -80,6 +83,10 @@ service cloud.firestore {
       allow list: if administrator();
       allow write: if false;
     }
+    // Login appearance is served through a public projection; all settings and
+    // media writes use the trusted API with both administrator checks.
+    match /siteSettings/{id} { allow read, write: if false; }
+    match /loginAppearanceMedia/{id} { allow read, write: if false; }
     match /productSlugs/{slug} { allow read, write: if false; }
     match /productMedia/{mediaId} { allow read, write: if false; }
     match /catalogUploadLimits/{id} { allow read, write: if false; }

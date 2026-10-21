@@ -4,6 +4,7 @@ import { AdminDashboard } from './AdminDashboard.tsx';
 import { AdminOrders } from './AdminOrders.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import { AdminCustomers } from './AdminCustomers.tsx';
+import {AdminLoginAppearance} from '../appearance/AdminLoginAppearance.tsx';
 import { AdminCategories } from './AdminCategories.tsx';
 import { safeAdminDestination } from './accessPolicy.ts';
 
@@ -26,6 +27,8 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     content = <fieldset disabled className="min-w-0"><AdminOrders unavailable orders={[]} onNavigate={navigate} onUpdateStatus={unavailableWrite} onBulkUpdateStatus={unavailableWrite} /></fieldset>;
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
+  } else if (path === '/admin/settings') {
+    content = <AdminLoginAppearance/>;
   } else if (path === '/admin/customers') {
     content = <fieldset disabled className="min-w-0"><AdminCustomers unavailable customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
   } else {
@@ -33,7 +36,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     content = <ModuleUnavailable title={title} />;
   }
   return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email}>
-    {path !== '/admin/categories' && !path.startsWith('/admin/products') && <div role="note" className="mb-5 rounded-lg border border-[#B88A44]/40 bg-[#F4EEE5] p-4 text-sm text-[#5F5552]">Administrator access is active. This business module is not connected yet. No live records are displayed and no changes can be saved.</div>}
+    {path !== '/admin/settings' && path !== '/admin/categories' && !path.startsWith('/admin/products') && <div role="note" className="mb-5 rounded-lg border border-[#B88A44]/40 bg-[#F4EEE5] p-4 text-sm text-[#5F5552]">Administrator access is active. This business module is not connected yet. No live records are displayed and no changes can be saved.</div>}
     <div key={path}>{content}</div>
   </AdminLayout>;
 }

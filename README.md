@@ -6,13 +6,15 @@ See [Product CRUD configuration and acceptance](docs/PRODUCTS.md) for the curren
 
 ## Customer authentication
 
-See [customer authentication, private profile rules and release acceptance](docs/CUSTOMER_AUTH.md). The approved responsive login design is implemented with real Firebase flows and emulator-only automated accounts. Customer email verification is not required or sent; password-reset emails remain enabled. This simplification does not change Firestore rules or require new rule publication. Owner review/publication of the narrow profile rules, authorized-domain/email-action settings and Vercel acceptance remain necessary. No production changes were made.
+See [customer authentication, private profile rules and release acceptance](docs/CUSTOMER_AUTH.md). The approved responsive login design is implemented with real Firebase flows and emulator-only automated accounts. Customer email verification is not required or sent; password-reset emails remain enabled. New registration now requires normalized mobile contact; the corresponding profile rule update must be coordinated with release. Owner review/publication of the narrow profile rules, authorized-domain/email-action settings and Vercel acceptance remain necessary. Release requirements and acceptance steps are documented in the linked guides.
+
+See [login appearance and mobile contact release guide](docs/LOGIN_APPEARANCE.md). Owners can prepare separate desktop/mobile photos under Admin > Store Settings > Login Page Appearance and publish them with Save; the approved image remains the fallback.
 
 ## Administrator access
 
 See [administrator setup and release instructions](docs/ADMIN_ACCESS.md). Production /admin remains separate from public browsing and always requires real authorization. Both a server-assigned admin claim and an enabled adminAccess record are required. No customer admin shortcut or demo admin bypass remains.
 
-The owner-supplied rules allow public reads/writes until 14 November 2026. The restrictive local firestore.rules replacement requires owner review/deployment. Local code does not change deployed permissions.
+Deployed restrictive rules were inspected and matched the repository baseline before this update. The mobile-field rule diff must be coordinated with the application release; local edits alone do not change deployed permissions.
 
 Run npm.cmd run test:admin for isolated emulator tests. Provisioning is a separate trusted owner action: npm.cmd run admin:provision is read-only until explicit UID/email confirmation and --apply. The approved existing administrator was provisioned separately through the trusted procedure; provisioning is not part of storefront builds.
 

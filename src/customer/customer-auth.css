@@ -9,7 +9,7 @@ html:has(.customer-auth-shell){scroll-padding-block:80px calc(5rem + env(safe-ar
 .customer-auth-header .auth-extra,.customer-auth-header nav{display:none}
 .customer-auth-layout{display:grid;grid-template-columns:1fr}
 .customer-auth-portrait{height:clamp(175px,46vw,300px);overflow:hidden;background:#b98c55}
-.customer-auth-portrait img{width:100%;height:100%;object-fit:cover;object-position:50% 0%;display:block}
+.customer-auth-portrait img{width:100%;height:100%;object-fit:cover;object-position:var(--login-mobile-position,50% 0%);display:block}
 .customer-auth-panel{position:relative;isolation:isolate;overflow:hidden;background:#FBF7F0;padding:24px 28px 20px}
 .customer-auth-panel:before,.customer-auth-panel:after{content:"";position:absolute;z-index:-1;pointer-events:none;background:url('/assets/auth-botanical.svg') no-repeat center/contain;width:110px;height:420px;opacity:.37}
 .customer-auth-panel:before{left:-59px;top:-30px;transform:scaleX(-1)}
@@ -56,7 +56,7 @@ html:has(.customer-auth-shell){scroll-padding-block:80px calc(5rem + env(safe-ar
  .customer-auth-header .auth-brand>span:last-child{font-size:29px;letter-spacing:.11em}
  .customer-auth-layout{grid-template-columns:51.6% 48.4%;min-height:calc(100svh - var(--auth-header-height))}
  .customer-auth-portrait{height:auto;min-height:760px;position:relative;border-right:1px solid #c49a58}
- .customer-auth-portrait img{position:absolute;inset:0;object-position:50% 50%}
+ .customer-auth-portrait img{position:absolute;inset:0;object-position:var(--login-desktop-position,50% 50%)}
  .customer-auth-panel{padding:42px 48px 20px;display:flex;align-items:center}
  .customer-auth-content h1{font-size:52px}
  .customer-auth-monogram{width:50px;height:50px;margin-bottom:20px;font-size:35px}
@@ -68,3 +68,7 @@ html:has(.customer-auth-shell){scroll-padding-block:80px calc(5rem + env(safe-ar
  .customer-auth-panel:before{display:none}.customer-auth-panel:after{width:180px;height:90%;right:-68px;bottom:5%;opacity:.4}
  .customer-auth-shell .customer-auth-bottom-nav{display:none}
 }
+
+.customer-auth-portrait picture{display:block;height:100%}
+
+.customer-mobile-fields{display:grid;grid-template-columns:minmax(105px,.85fr) minmax(0,1.5fr);gap:8px}.customer-mobile-fields select{width:100%;min-width:0;border:1px solid #aeb2b5;border-radius:4px;background:#fff6;padding:10px;font-size:16px;color:#303943}.customer-mobile-help{font-size:12px;font-weight:400;color:#68707a}

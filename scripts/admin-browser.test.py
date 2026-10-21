@@ -49,7 +49,7 @@ with sync_playwright() as p:
         except Exception:
             print('Failed route heading:',route,'Expected:',heading,'Actual:',page.locator('h1').all_text_contents())
             raise
-        assert page.get_by_text('No live records are displayed',exact=False).count()==(0 if route.startswith('/admin/products') else 1)
+        assert page.get_by_text('No live records are displayed',exact=False).count()==(0 if route.startswith('/admin/products') or route=='/admin/settings' else 1)
         assert '8,42,500' not in page.inner_text('body')
         body = page.inner_text('body')
         for fictional in ['Mayuri Regal Wine', 'Ananya Rao', 'Across 4 master loom regions', 'Redeemable at', '0 Clients', '0 Pts', '0 Sarees']:

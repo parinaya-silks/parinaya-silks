@@ -18,10 +18,11 @@ export function catalogHandler(service:()=>Service|Promise<Service>, report:(dia
       const url=new URL(request.url || '/api/catalog','http://catalog.local');
       let result;
       if(request.method==='GET') {
-        if([...url.searchParams.keys()].some(key=>!['slug','cursor'].includes(key)))throw new ProductError('invalid','Unsupported catalog query.');
+        const appearance=url.searchParams.get('appearance')==='login'&&[...url.searchParams.keys()].length===1;
+        if(!appearance&&[...url.searchParams.keys()].some(key=>!['slug','cursor'].includes(key)))throw new ProductError('invalid','Unsupported catalog query.');
         action=url.searchParams.has('slug')?'get':'list';
         const ready=await initialize();
-        result=url.searchParams.has('slug') ? await ready.publicGet(url.searchParams.get('slug')) : await ready.publicList(url.searchParams.get('cursor'));
+        result=appearance?await ready.publicAppearance():url.searchParams.has('slug') ? await ready.publicGet(url.searchParams.get('slug')) : await ready.publicList(url.searchParams.get('cursor'));
       } else if(request.method==='POST') {
         if(!request.headers['content-type']?.startsWith('application/json'))throw new ProductError('invalid','JSON is required.');
         const bearer=request.headers.authorization;
@@ -31,7 +32,7 @@ export function catalogHandler(service:()=>Service|Promise<Service>, report:(dia
         if(typeof body==='string') {try{body=JSON.parse(body);}catch{throw new ProductError('invalid','Invalid JSON.');}}
         if(!body || typeof body!=='object' || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body))>100000)throw new ProductError('invalid','Invalid catalog request.');
         const input=body as Record<string,unknown>;
-        if(typeof input.action==='string' && ['list','get','save','sign','verify','delete'].includes(input.action))action=input.action;
+        if(typeof input.action==='string' && ['list','get','save','sign','verify','delete','appearance:get','appearance:sign','appearance:verify','appearance:save'].includes(input.action))action=input.action;
         result=await (await initialize()).privileged(bearer.slice(7),input);
       } else {response.setHeader('Allow','GET, POST');response.statusCode=405;response.end(JSON.stringify({code:'method',message:'Method not allowed.'}));return;}
       response.statusCode=200;response.end(JSON.stringify(result));

@@ -6,6 +6,6 @@ const app=initializeApp({projectId:'parinaya-silks'},'customer-fixture-control')
 try{
   const user=await getAuth(app).getUserByEmail(process.argv[2]);
   const db=getFirestore(app),profile=await db.doc('customerProfiles/'+user.uid).get(),access=await db.doc('adminAccess/'+user.uid).get();
-  console.log(JSON.stringify({emailVerified:user.emailVerified,profileExists:profile.exists,createdAt:profile.data()?.createdAt?.toMillis(),updatedAt:profile.data()?.updatedAt?.toMillis(),adminClaim:user.customClaims?.admin===true,adminAccessExists:access.exists}));
+  console.log(JSON.stringify({mobileNumber:profile.data()?.mobileNumber,emailVerified:user.emailVerified,profileExists:profile.exists,createdAt:profile.data()?.createdAt?.toMillis(),updatedAt:profile.data()?.updatedAt?.toMillis(),adminClaim:user.customClaims?.admin===true,adminAccessExists:access.exists}));
   await db.terminate();
 }finally{await deleteApp(app);}

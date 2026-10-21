@@ -4,6 +4,7 @@ import type { Auth } from 'firebase-admin/auth';
 import { MAX_IMAGE_BYTES, ProductError, productFields, validateProduct, type ProductRecord, type ProductImage } from '../src/products/model.ts';
 import type { CloudinaryMedia, UploadTicket } from './cloudinary.ts';
 import { CatalogConfigurationError } from './errors.ts';
+import {loginAppearanceService} from './loginAppearance.ts';
 import {publicProduct} from './publicProduct.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
@@ -25,6 +26,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return user.uid;
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
+  const appearance=loginAppearanceService(db,media,transactionAccess);
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
     const data=document.data()!;
     if(data.schemaVersion!==1) throw new ProductError('schema','This product needs an owner-reviewed schema migration.');
@@ -129,10 +131,15 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return {...metadata,mediaId:imageId,alt:''};
   }
   return {
+    publicAppearance:appearance.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
       const uid=await administrator(token);
       switch(body.action) {
+        case 'appearance:get': keys(body,['action']);return appearance.get();
+        case 'appearance:sign':return appearance.sign(uid,body);
+        case 'appearance:verify':return appearance.verify(uid,body);
+        case 'appearance:save':return appearance.save(uid,body);
         case 'list': keys(body,['action','cursor']);return list(true,body.cursor);
         case 'get': {keys(body,['action','id']);const document=await db.doc(`products/${id(body.id)}`).get();if(!document.exists)throw new ProductError('not-found','Product not found.');return present(document);}
         case 'save':return save(uid,body);

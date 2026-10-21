@@ -1,4 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {MobileField} from './MobileField.tsx';
+import {normalizeMobile,type CountryCode} from './mobile.ts';
 import {Eye,EyeOff} from 'lucide-react';
 import {AuthFrame} from './AuthFrame.tsx';
 import {useCustomerAuth} from './CustomerAuth.tsx';
@@ -11,6 +13,7 @@ export type CustomerMode='login'|'register'|'reset'|'account';
 export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerMode;currentPath:string;onNavigate:(path:string)=>void}) {
   const session=useCustomerAuth();
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[name,setName]=useState(''),[remember,setRemember]=useState(false),[visible,setVisible]=useState(false);
+  const [mobileNumber,setMobileNumber]=useState(''),[country,setCountry]=useState<CountryCode>('IN');
   const [busy,setBusy]=useState(false),[errors,setErrors]=useState<Record<string,string>>({}),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const lock=useRef(false),form=useRef<HTMLFormElement>(null),redirected=useRef(false),mounted=useRef(true);
   const previousUid=useRef<string|null>(null);
@@ -19,7 +22,7 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   useEffect(()=>{
     const uid=session.user?.uid||null;
-    if(previousUid.current&&previousUid.current!==uid){setEmail('');setName('');setPassword('');setConfirm('');setNotice('');setError('');setErrors({});}
+    if(previousUid.current&&previousUid.current!==uid){setEmail('');setName('');setMobileNumber('');setCountry('IN');setPassword('');setConfirm('');setNotice('');setError('');setErrors({});}
     previousUid.current=uid;
   },[session.user?.uid]);
   useEffect(()=>{
@@ -31,12 +34,12 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
   };
   async function submit(event:React.FormEvent) {
     event.preventDefault();if(lock.current)return;setError('');setNotice('');setErrors({});
-    try{validateCustomerFields({email,...(mode==='reset'?{}:{password}),...(mode==='register'?{name,confirm}:{})},mode==='register');}catch(failure){showFailure(failure);return;}
+    try{validateCustomerFields({email,...(mode==='reset'?{}:{password}),...(mode==='register'?{name,confirm}:{})},mode==='register');if(mode==='register')normalizeMobile(mobileNumber,country);}catch(failure){showFailure(failure);return;}
     lock.current=true;setBusy(true);
     try {
       if(mode==='reset'){await customerPasswordReset(email);if(mounted.current)setNotice('If an account can receive email at this address, password reset instructions will be sent.');}
       else if(mode==='register'){
-        const result=await customerRegister(name,email,password,confirm);
+        const result=await customerRegister(name,email,password,confirm,mobileNumber,country);
         if(mounted.current&&getAuthClients().auth.currentUser?.uid===result.user.uid){
           setPassword('');setConfirm('');redirected.current=true;
           // A partial profile save belongs on the recoverable account screen.
@@ -67,6 +70,7 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
         <form ref={form} className="customer-auth-form" onSubmit={submit} noValidate aria-label={mode==='register'?'Create customer account':mode==='reset'?'Reset customer password':'Customer sign in'} aria-busy={busy}>
           {mode==='register'&&field('name','Name','Enter your name')}
           {field('email','Email address','Enter your email')}
+          {mode==='register'&&<MobileField value={mobileNumber} country={country} onChange={setMobileNumber} onCountry={setCountry} error={errors.mobileNumber} disabled={busy}/>}
           {mode!=='reset'&&field('password','Password','Enter your password')}
           {mode==='register'&&field('confirm','Confirm password','Enter your password again')}
           {(mode==='login'||mode==='account')&&<div className="customer-auth-options"><label><input type="checkbox" checked={remember} onChange={event=>setRemember(event.target.checked)} disabled={busy}/>Remember me</label><a href={linked('/forgot-password')} onClick={event=>{event.preventDefault();onNavigate(linked('/forgot-password'));}}>Forgot password?</a></div>}

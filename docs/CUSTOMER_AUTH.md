@@ -2,30 +2,33 @@
 
 This milestone implements real Firebase customer authentication using the existing `parinaya-silks` app and `(default)` Firestore database. Local tests use loopback emulators. No production customers, permissions, rules, configuration or deployments were changed.
 
+Current update: [admin-managed login portraits and required registration mobile contact](LOGIN_APPEARANCE.md). New profile creation requires the reviewed mobile-number rules; previous email/password-only rule-publication notes below describe that earlier change.
+
 ## Routes and session behavior
 
 | Route | Behavior |
 | --- | --- |
 | `/login` | Email/password sign-in, password visibility, Remember me, reset and registration links |
-| `/register` | Name, email, password/confirmation; Firebase password-policy validation; registration, profile creation and immediate sign-in |
+| `/register` | Name, email, mobile number, password/confirmation; Firebase password-policy validation; registration, profile creation and immediate sign-in |
 | `/forgot-password` | Neutral password-reset confirmation for existing and unknown email addresses |
 | `/verify-email` | Legacy account alias only; no verification flow |
-| `/account` | Real name/email, profile recovery, browse and sign-out |
+| `/account` | Real name/email/mobile contact, profile recovery, browse and sign-out |
 | `/account/orders` | Same minimal account view; order history is not implemented |
 
 The Account navigation entry preserves the current implemented browsing URL for signed-out visitors. Explicit `?returnTo=` values are allowlisted internal routes; external URLs, admin/API paths, recursive auth links, traversal and unsafe encodings are rejected. The default is `/account`. Completed registration opens that account or the validated internal destination. A failed name/profile save opens `/account` for recovery instead. Signed-in visitors to login/registration are redirected without replacing their session.
 
-Customer and administrator routes share **one Firebase Auth instance**. Initialization restores existing local/session persistence without calling `setPersistence` or signing anyone out. Explicit customer login selects local persistence when Remember me is checked, and session persistence otherwise, before authenticating. Registration selects session persistence. Firebase owns its authentication storage; the application never manually stores passwords or tokens. Sign-out affects the shared session, including administrator access in the same browser.
+Customer and administrator routes share **one Firebase Auth instance**. Initialization restores existing local/session persistence without calling `setPersistence` or signing anyone out. Explicit customer login selects local persistence when Remember me is checked, and session persistence otherwise, before authenticating. Registration selects session persistence and validates mobile contact before Auth creation. Firebase owns its authentication storage; the application never manually stores passwords or tokens. Sign-out affects the shared session, including administrator access in the same browser.
 
 Initial restoration has a neutral loading state. Token updates do not trigger a full-page loading overlay. Email verification is not required or sent. Registration and account loading do not request verification, refresh verification status or change Firebase verification flags. Existing unverified customers can sign in and use implemented customer features. Bag, favourites, orders, checkout and payments remain outside this milestone.
 
 ## Private profile schema and recovery
 
-`customerProfiles/{Firebase Auth UID}` contains exactly:
+`customerProfiles/{Firebase Auth UID}` uses the following fields:
 
 ```text
 uid: string matching the document ID and authenticated UID
 displayName: trimmed, nonempty string, maximum 100 characters
+mobileNumber: normalized E.164 string required for new profiles; optional on existing profiles
 createdAt: Firestore server timestamp
 updatedAt: Firestore server timestamp
 ```

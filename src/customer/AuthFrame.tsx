@@ -1,10 +1,11 @@
 import React from 'react';
+import {LoginPortrait} from '../appearance/LoginPortrait.tsx';
 import {ArrowLeft} from 'lucide-react';
 import './customer-auth.css';
 
 export function AuthFrame({title,subtitle,children,onNavigate}:{title:string;subtitle:string;children:React.ReactNode;onNavigate:(path:string)=>void}) {
   return <div className="customer-auth-layout">
-    <div className="customer-auth-portrait"><img src="/assets/customer-auth-portrait.jpg" alt="A woman wearing a maroon silk saree beside carved stone pillars" fetchPriority="high" width="818" height="915"/></div>
+    <LoginPortrait/>
     <section className="customer-auth-panel" aria-labelledby="customer-auth-title"><div className="customer-auth-content">
       <div className="customer-auth-monogram" aria-hidden="true"><span>P</span><span>S</span></div>
       <h1 id="customer-auth-title">{title}</h1><p className="customer-auth-subtitle">{subtitle}</p>

@@ -11,6 +11,7 @@ async function run(command: string, args: string[], environment = process.env) {
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/admin-rules.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/category-rules.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/catalog-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/appearance-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/customer-rules.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
@@ -19,12 +20,14 @@ try {
   const database = getFirestore(app);
   for (const [uid, email, claim, enabled] of [
     ['test-approved-admin', 'parinayasilks.in@gmail.com', true, true],
+    ['legacy-customer', 'legacy-customer@example.test', false, false],
     ['test-customer', 'customer@example.test', false, false],
     ['test-claim-only', 'claim-only@example.test', true, false],
     ['test-record-only', 'record-only@example.test', false, true],
   ] as const) {
     await auth.createUser({ uid, email, password, emailVerified: true });
     await auth.setCustomUserClaims(uid, { admin: claim });
+    if(uid==='legacy-customer')await database.doc('customerProfiles/'+uid).set({uid,displayName:'Legacy Customer',createdAt:new Date(),updatedAt:new Date()});
     if (uid !== 'test-claim-only') await database.doc(`adminAccess/${uid}`).set({ enabled });
   }
 } finally { await deleteApp(app); }
@@ -39,7 +42,8 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!ready) throw new Error('Local test server unavailable.');
-  await run('python', ['scripts/customer-browser.test.py']);
+  await run('python', ['scripts/customer-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await run('python', ['scripts/appearance-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/product-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });

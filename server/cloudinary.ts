@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { MAX_IMAGE_BYTES, ProductError, type ProductImage } from '../src/products/model.ts';
 
-export interface UploadTicket { productId:string; publicId:string; uid:string; timestamp:number; verified:boolean }
-export interface CloudinaryMedia { sign(ticket:UploadTicket):Record<string,string|number>; verify(ticket:UploadTicket):Promise<Omit<ProductImage,'mediaId'|'alt'>> }
+export interface MediaUploadTicket {publicId:string;uid:string;timestamp:number;verified:boolean}
+export interface UploadTicket extends MediaUploadTicket {productId:string}
+export interface CloudinaryMedia { sign(ticket:MediaUploadTicket):Record<string,string|number>; verify(ticket:MediaUploadTicket):Promise<Omit<ProductImage,'mediaId'|'alt'>> }
 export function cloudinaryMedia(environment=process.env, request:typeof fetch=fetch):CloudinaryMedia {
   const config=()=>{ const cloud=environment.CLOUDINARY_CLOUD_NAME,key=environment.CLOUDINARY_API_KEY,secret=environment.CLOUDINARY_API_SECRET,preset=environment.CLOUDINARY_UPLOAD_PRESET;if(!cloud || !/^[a-zA-Z0-9_-]+$/.test(cloud) || !key || !secret || !preset) throw new ProductError('configuration','Product image uploads are not configured. Contact the store owner.');return {cloud,key,secret,preset}; };
   return {

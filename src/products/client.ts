@@ -16,6 +16,11 @@ export const newOperation=()=>crypto.randomUUID().replaceAll('-','');
 export const saveProduct=(id:string,expectedRevision:number,operationId:string,product:ProductInput)=>catalogAction<ProductRecord>({action:'save',id,expectedRevision,operationId,product});
 export async function uploadImage(file:File,productId:string,mediaId:string,onProgress:(progress:number)=>void) {
   const params=await catalogAction<Record<string,string>>({action:'sign',productId,mediaId,type:file.type,size:file.size});
+  await uploadSignedImage(file,params,onProgress);
+  return catalogAction<ProductImage>({action:'verify',productId,mediaId});
+}
+
+export async function uploadSignedImage(file:File,params:Record<string,string>,onProgress:(progress:number)=>void){
   const form=new FormData();
   for(const [key,value]of Object.entries(params))if(!['uploadUrl','mediaId'].includes(key))form.append(key,String(value));
   form.append('file',file);
@@ -26,5 +31,4 @@ export async function uploadImage(file:File,productId:string,mediaId:string,onPr
     xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new ProductError('upload','Image upload failed. Check the file or retry.'));
     xhr.send(form);
   });
-  return catalogAction<ProductImage>({action:'verify',productId,mediaId});
 }
