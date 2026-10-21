@@ -38,6 +38,8 @@ import { VerifyEmailView } from './views/VerifyEmailView.tsx';
 import { ContactView } from './views/ContactView.tsx';
 import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
+import {CustomerAuthProvider,useCustomerAuth} from './customer/CustomerAuth.tsx';
+import {safeCustomerReturn} from './customer/policy.ts';
 import { FeatureUnavailable } from './components/FeatureUnavailable.tsx';
 
 import { isAdminLocation, safeAdminDestination } from './admin/accessPolicy.ts';
@@ -81,7 +83,10 @@ function customerLocation() {
   return normalizePath(window.location.hash.startsWith('#/') ? window.location.hash.slice(1) : window.location.pathname + window.location.search);
 }
 
-function Storefront() {
+function Storefront() {return <CustomerAuthProvider><StorefrontContent/></CustomerAuthProvider>;}
+
+function StorefrontContent() {
+  const session=useCustomerAuth();
   // Navigation State (Simple client-side routing)
   const [currentPath, setCurrentPath] = useState<string>(() => {
     return customerLocation();
@@ -131,11 +136,18 @@ function Storefront() {
 
   const navigate = useCallback((path: string) => {
     path = normalizePath(path);
+    if((path==='/account'||path==='/login')&&session.status!=='signed-in'){
+      const previous=safeCustomerReturn(currentPath);
+      if(previous!=='/account')path='/login?returnTo='+encodeURIComponent(previous);
+    }
     window.history.pushState(null, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
     setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [currentPath,session.status]);
+
+  const authRoute=currentPath.split('?')[0];
+  const authExperience=['/login','/register','/forgot-password','/verify-email','/account','/account/orders'].includes(authRoute);
 
   // Helpers
   const isWishlisted = useCallback(
@@ -253,44 +265,16 @@ function Storefront() {
         onNavigate={navigate}
       />
     );
-  } else if (currentPath === '/account' || currentPath === '/account/orders') {
-    customerView = (
-      <AccountView
-        customer={customer}
-        orders={orders.filter(o => o.customerEmail === customer.email)}
-        onNavigate={navigate}
-        onUpdateProfile={(updates) => storeService.updateCustomerProfile(updates)}
-        onAddAddress={(addr) => storeService.addCustomerAddress(addr)}
-        onRemoveAddress={(id) => storeService.removeCustomerAddress(id)}
-      />
-    );
-  } else if (currentPath === '/login') {
-    customerView = (
-      <LoginView
-        onNavigate={navigate}
-        onLoginSuccess={() => {}}
-      />
-    );
-  } else if (currentPath === '/register') {
-    customerView = (
-      <RegisterView
-        onNavigate={navigate}
-        onRegisterSuccess={() => {}}
-      />
-    );
-  } else if (currentPath === '/forgot-password') {
-    customerView = (
-      <ForgotPasswordView
-        onNavigate={navigate}
-      />
-    );
-  } else if (currentPath === '/verify-email') {
-    customerView = (
-      <VerifyEmailView
-        initialEmail={customer.email}
-        onNavigate={navigate}
-      />
-    );
+  } else if (authRoute === '/account' || authRoute === '/account/orders') {
+    customerView = <AccountView currentPath={currentPath} onNavigate={navigate}/>;
+  } else if (authRoute === '/login') {
+    customerView = <LoginView currentPath={currentPath} onNavigate={navigate}/>;
+  } else if (authRoute === '/register') {
+    customerView = <RegisterView currentPath={currentPath} onNavigate={navigate}/>;
+  } else if (authRoute === '/forgot-password') {
+    customerView = <ForgotPasswordView currentPath={currentPath} onNavigate={navigate}/>;
+  } else if (authRoute === '/verify-email') {
+    customerView = <VerifyEmailView currentPath={currentPath} onNavigate={navigate}/>;
   } else if (currentPath === '/about') {
     customerView = (
       <AboutView
@@ -336,7 +320,7 @@ function Storefront() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white">
+    <div className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")}>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
@@ -353,6 +337,7 @@ function Storefront() {
 
       {/* Main Storefront Header */}
       <Header
+        authLayout={authExperience}
         currentPath={currentPath}
         onNavigate={navigate}
         cartCount={cartCount}
@@ -362,14 +347,15 @@ function Storefront() {
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}
-        {catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
+        {!authExperience && catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
       </main>
 
       {/* Storefront Footer */}
-      <Footer onNavigate={navigate} />
+      {!authExperience&&<Footer onNavigate={navigate} />}
 
       {/* Approved 5-Tab Mobile Bottom Navigation (Home · Shop · Wishlist · Bag · Account) */}
       <MobileBottomNav
+        authLayout={authExperience}
         currentPath={currentPath}
         onNavigate={navigate}
         cartCount={cartCount}

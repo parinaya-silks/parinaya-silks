@@ -5,6 +5,7 @@ interface MobileBottomNavProps {
   onNavigate: (path: string) => void;
   cartCount: number;
   wishlistCount: number;
+  authLayout?: boolean;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -12,6 +13,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onNavigate,
   cartCount,
   wishlistCount,
+  authLayout=false,
 }) => {
   // Determine active tab
   // Strictly: Home, Shop, Wishlist, Bag, Account
@@ -20,12 +22,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isShop = currentPath.startsWith('/shop') || currentPath.startsWith('/product');
   const isWishlist = currentPath === '/wishlist';
   const isBag = currentPath === '/bag';
-  const isAccount = currentPath.startsWith('/account') || currentPath === '/login' || currentPath === '/register';
+  const accountPath=currentPath.split('?')[0];
+  const isAccount = accountPath.startsWith('/account') || ['/login','/register','/forgot-password','/verify-email'].includes(accountPath);
 
   return (
     <nav
       aria-label="Mobile Bottom Navigation"
-      className="md:hidden fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-2 pb-safe h-[calc(4rem+env(safe-area-inset-bottom))] bg-white border-t border-[#E8DDD6] shadow-[0_-2px_10px_rgba(35,25,25,0.06)]"
+      className={'md:hidden fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-2 pb-safe h-[calc(4rem+env(safe-area-inset-bottom))] bg-white border-t border-[#E8DDD6] shadow-[0_-2px_10px_rgba(35,25,25,0.06)]'+(authLayout?' customer-auth-bottom-nav':'')}
     >
       {/* 1. Home */}
       <button
@@ -121,6 +124,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         type="button"
         onClick={() => onNavigate('/account')}
+        aria-current={isAccount?'page':undefined}
         className={`flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[44px] transition-colors ${
           isAccount ? 'text-[#780D24] font-semibold' : 'text-[#5F5552] hover:text-[#231919]'
         }`}

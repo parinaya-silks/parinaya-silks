@@ -68,9 +68,11 @@ with sync_playwright() as p:
             assert page.get_by_role('button',name='Simulate payment',exact=False).count()==0
         for route in ['/login','/register','/forgot-password']:
             page.goto(origin+route)
-            assert page.locator('button[type="submit"]').is_disabled()
-            assert page.locator('input:not([disabled])').count()==0
-            page.locator('form').evaluate('(form)=>form.requestSubmit()')
+            page.locator('.customer-auth-form').wait_for()
+            assert page.locator('button[type="submit"]').is_enabled()
+            page.locator('.customer-auth-form').evaluate('(form)=>form.requestSubmit()')
+            page.get_by_role('alert').filter(has_text='Please check the highlighted fields').wait_for()
+            assert page.locator('[aria-invalid="true"]').count()>0
             assert page.url==origin+route
         page.goto(origin+'/contact')
         for label in ['How do I track my order?','Where can I find delivery information?','Where can I check the returns and exchange policy?']:
@@ -78,7 +80,8 @@ with sync_playwright() as p:
         text=page.locator('body').inner_text()
         for phrase in forbidden: assert phrase not in text, phrase
         # Enabled category queries are now expected; public pages must not start
-        # customer authentication. Rules/emulator tests verify category scope.
+        # authentication on initial browsing/invalid form submission. Real
+        # customer authentication is covered by the isolated emulator suite.
         assert all('firestore.googleapis.com' in url for url in backend_requests)
         page.goto(origin+'/admin/orders')
         page.get_by_role('heading',name='Administrator Sign In').wait_for()

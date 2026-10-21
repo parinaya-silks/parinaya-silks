@@ -16,6 +16,21 @@ service cloud.firestore {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, create, update, delete: if false;
     }
+    // Private customer identity only. Authorization, verification and business
+    // state never come from this client-created profile.
+    match /customerProfiles/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, update, delete: if false;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['uid','displayName','createdAt','updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid','displayName','createdAt','updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 1 && request.resource.data.displayName.size() <= 100
+        && request.resource.data.displayName.matches('\\S(?:.*\\S)?')
+        && request.resource.data.displayName.matches('[^\\x00-\\x1F\\x7F]+')
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+    }
     function validCategory(data) {
       return data.keys().hasAll(['name', 'slug', 'enabled', 'displayOrder', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['name', 'slug', 'description', 'enabled', 'displayOrder', 'createdAt', 'updatedAt'])

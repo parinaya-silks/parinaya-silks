@@ -1,8 +1,12 @@
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Other business modules, customer login and checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Customer login, registration, verification and password recovery use the shared Firebase Auth instance. Other business modules and checkout remain unconnected.
 
 See [Product CRUD configuration and acceptance](docs/PRODUCTS.md) for the current milestone and [category management](docs/CATEGORIES.md) for its foundation. Product setup requires the local API server and server-only credentials. Owner rules/index publication, server configuration and application release remain necessary. No live test records or uploads were created.
+
+## Customer authentication
+
+See [customer authentication, private profile rules and release acceptance](docs/CUSTOMER_AUTH.md). The approved responsive login design is implemented with real Firebase flows and emulator-only automated accounts. Owner review/publication of the narrow profile rules, authorized-domain/email-action settings and Vercel acceptance remain necessary. No production changes were made.
 
 ## Administrator access
 
@@ -36,11 +40,11 @@ npm.cmd run build
 npm.cmd run preview
 ```
 
-`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer login, registration, recovery, verification, checkout and order actions are unavailable in ordinary development and all builds. Administrator authentication is real.
+`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer and administrator authentication use real Firebase. Automated customer account creation is restricted to the emulator suite. Checkout and order actions remain unavailable.
 
 The **storefront stays visible with clean empty states**. No sample catalogue, customer identity, order history, sale campaigns or fictional reporting is displayed. See [content cleanup and review instructions](docs/CONTENT_CLEANUP.md).
 
-There is no visibility flag or public simulator mode. `demoEnabled` is false in every mode. Customer sign-in, checkout and order actions remain unavailable. Automated tests import fixtures directly from `tests/fixtures/commerce.ts`; the normal application never imports that dataset.
+There is no visibility flag or public simulator mode. `demoEnabled` is false in every mode. Checkout and order actions remain unavailable; customer authentication is real. Automated tests import fixtures directly from `tests/fixtures/commerce.ts`; the normal application never imports that dataset.
 
 A one-time versioned migration removes only the 12 exact retired product IDs from the named legacy bag/wishlist keys. It preserves unknown rows, order/profile data, preferences and Firebase authentication storage. Those legacy records are not read into the normal website. See the cleanup guide for the exact keys and failure behavior.
 
@@ -60,7 +64,8 @@ The historical `browser-flows.py` delegates to the current empty-content checks.
 
 - `src/App.tsx`: hash routing, shared shell and reactive state.
 - `src/components`: storefront header, footer and mobile navigation.
-- `src/views`: customer screens.
+- `src/views`: storefront screens and customer authentication route wrappers.
+- `src/customer`: shared responsive authentication, session, profile and account flows.
 - `src/admin`: admin screens and separate layout.
 - `src/services/storeService.ts`: explicit empty/unconnected business repositories; no automatic seeding.
 - `src/services/legacyDemoCleanup.ts`: narrow versioned legacy bag/wishlist cleanup.

@@ -1,30 +1,10 @@
-import { initializeAuth, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, connectAuthEmulator, onIdTokenChanged, getIdTokenResult, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, type Auth, type User } from 'firebase/auth';
-import { doc, onSnapshot, type Firestore } from 'firebase/firestore';
-import { getDatabaseClient } from './database.ts';
-import { getFirebaseApp } from './app.ts';
+import { onIdTokenChanged, getIdTokenResult, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, type User } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import {adminSessionWatcher,type AdminSession as Session} from '../../admin/sessionWatcher.ts';
 
-type Clients = { auth: Auth; database: Firestore };
-const clients: Map<string, Clients> = import.meta.hot?.data.adminClients ?? new Map();
-if (import.meta.hot) import.meta.hot.data.adminClients = clients;
-
-export function getAdminClients(): Clients {
-  const app = getFirebaseApp();
-  if (app.status !== 'app-initialized' || import.meta.env.VITE_FIREBASE_DATABASE_ID !== '(default)') {
-    throw new Error('Firebase administrator access is not configured. Check the Firebase environment settings and reload.');
-  }
-  const cached = clients.get(app.app.name);
-  if (cached) return cached;
-  const auth = initializeAuth(app.app, { persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence] });
-  const database = getDatabaseClient();
-  // Explicit local test mode only. This branch is removed from production builds.
-  if (import.meta.env.DEV && import.meta.env.MODE === 'admin-test') {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  }
-  const result = { auth, database };
-  clients.set(app.app.name, result);
-  return result;
-}
+// Compatibility export: existing admin callers use the one shared Auth instance.
+export {getAuthClients as getAdminClients} from './auth.ts';
+import {getAuthClients as getAdminClients} from './auth.ts';
 
 export type AdminSession=Session<User>;
 

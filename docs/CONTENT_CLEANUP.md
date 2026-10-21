@@ -1,5 +1,6 @@
 # Empty content milestone — 17 October 2026
 
+Historical cleanup milestone: real product/category management and customer authentication were added later. See [customer authentication](CUSTOMER_AUTH.md) and [product management](PRODUCTS.md) for current functionality. Cleanup protections and the ban on simulated business data remain in force.
 Subsequent product milestone: [PRODUCTS.md](PRODUCTS.md) connects owner-created products, publication and verified media. Normal repositories still have no mock fallback or automatic seed. Earlier empty-catalog statements below describe the cleanup milestone, not the new product integration.
 
 Subsequent category milestone: [CATEGORIES.md](CATEGORIES.md) connects real enabled Firestore categories to the existing shop controls. Products and other business records remain empty/unconnected. No sample categories or products are seeded.

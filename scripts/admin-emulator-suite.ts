@@ -11,6 +11,7 @@ async function run(command: string, args: string[], environment = process.env) {
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/admin-rules.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/category-rules.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/catalog-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/customer-rules.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -38,6 +39,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!ready) throw new Error('Local test server unavailable.');
+  await run('python', ['scripts/customer-browser.test.py']);
   await run('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/product-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect,useRef,useState } from 'react';
 import { CartItem, WishlistItem } from '../types/index.ts';
 
 interface HeaderProps {
@@ -6,6 +6,7 @@ interface HeaderProps {
   onNavigate: (path: string) => void;
   cartCount: number;
   wishlistCount: number;
+  authLayout?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,10 +14,23 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   cartCount,
   wishlistCount,
+  authLayout=false,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const menuTrigger=useRef<HTMLButtonElement>(null),drawer=useRef<HTMLElement>(null);
+  const closeDrawer=()=>{menuTrigger.current?.focus();setDrawerOpen(false);};
+  useEffect(()=>{
+    if(!drawerOpen)return;
+    const controls=()=>Array.from(drawer.current?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled])')||[]);
+    controls()[0]?.focus();
+    const key=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){event.preventDefault();closeDrawer();}
+      if(event.key==='Tab'){const items=controls(),first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+    };
+    document.addEventListener('keydown',key);return()=>document.removeEventListener('keydown',key);
+  },[drawerOpen]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +44,15 @@ export const Header: React.FC<HeaderProps> = ({
     <>
 
       {/* Approved Top App Bar (Deep Maroon #780D24, Single Row) */}
-      <header className="sticky top-0 z-40 bg-[#780D24] text-white shadow-md">
+      <header className={'sticky top-0 z-40 bg-[#780D24] text-white shadow-md'+(authLayout?' customer-auth-header':'')}>
         <div className="flex justify-between items-center w-full px-4 h-16 max-w-7xl mx-auto">
           {/* Leading Menu Trigger */}
           <div className="flex items-center gap-2">
             <button
               aria-label="Open Navigation Drawer"
+              ref={menuTrigger}
+              aria-expanded={drawerOpen}
+              aria-controls="storefront-navigation-drawer"
               className="p-2 -ml-2 text-white hover:text-[#F2BE72] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-95"
               onClick={() => setDrawerOpen(true)}
               type="button"
@@ -46,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Brand Logo: Circular PS Badge + PARINAYA SILKS on ONE LINE */}
             <button
               onClick={() => onNavigate('/')}
-              className="flex items-center gap-2.5 hover:opacity-95 transition-opacity text-left"
+              className={'flex items-center gap-2.5 hover:opacity-95 transition-opacity text-left'+(authLayout?' auth-brand':'')}
               type="button"
             >
               <span className="w-8 h-8 rounded-full border border-[#B88A44]/80 bg-[#5E091B] flex items-center justify-center font-serif text-[13px] font-bold text-[#F2BE72] tracking-wider shrink-0 shadow-inner">
@@ -105,6 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Desktop Wishlist Link */}
+            <div className={authLayout?'auth-extra':'contents'}>
             <button
               aria-label="Wishlist"
               className="hidden sm:flex relative p-2 text-white hover:text-[#F2BE72] transition-colors min-w-[44px] min-h-[44px] items-center justify-center active:scale-95"
@@ -133,8 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               )}
             </button>
-
-
+            </div>
           </div>
         </div>
 
@@ -178,10 +195,18 @@ export const Header: React.FC<HeaderProps> = ({
         className={`fixed inset-0 bg-[#231919]/60 backdrop-blur-sm z-50 transition-opacity duration-300 ${
           drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+        onClick={closeDrawer}
       />
 
       <aside
+        ref={drawer}
+        id="storefront-navigation-drawer"
+        role="dialog"
+        aria-label="Store navigation"
+        aria-modal={drawerOpen||undefined}
+        aria-hidden={!drawerOpen||undefined}
+        inert={!drawerOpen||undefined}
         className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-[#FBF7F0] border-r border-[#E8DDD6] shadow-2xl z-50 transform transition-transform duration-300 flex flex-col p-5 ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -198,7 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             aria-label="Close Navigation Drawer"
             className="p-2 text-[#5F5552] hover:text-[#780D24] min-w-[44px] min-h-[44px] flex items-center justify-center"
-            onClick={() => setDrawerOpen(false)}
+            onClick={closeDrawer}
             type="button"
           >
             <span className="material-symbols-outlined">close</span>
@@ -209,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -219,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/shop');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -229,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/wishlist');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -246,7 +271,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/bag');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -263,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/account');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -273,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/about');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -283,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               onNavigate('/contact');
-              setDrawerOpen(false);
+              closeDrawer();
             }}
             className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#F4EEE5] text-[#231919]"
           >
@@ -298,7 +323,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 onNavigate('/policies?tab=shipping');
-                setDrawerOpen(false);
+                closeDrawer();
               }}
               className="w-full text-left px-3 py-2 rounded text-[#231919] hover:bg-[#F4EEE5] flex items-center justify-between"
             >
@@ -308,7 +333,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 onNavigate('/policies?tab=returns');
-                setDrawerOpen(false);
+                closeDrawer();
               }}
               className="w-full text-left px-3 py-2 rounded text-[#231919] hover:bg-[#F4EEE5] flex items-center justify-between mt-1"
             >
@@ -318,7 +343,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 onNavigate('/policies?tab=privacy');
-                setDrawerOpen(false);
+                closeDrawer();
               }}
               className="w-full text-left px-3 py-2 rounded text-[#231919] hover:bg-[#F4EEE5] flex items-center justify-between mt-1"
             >
@@ -328,7 +353,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 onNavigate('/policies?tab=terms');
-                setDrawerOpen(false);
+                closeDrawer();
               }}
               className="w-full text-left px-3 py-2 rounded text-[#231919] hover:bg-[#F4EEE5] flex items-center justify-between mt-1"
             >
