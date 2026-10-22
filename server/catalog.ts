@@ -7,6 +7,7 @@ import { CatalogConfigurationError } from './errors.ts';
 import {loginAppearanceService} from './loginAppearance.ts';
 import {publicProduct} from './publicProduct.ts';
 import {shoppingService} from './shopping.ts';
+import {deliveryService} from './delivery.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
@@ -136,11 +137,13 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     await db.runTransaction(async transaction=>{await transactionAccess(transaction,uid);const current=await transaction.get(ref);if(current.data()?.productId!==productId)throw new ProductError('media','Upload changed.');transaction.update(ref,{verified:true,metadata,verifiedAt:FieldValue.serverTimestamp()});});
     return {...metadata,mediaId:imageId,alt:''};
   }
+  const delivery=deliveryService(db,async(document,name)=>publicProduct(await present(document,name)));
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
     publicAppearance:appearance.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
       switch(body.action) {

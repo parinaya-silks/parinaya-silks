@@ -7,7 +7,7 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "build:demo": "vite build --mode demo",
-    "test": "node --import tsx --test src/utils/pricing.test.ts src/utils/fulfilment.test.ts src/utils/routing.test.ts src/services/firebase/config.test.ts src/services/firebase/verification.test.ts src/customer/policy.test.ts src/customer/mobile.test.ts src/appearance/model.test.ts src/admin/accessPolicy.test.ts src/admin/sessionWatcher.test.ts src/services/storefrontAccess.test.ts src/categories/model.test.ts src/products/model.test.ts scripts/cloudinary.test.ts server/credentials.test.ts scripts/catalog-handler.test.ts src/shopping/model.test.ts src/shopping/intent.test.ts",
+    "test": "node --import tsx --test src/utils/pricing.test.ts src/utils/fulfilment.test.ts src/utils/routing.test.ts src/services/firebase/config.test.ts src/services/firebase/verification.test.ts src/customer/policy.test.ts src/customer/mobile.test.ts src/appearance/model.test.ts src/admin/accessPolicy.test.ts src/admin/sessionWatcher.test.ts src/services/storefrontAccess.test.ts src/categories/model.test.ts src/products/model.test.ts scripts/cloudinary.test.ts server/credentials.test.ts scripts/catalog-handler.test.ts src/shopping/model.test.ts src/shopping/intent.test.ts src/delivery/model.test.ts",
     "test:catalog-runtime": "node scripts/catalog-runtime.test.mjs",
     "test:admin": "node scripts/test-admin.mjs",
     "admin:provision": "node --import tsx scripts/provision-admin.ts",

@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
+import {collection,doc,getDoc,getDocs,setDoc,setLogLevel} from 'firebase/firestore';
+import handler from '../api/catalog.ts';
+import {serverFirebase} from '../server/firebase.ts';
+import {emptyProduct} from '../src/products/model.ts';
+import {blankAddress} from '../src/delivery/model.ts';
+import {bagId} from '../src/shopping/model.ts';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw new Error('Loopback emulators required.');
+process.env.PARINAYA_SERVER_EMULATORS='true';setLogLevel('silent');
+test('exported delivery API: owner isolation, atomic default/limits, revisions and read-only trusted checkout',async()=>{
+  const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}});
+  const {database:db,auth}=serverFirebase(),tokens:Record<string,string>={},users:string[]=[];
+  const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');
+  const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`,op=()=>randomUUID().replaceAll('-','');
+  const call=async(body:Record<string,unknown>,who='a')=>{const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...(tokens[who]?{Authorization:'Bearer '+tokens[who]}:{})},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
+  const address={...blankAddress(),recipientName:'Emulator Recipient',mobileNumber:'9876543210',pinCode:'500034',line1:'12 Emulator Street',locality:'Locality',city:'Hyderabad',state:'Telangana'};
+  const save=(id:string,expectedRevision=0,changes={},operationId=op(),who='a')=>call({action:'addresses:save',id,expectedRevision,operationId,address:{...address,...changes}},who);
+  const list=async(who='a')=>{const result=await call({action:'addresses:list'},who);assert.equal(result.status,200);return result.data;};
+  const command=(action:string,id:string,expectedRevision=1)=>call({action,id,expectedRevision,operationId:op()});
+  const a='a'.repeat(32),b='b'.repeat(32),foreign='f'.repeat(32),pid='p'.repeat(20),vid='v'.repeat(20),cid='c'.repeat(20);
+  const review=async(id:string|null=a)=>{const result=await call({action:'checkout:review',addressId:id});assert.equal(result.status,200);return result.data;};
+  try{
+    await env.clearFirestore();
+    for(const who of ['a','b']){const uid='delivery-'+who,password=randomUUID()+'Aa9!';users.push(uid);await auth.createUser({uid,email:uid+'@example.test',password,emailVerified:false});const result=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=synthetic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:uid+'@example.test',password,returnSecureToken:true})});tokens[who]=(await result.json()).idToken;}
+    assert.equal((await call({action:'addresses:list'},'guest')).status,401);assert.deepEqual((await list()).addresses,[]);
+    assert.equal((await call({action:'checkout:review',addressId:null},'guest')).status,401);
+    for(const changes of [{mobileNumber:'123'},{pinCode:'012345'},{country:'Elsewhere'},{state:'Invented'},{locality:''},{recipientName:'bad\nname'},{admin:true}])assert.equal((await save(a,0,changes)).status,400);
+    const firstOp=op();assert.equal((await save(a,0,{},firstOp)).status,200);assert.equal((await save(a,0,{},firstOp)).status,200);let book=await list();assert.equal(book.addresses.length,1);assert.equal(book.defaultAddressId,a);assert.equal(book.addresses[0].mobileNumber,'+919876543210');assert.ok(book.addresses[0].createdAt>0);
+    assert.equal((await save(a,1,{recipientName:'Changed Recipient'})).status,200);assert.equal((await save(a,1,{recipientName:'Stale'})).status,409);assert.equal((await list()).addresses[0].recipientName,'Changed Recipient');
+    assert.equal((await save(b)).status,200);await Promise.all([command('addresses:default',a,2),command('addresses:default',b)]);book=await list();assert.ok([a,b].includes(book.defaultAddressId));assert.equal(book.addresses.filter((item:any)=>'isDefault' in item).length,0);
+    await command('addresses:default',b);await command('addresses:delete',b);assert.equal((await list()).defaultAddressId,a);
+    assert.equal((await save(foreign,0,{},op(),'b')).status,200);assert.equal((await call({action:'checkout:review',addressId:foreign})).status,403);
+    for(const extras of [{uid:'delivery-b'},{pricePaise:1},{subtotalPaise:1},{items:[]},{stock:999}])assert.equal((await call({action:'checkout:review',addressId:a,...extras})).status,400);
+    const owner=env.authenticatedContext('delivery-a').firestore(),other=env.authenticatedContext('delivery-b').firestore(),guest=env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDocs(collection(owner,'customerShopping/delivery-a/addresses')));await assertSucceeds(getDoc(doc(owner,'customerShopping/delivery-a/preferences/delivery')));
+    for(const client of [other,guest]){await assertFails(getDocs(collection(client,'customerShopping/delivery-a/addresses')));await assertFails(getDoc(doc(client,'customerShopping/delivery-a/preferences/delivery')));}
+    for(const client of [owner,other,guest])for(const path of ['customerShopping/delivery-a/addresses/'+a,'customerShopping/delivery-a/preferences/delivery'])await assertFails(setDoc(doc(client,path),{admin:true}));
+    assert.equal((await review()).items.length,0);assert.equal((await review()).valid,false);
+    await db.doc('categories/'+cid).set({name:'Emulator Silk',enabled:true});
+    const base={...emptyProduct(),schemaVersion:1,status:'Published',name:'Delivery Saree',slug:'delivery-saree',sku:'DELIVERY-TEST',description:'Emulator fixture',categoryId:cid,pricePaise:123405,images:[{mediaId:'a'.repeat(32),alt:'Saree',url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/fixture.jpg',width:300,height:400}],coverMediaId:'a'.repeat(32),inventory:{mode:'simple',quantity:5},createdAt:new Date(),updatedAt:new Date(),revision:1};
+    await db.doc('products/'+pid).set(base);await db.doc('products/'+vid).set({...base,inventory:{mode:'variants',variants:[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:2}]}});
+    const line=db.doc('customerShopping/delivery-a/bag/'+bagId(pid,null));await line.set({productId:pid,variantId:null,quantity:2,createdAt:new Date(),updatedAt:new Date()});
+    const productsBefore=(await db.collection('products').get()).docs.map(doc=>doc.data()),bagBefore=(await line.get()).data(),ordersBefore=(await db.collection('orders').get()).size;
+    let result=await review();assert.equal(result.valid,true);assert.equal(result.subtotalPaise,'246810');assert.equal(result.address.id,a);assert.equal((await review(null)).valid,false);
+    for(let attempt=0;attempt<3;attempt++)await review();assert.deepEqual((await db.collection('products').get()).docs.map(doc=>doc.data()),productsBefore);assert.deepEqual((await line.get()).data(),bagBefore);assert.equal((await db.collection('orders').get()).size,ordersBefore);
+    const previous=result.fingerprint;await db.doc('products/'+pid).update({pricePaise:200005});result=await review();assert.equal(result.subtotalPaise,'400010');assert.notEqual(result.fingerprint,previous);
+    await db.doc('products/'+pid).update({'inventory.quantity':1});result=await review();assert.equal(result.valid,false);assert.match(result.items[0].issues.join(' '),/Only 1/);assert.equal((await line.get()).data()!.quantity,2);
+    await line.update({quantity:0});assert.match((await review()).items[0].issues.join(' '),/positive/);await line.update({quantity:1});
+    await db.doc('products/'+pid).update({status:'Draft'});result=await review();assert.equal(result.items[0].product,null);assert.equal(result.subtotalComplete,false);
+    await db.doc('products/'+pid).update({status:'Published'});await db.doc('categories/'+cid).update({enabled:false});assert.equal((await review()).items[0].product,null);await db.doc('categories/'+cid).update({enabled:true});
+    await line.update({productId:vid,variantId:null});assert.equal((await review()).valid,false);await line.update({variantId:'wine',quantity:3});assert.match((await review()).items[0].issues.join(' '),/Only 2/);await line.update({quantity:1});assert.equal((await review()).valid,true);await db.doc('products/'+vid).delete();assert.equal((await review()).items[0].product,null);
+    const extraIds=Array.from({length:9},(_,index)=>(index+1).toString(16).padStart(32,'0'));for(const id of extraIds)assert.equal((await save(id)).status,200);assert.equal((await save('e'.repeat(32))).status,409);assert.equal((await list()).addresses.length,10);
+    for(const entry of (await list()).addresses)assert.equal((await command('addresses:delete',entry.id,entry.revision)).status,200);book=await list();assert.deepEqual(book.addresses,[]);assert.equal(book.defaultAddressId,null);
+    assert.equal((await call({action:'list'})).status,403);
+  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));for(const uid of users)await auth.deleteUser(uid);await env.clearFirestore();await env.cleanup();}
+});

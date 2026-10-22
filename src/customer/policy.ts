@@ -12,7 +12,8 @@ export function safeCustomerReturn(value:string|null|undefined):string {
   const path=decoded.split('?')[0];
   // Return only to implemented public browsing/account routes. No admin or
   // recursive auth returns, payment endpoints, schemes or traversal segments.
-  if(!/^(?:\/|\/(?:account|shop|collections|sale|search|wishlist|bag|about|contact|shipping-policy|returns-policy|privacy-policy|terms-conditions)|\/(?:product|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(path))return '/account';
+  if(path==='/account/addresses')return new URLSearchParams(value.split('?')[1]||'').has('returnTo')?'/account':value;
+  if(!/^(?:\/|\/(?:account|checkout|shop|collections|sale|search|wishlist|bag|about|contact|shipping-policy|returns-policy|privacy-policy|terms-conditions)|\/(?:product|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(path))return '/account';
   if(new URLSearchParams(value.split('?')[1]||'').has('returnTo'))return '/account';
   return value;
 }

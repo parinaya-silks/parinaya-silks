@@ -38,6 +38,9 @@ import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
 import {CustomerAuthProvider,useCustomerAuth} from './customer/CustomerAuth.tsx';
 import {useShopping} from './shopping/useShopping.ts';
+import {CheckoutView} from './views/CheckoutView.tsx';
+import {AddressesView} from './delivery/AddressesView.tsx';
+import {CustomerGate} from './delivery/CustomerGate.tsx';
 import {safeCustomerReturn} from './customer/policy.ts';
 import { FeatureUnavailable } from './components/FeatureUnavailable.tsx';
 
@@ -154,7 +157,6 @@ function StorefrontContent() {
   let customerView: React.ReactNode = null;
 
   const unavailable = !demoEnabled && (
-    currentPath === '/checkout' ? ['Checkout unavailable', 'Online checkout is not available yet. Please contact us for assistance.'] :
     /^\/(?:order-result|order-confirmed|order-tracking)(?:\/|\?|$)/.test(currentPath) ? ['Orders unavailable', 'Online order history and tracking are not available yet. Please contact us for assistance.'] : null
   );
 
@@ -202,6 +204,10 @@ function StorefrontContent() {
     customerView = (
       <BagView shopping={shopping} onNavigate={navigate}/>
     );
+  } else if (authRoute === '/checkout') {
+    customerView = <CustomerGate path="/checkout" onNavigate={navigate}><CheckoutView shopping={shopping} onNavigate={navigate}/></CustomerGate>;
+  } else if (authRoute === '/account/addresses') {
+    customerView = <CustomerGate path="/account/addresses" onNavigate={navigate}><AddressesView onNavigate={navigate}/></CustomerGate>;
   } else if (authRoute === '/account' || authRoute === '/account/orders') {
     customerView = <AccountView currentPath={currentPath} onNavigate={navigate}/>;
   } else if (authRoute === '/login') {

@@ -133,7 +133,7 @@ with sync_playwright() as p:
         page.get_by_role('button',name='Sign out',exact=True).wait_for()
         page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
         assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address','Mobile number']
-        assert page.locator('.customer-account-details + .customer-auth-actions button').all_text_contents()==['Browse sarees','Sign out']
+        assert page.locator('.customer-account-details + .customer-auth-actions button').all_text_contents()==['Addresses','Browse sarees','Sign out']
         assert 'verif' not in page.locator('main').inner_text().lower()
         assert 'VERIFY_EMAIL' not in mail_actions,'No verification email request is permitted'
     assert_clean_account()

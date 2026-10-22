@@ -62,7 +62,7 @@ with sync_playwright() as p:
         page.get_by_role('heading',name='No products found.',exact=True).wait_for()
         page.get_by_role('button',name='Clear filters',exact=True).click()
         page.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
-        for route,heading in [('/bag','Sign in to view your bag'),('/wishlist','Sign in to view your wishlist'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed?orderId=ord-1089','Orders unavailable'),('/checkout','Checkout unavailable')]:
+        for route,heading in [('/bag','Sign in to view your bag'),('/wishlist','Sign in to view your wishlist'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed?orderId=ord-1089','Orders unavailable'),('/checkout','Welcome back')]:
             page.goto(origin+route)
             page.get_by_role('heading',name=heading,exact=True).wait_for()
             assert page.get_by_role('button',name='Simulate payment',exact=False).count()==0

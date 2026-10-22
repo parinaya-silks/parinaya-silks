@@ -14,6 +14,7 @@ await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/catalog-emula
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/appearance-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/customer-rules.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/shopping-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/delivery-emulator.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -49,4 +50,5 @@ try {
   await run('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/product-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/shopping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await run('python', ['scripts/delivery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

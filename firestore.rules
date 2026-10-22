@@ -21,6 +21,15 @@ service cloud.firestore {
       allow get, list: if signedIn() && request.auth.uid == uid && kind in ['bag','wishlist'];
       allow write: if false;
     }
+    // Delivery addresses and the single default pointer are private, server-written.
+    match /customerShopping/{uid}/addresses/{id} {
+      allow get, list: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /customerShopping/{uid}/preferences/delivery {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
     // Private customer identity only. Authorization, verification and business
     // state never come from this client-created profile.
     match /customerProfiles/{uid} {
