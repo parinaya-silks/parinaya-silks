@@ -4,6 +4,8 @@ This milestone implements real Firebase customer authentication using the existi
 
 Current update: [admin-managed login portraits and required registration mobile contact](LOGIN_APPEARANCE.md). New profile creation requires the reviewed mobile-number rules; previous email/password-only rule-publication notes below describe that earlier change.
 
+The subsequent [account-linked Bag and Wishlist milestone](SHOPPING.md) reuses this authentication and safe-return flow. Its shopping permissions remain separate from administrator permissions.
+
 ## Routes and session behavior
 
 | Route | Behavior |

@@ -83,7 +83,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             favorite
           </span>
           {wishlistCount > 0 && (
-            <span className="absolute -top-1 -right-2 bg-[#B88A44] text-[#231919] font-sans text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-2 bg-[#B88A44] text-[#231919] font-sans text-[9px] min-w-4 px-1 h-4 rounded-full flex items-center justify-center font-bold">
               {wishlistCount}
             </span>
           )}
@@ -109,7 +109,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             shopping_bag
           </span>
           {cartCount > 0 && (
-            <span className="absolute -top-1 -right-2 bg-[#780D24] text-white font-sans text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-2 bg-[#780D24] text-white font-sans text-[9px] min-w-4 px-1 h-4 rounded-full flex items-center justify-center font-bold">
               {cartCount}
             </span>
           )}

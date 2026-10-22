@@ -32,7 +32,7 @@ export function catalogHandler(service:()=>Service|Promise<Service>, report:(dia
         if(typeof body==='string') {try{body=JSON.parse(body);}catch{throw new ProductError('invalid','Invalid JSON.');}}
         if(!body || typeof body!=='object' || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body))>100000)throw new ProductError('invalid','Invalid catalog request.');
         const input=body as Record<string,unknown>;
-        if(typeof input.action==='string' && ['list','get','save','sign','verify','delete','appearance:get','appearance:sign','appearance:verify','appearance:save'].includes(input.action))action=input.action;
+        if(typeof input.action==='string' && ['list','get','save','sign','verify','delete','appearance:get','appearance:sign','appearance:verify','appearance:save','shopping:get','bag:add','bag:adjust','bag:remove','wishlist:set'].includes(input.action))action=input.action;
         result=await (await initialize()).privileged(bearer.slice(7),input);
       } else {response.setHeader('Allow','GET, POST');response.statusCode=405;response.end(JSON.stringify({code:'method',message:'Method not allowed.'}));return;}
       response.statusCode=200;response.end(JSON.stringify(result));

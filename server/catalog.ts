@@ -6,6 +6,7 @@ import type { CloudinaryMedia, UploadTicket } from './cloudinary.ts';
 import { CatalogConfigurationError } from './errors.ts';
 import {loginAppearanceService} from './loginAppearance.ts';
 import {publicProduct} from './publicProduct.ts';
+import {shoppingService} from './shopping.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
@@ -14,7 +15,7 @@ function keys(value:Record<string,unknown>,allowed:string[]) {if(Object.keys(val
 function mediaId(value:unknown):string {if(typeof value!=='string'||!/^[a-f0-9]{32}$/.test(value))throw new ProductError('invalid','Invalid media ID.');return value;}
 
 export function catalogService({database:db,auth,media}:Dependencies) {
-  async function administrator(token:string) {
+  async function authenticate(token:string) {
     let user;
     try { user=await auth.verifyIdToken(token,true); } catch(error) {
       const code=typeof error==='object' && error!==null && 'code' in error ? error.code : '';
@@ -22,7 +23,12 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(['app/invalid-credential','auth/invalid-credential','auth/insufficient-permission'].includes(code as string)) throw new CatalogConfigurationError('Firebase token verification is not configured.', 'firebase-auth-configuration', {cause:error});
       throw error;
     }
-    if(user.aud!=='parinaya-silks' || user.admin!==true || (await db.doc(`adminAccess/${user.uid}`).get()).data()?.enabled!==true) throw new ProductError('permission','Active administrator permission is required.');
+    if(user.aud!=='parinaya-silks')throw new ProductError('unauthorized','Sign in again to continue.');
+    return user;
+  }
+  async function administrator(token:string) {
+    const user=await authenticate(token);
+    if(user.admin!==true || (await db.doc(`adminAccess/${user.uid}`).get()).data()?.enabled!==true) throw new ProductError('permission','Active administrator permission is required.');
     return user.uid;
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
@@ -130,10 +136,12 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     await db.runTransaction(async transaction=>{await transactionAccess(transaction,uid);const current=await transaction.get(ref);if(current.data()?.productId!==productId)throw new ProductError('media','Upload changed.');transaction.update(ref,{verified:true,metadata,verifiedAt:FieldValue.serverTimestamp()});});
     return {...metadata,mediaId:imageId,alt:''};
   }
+  const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
     publicAppearance:appearance.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
       switch(body.action) {
         case 'appearance:get': keys(body,['action']);return appearance.get();

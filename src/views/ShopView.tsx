@@ -361,13 +361,14 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
                     {/* Wishlist Heart Button */}
                     <button
-                      disabled title="Saved shopping is not available yet"
+
                       aria-label={`Save ${product.name} to wishlist`}
+                      aria-pressed={wishlisted}
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleWishlist(product);
                       }}
-                      className="absolute top-2 right-2 w-8 h-8 bg-white/85 backdrop-blur-sm rounded-full flex items-center justify-center text-[#780D24] active:scale-90 transition-transform shadow-xs"
+                      className="absolute z-20 top-2 right-2 w-11 h-11 bg-white/85 backdrop-blur-sm rounded-full flex items-center justify-center text-[#780D24] active:scale-90 transition-transform shadow-xs"
                       type="button"
                     >
                       <span className={`material-symbols-outlined text-[18px] ${wishlisted ? 'fill text-[#780D24]' : ''}`}>
@@ -428,14 +429,14 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
                       {product.inStock ? (
                         <button
-                          disabled title="Online shopping is not available yet; please contact us"
+                          aria-label="Add to Bag"
                           onClick={() => onAddToCart(product)}
-                          className="w-full mt-2.5 py-2 bg-[#780D24] hover:bg-[#5E091B] text-white rounded text-[11px] font-semibold tracking-wider uppercase font-sans flex items-center justify-center gap-1 active:scale-95 transition-all shadow-xs"
+                          className="w-full mt-2.5 min-h-11 py-2 bg-[#780D24] hover:bg-[#5E091B] text-white rounded text-[11px] font-semibold tracking-wider uppercase font-sans flex items-center justify-center gap-1 active:scale-95 transition-all shadow-xs"
                         >
                           <span className="material-symbols-outlined text-[14px]">
                             shopping_bag
                           </span>
-                          <span>Bag unavailable</span>
+                          <span>Add to Bag</span>
                         </button>
                       ) : (
                         <div className="w-full mt-2.5 py-1.5 text-center text-[10px] font-sans uppercase tracking-wider text-[#780D24] font-medium">

@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <span className="material-symbols-outlined text-[22px]">favorite</span>
               {wishlistCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#B88A44] text-[#231919] font-sans text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute top-1 right-1 min-w-4 px-1 h-4 rounded-full bg-[#B88A44] text-[#231919] font-sans text-[10px] font-bold flex items-center justify-center">
                   {wishlistCount}
                 </span>
               )}
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <span className="material-symbols-outlined text-[22px]">shopping_bag</span>
               {cartCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#F2BE72] text-[#5E091B] font-sans text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute top-1 right-1 min-w-4 px-1 h-4 rounded-full bg-[#F2BE72] text-[#5E091B] font-sans text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
               )}

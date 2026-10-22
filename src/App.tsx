@@ -12,8 +12,6 @@ import { storefrontProduct } from './products/adapter.ts';
 import { PublicProduct } from './products/PublicProduct.tsx';
 import {
   Product,
-  CartItem,
-  WishlistItem,
   Order,
   Customer,
   Coupon,
@@ -39,6 +37,7 @@ import { ContactView } from './views/ContactView.tsx';
 import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
 import {CustomerAuthProvider,useCustomerAuth} from './customer/CustomerAuth.tsx';
+import {useShopping} from './shopping/useShopping.ts';
 import {safeCustomerReturn} from './customer/policy.ts';
 import { FeatureUnavailable } from './components/FeatureUnavailable.tsx';
 
@@ -95,8 +94,6 @@ function StorefrontContent() {
   // Reactive Data State from StoreService
   const catalog = usePublicCatalog();
   const products = catalog.items.map(storefrontProduct);
-  const [cart, setCart] = useState<CartItem[]>(() => storeService.getCart());
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => storeService.getWishlist());
   const [orders, setOrders] = useState<Order[]>(() => storeService.getOrders());
   const [customer, setCustomer] = useState<Customer>(() => storeService.getCustomer());
   const [customersList, setCustomersList] = useState<Customer[]>(() => storeService.getCustomersList());
@@ -110,8 +107,6 @@ function StorefrontContent() {
   // Sync with storeService subscription
   useEffect(() => {
     const unsubscribe = storeService.subscribe(() => {
-      setCart(storeService.getCart());
-      setWishlist(storeService.getWishlist());
       setOrders(storeService.getOrders());
       setCustomer(storeService.getCustomer());
       setCustomersList(storeService.getCustomersList());
@@ -143,51 +138,17 @@ function StorefrontContent() {
     window.history.pushState(null, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
     setCurrentPath(path);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [currentPath,session.status]);
 
   const authRoute=currentPath.split('?')[0];
   const authExperience=['/login','/register','/forgot-password','/verify-email','/account','/account/orders'].includes(authRoute);
 
-  // Helpers
-  const isWishlisted = useCallback(
-    (productId: string) => {
-      return wishlist.some((w) => w.productId === productId);
-    },
-    [wishlist]
-  );
-
-  const isInCart = useCallback(
-    (productId: string) => {
-      return cart.some((i) => i.productId === productId);
-    },
-    [cart]
-  );
-
-  // Cart & Wishlist Actions
-  const handleAddToCart = useCallback((product: Product, quantity = 1, selectedColor?: string) => {
-    storeService.addToCart(product, quantity, selectedColor);
-  }, []);
-
-  const handleUpdateCartQuantity = useCallback((productId: string, quantity: number) => {
-    storeService.updateCartQuantity(productId, quantity);
-  }, []);
-
-  const handleRemoveFromCart = useCallback((productId: string) => {
-    return storeService.removeFromCart(productId);
-  }, []);
-
-  const handleToggleWishlist = useCallback((product: Product) => {
-    return storeService.toggleWishlist(product);
-  }, []);
-
-  const handleRemoveFromWishlist = useCallback((productId: string) => {
-    return storeService.removeFromWishlist(productId);
-  }, []);
-
-  // Derived Counts
-  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
-  const wishlistCount = wishlist.length;
+  const shopping=useShopping(currentPath,navigate);
+  const isWishlisted=shopping.isWishlisted;
+  const handleAddToCart=shopping.add, handleToggleWishlist=shopping.toggle;
+  const cartCount=shopping.bag.reduce((sum,item)=>sum+item.quantity,0);
+  const wishlistCount=shopping.wishlist.length;
 
   // Render Customer Storefront Views
   let customerView: React.ReactNode = null;
@@ -235,35 +196,11 @@ function StorefrontContent() {
     customerView = <PublicProduct key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
   } else if (currentPath === '/wishlist') {
     customerView = (
-      <WishlistView
-        wishlist={wishlist}
-        onNavigate={navigate}
-        onAddToCart={handleAddToCart}
-        onRemoveFromWishlist={handleRemoveFromWishlist}
-        isInCart={isInCart}
-      />
+      <WishlistView shopping={shopping} onNavigate={navigate}/>
     );
   } else if (currentPath === '/bag') {
     customerView = (
-      <BagView
-        settings={settings}
-        cart={cart}
-        appliedCoupon={appliedCoupon}
-        onApplyCoupon={(coupon) => setAppliedCoupon(coupon)}
-        availableCoupons={coupons}
-        pointsToRedeem={pointsToRedeem}
-        onTogglePoints={(redeem) =>
-          setPointsToRedeem(redeem ? Math.min(customer.pointsBalance, 2500) : 0)
-        }
-        customerPoints={customer.pointsBalance}
-        onUpdateQuantity={handleUpdateCartQuantity}
-        onRemoveItem={handleRemoveFromCart}
-        onMoveToWishlist={(prod) => {
-          storeService.removeFromCart(prod.id);
-          storeService.toggleWishlist(prod);
-        }}
-        onNavigate={navigate}
-      />
+      <BagView shopping={shopping} onNavigate={navigate}/>
     );
   } else if (authRoute === '/account' || authRoute === '/account/orders') {
     customerView = <AccountView currentPath={currentPath} onNavigate={navigate}/>;
@@ -320,7 +257,7 @@ function StorefrontContent() {
   }
 
   return (
-    <div className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")}>
+    <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")}>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
@@ -344,10 +281,13 @@ function StorefrontContent() {
         wishlistCount={wishlistCount}
       />
 
+      {shopping.notice&&<div className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:w-96 z-50 bg-white border border-[#B88A44] rounded-xl shadow-lg p-4 text-sm" role={shopping.notice.error?'alert':'status'}>
+        <p>{shopping.notice.message}</p><div className="flex flex-wrap gap-4 mt-2">{shopping.notice.error&&<button className="min-h-11 underline text-[#780D24]" onClick={shopping.retryChange}>Retry change</button>}{shopping.signedIn&&<button className="min-h-11 underline text-[#780D24]" onClick={()=>navigate('/bag')}>View bag</button>}<button className="min-h-11 underline" onClick={shopping.dismiss}>Dismiss</button></div>
+      </div>}
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}
-        {!authExperience && catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
+        {!authExperience && catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && !['/bag','/wishlist'].includes(currentPath) && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
       </main>
 
       {/* Storefront Footer */}

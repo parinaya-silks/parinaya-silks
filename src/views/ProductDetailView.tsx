@@ -24,11 +24,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const [activeImageKey, setActiveImageKey] = useState<string>(product.gallery?.find(image=>image.url===product.images.full)?.mediaId || 'full');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [rewardsModalOpen, setRewardsModalOpen] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(product.variants?.[0]?.id || product.colorName);
+  const [selectedColor, setSelectedColor] = useState(product.variants?.length ? '' : product.colorName);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('500034');
   const [deliveryResult, setDeliveryResult] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const imagesList = product.gallery?.length ? product.gallery.map(image=>({key:image.mediaId,label:image.alt,url:image.url})) : [
     { key: 'full' as const, label: 'Full Saree', url: product.images.full },
@@ -41,7 +40,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   const colorVariants = product.variants?.length ? product.variants.map(variant=>({...variant,key:variant.id})) : [{key:product.colorName,name:product.colorName,hex:product.colorHex}];
   const selectedVariant = product.variants?.find(variant=>variant.id===selectedColor);
-  const selectedStock = selectedVariant ? selectedVariant.quantity : product.stockCount;
+  const selectedStock = selectedVariant ? selectedVariant.quantity : product.variants?.length ? 0 : product.stockCount;
 
   const handleCheckPincode = () => {
     if (/^[1-9][0-9]{5}$/.test(pincode)) {
@@ -53,16 +52,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     }
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
   const handleAdd = () => {
     onAddToCart(product, quantity, selectedColor);
-    showToast('Added to your shopping bag!');
+
   };
 
   const handleBuyNow = () => {
@@ -76,20 +68,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   return (
     <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4" style={{overflowWrap:'anywhere'}}>
-      {/* Toast Feedback */}
-      {toastMessage && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#780D24] text-white px-5 py-2.5 rounded-lg shadow-xl flex items-center gap-2 border border-[#B88A44]/50 animate-bounce">
-          <span className="material-symbols-outlined text-[20px] text-emerald-400">check_circle</span>
-          <span className="text-[13px] font-medium">{toastMessage}</span>
-          <button
-            onClick={() => onNavigate('/bag')}
-            className="underline font-bold text-xs ml-2 text-[#F2BE72]"
-          >
-            View Bag
-          </button>
-        </div>
-      )}
-
+      {product.variants?.length&&!selectedColor&&<p className="mb-4 p-3 rounded bg-[#F4EEE5] text-sm text-[#780D24]" role="note">Please select a colour before adding to your bag.</p>}
       {/* Breadcrumb strip */}
       <nav aria-label="Breadcrumb" className="mb-4 text-[12px] font-sans text-[#5F5552] flex items-center gap-1.5 flex-wrap">
         <button onClick={() => onNavigate('/')} className="hover:text-[#780D24]">
@@ -132,7 +111,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Wishlist Heart Button */}
             <button
               aria-label="Save to Wishlist"
-              disabled title="Saved shopping is not available yet" onClick={() => onToggleWishlist(product)}
+              aria-pressed={wishlisted}
+              onClick={() => onToggleWishlist(product)}
               className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/85 backdrop-blur-md border border-[#E8DDD6] flex items-center justify-center text-[#231919] hover:text-[#780D24] shadow-sm active:scale-95 transition-all"
               type="button"
             >
@@ -188,7 +168,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
         {/* RIGHT COLUMN: Product Information & Controls */}
         <div className="space-y-4">
-          <FeatureNotice>Online checkout and saved shopping are unavailable. Please contact us for assistance.</FeatureNotice>
+          <FeatureNotice>Online checkout is unavailable. Your bag and wishlist are saved to your account.</FeatureNotice>
           {/* Summary Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -588,8 +568,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       <aside className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 w-full z-40 bg-white/95 backdrop-blur-md border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)] pb-safe">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           <button
+            aria-label="Add to Bag"
             onClick={handleAdd}
-            disabled
+            disabled={!product.inStock}
             className={`flex-1 h-12 border-2 border-[#780D24] text-[#780D24] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
               product.inStock ? 'hover:bg-[#780D24]/5 bg-white' : 'opacity-50 cursor-not-allowed'
             }`}
