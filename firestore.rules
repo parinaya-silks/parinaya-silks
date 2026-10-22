@@ -106,7 +106,15 @@ service cloud.firestore {
     match /productSlugs/{slug} { allow read, write: if false; }
     match /productMedia/{mediaId} { allow read, write: if false; }
     match /catalogUploadLimits/{id} { allow read, write: if false; }
-    // Other business repositories remain unconnected and browser writes denied.
+    // Business operations use the trusted API, with owner or dual administrator
+    // authorization. Customer order projections never expose internal notes.
+    match /adminNotifications/{id} { allow read, write: if false; }
+    match /adminNotificationReads/{uid}/{document=**} { allow read, write: if false; }
+    match /homeBannerMedia/{id} { allow read, write: if false; }
+    match /inventoryAudit/{id} { allow read, write: if false; }
+    match /orderOperations/{id} { allow read, write: if false; }
+    match /orderSubmissionLimits/{id} { allow read, write: if false; }
+    // Existing administrator reads stay intact. All writes remain server-only.
     match /{collection}/{document=**} {
       allow read: if collection in [
         'products', 'collections', 'orders', 'customers',

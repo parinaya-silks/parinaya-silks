@@ -2,7 +2,8 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {publicCatalog,publicProduct} from './client.ts';
 import {ProductError,type PublicProductRecord} from './model.ts';
 
-export function usePublicCatalog() {
+export function usePublicCatalog(options:Record<string,string>={}) {
+  const optionsKey=JSON.stringify(options);const [dataKey,setDataKey]=useState(optionsKey);
   const [items,setItems]=useState<PublicProductRecord[]>([]),[state,setState]=useState<'loading'|'ready'|'error'>('loading'),[cursor,setCursor]=useState<string|null>(null),[busy,setBusy]=useState(false);
   const generation=useRef(0),lock=useRef(false),ready=useRef(false),cursorRef=useRef<string|null>(null);
   const load=useCallback(async(more=false)=>{
@@ -11,21 +12,21 @@ export function usePublicCatalog() {
     const current=++generation.current;
     if(!more&&!ready.current)setState('loading');
     try {
-      const result=await publicCatalog(more?cursorRef.current||undefined:undefined);
+      const result=await publicCatalog(more?cursorRef.current||undefined:undefined,options);
       if(current!==generation.current)return;
       setItems(previous=>more?[...previous,...result.items.filter(item=>!previous.some(old=>old.id===item.id))]:result.items);
-      cursorRef.current=result.nextCursor;setCursor(result.nextCursor);ready.current=true;setState('ready');
-    } catch {if(current===generation.current){ready.current=false;setState('error');}}
+      cursorRef.current=result.nextCursor;setCursor(result.nextCursor);ready.current=true;setDataKey(optionsKey);setState('ready');
+    } catch {if(current===generation.current){ready.current=false;setDataKey(optionsKey);setState('error');}}
     finally{if(current===generation.current){lock.current=false;setBusy(false);}}
-  },[]);
+  },[optionsKey]);
   useEffect(()=>{
-    void load();
+    ready.current=false;cursorRef.current=null;setCursor(null);setState('loading');void load();
     const refresh=()=>{if(document.visibilityState==='visible')void load();};
     window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
     const interval=setInterval(refresh,30000);
     return()=>{generation.current++;lock.current=false;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);clearInterval(interval);};
   },[load]);
-  return {items:state==='ready'?items:[],state,busy,hasMore:Boolean(cursor),retry:()=>load(),loadMore:()=>load(true)};
+  return {items:state==='ready'&&dataKey===optionsKey?items:[],state:dataKey===optionsKey?state:'loading' as const,busy,hasMore:Boolean(cursor),retry:()=>load(),loadMore:()=>load(true)};
 }
 
 export function usePublicProduct(slug:string) {

@@ -42,21 +42,19 @@ with sync_playwright() as p:
     page.get_by_role('heading', name='Add Product', exact=True).wait_for()
     print('Signed-out nested route, forged local role rejection, wrong credentials, approved login and session restoration passed')
 
-    for route, heading in [('/admin','Dashboard'),('/admin/orders','Orders & Shipments'),('/admin/orders/test-order','Order Details'),('/admin/products','Products & Stock'),('/admin/products/new','Add Product'),('/admin/products/edit/test-product','Edit Product'),('/admin/customers','Patrons & Clients'),('/admin/coupons','Coupons & Loyalty'),('/admin/settings','Store Settings')]:
+    for route, heading in [('/admin','Dashboard'),('/admin/orders','Orders'),('/admin/orders/test-order','Order details'),('/admin/products','Products & Stock'),('/admin/products/new','Add Product'),('/admin/products/edit/test-product','Edit Product'),('/admin/customers','Customers'),('/admin/coupons','Coupons'),('/admin/settings','Store Settings')]:
         page.goto(origin+route)
         try:
             page.get_by_role('heading', name=heading, exact=True).wait_for(timeout=15000)
         except Exception:
             print('Failed route heading:',route,'Expected:',heading,'Actual:',page.locator('h1').all_text_contents())
             raise
-        assert page.get_by_text('No live records are displayed',exact=False).count()==(0 if route.startswith('/admin/products') or route=='/admin/settings' else 1)
+        assert page.get_by_text('No live records are displayed',exact=False).count()==0
         assert '8,42,500' not in page.inner_text('body')
         body = page.inner_text('body')
         for fictional in ['Mayuri Regal Wine', 'Ananya Rao', 'Across 4 master loom regions', 'Redeemable at', '0 Clients', '0 Pts', '0 Sarees']:
             if not (route.startswith('/admin/products') and fictional=='0 Sarees'):
                 assert fictional not in body, (route,fictional)
-        if route == '/admin/customers':
-            assert page.get_by_text('Not connected',exact=True).count() >= 3
         assert page.locator('nav[aria-label="Mobile Bottom Navigation"]').count()==0
         assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1')
     page.goto(origin+'/admin')
@@ -72,7 +70,7 @@ with sync_playwright() as p:
     control('grant-claim')
     page.get_by_role('button',name='Refresh permissions').click()
     page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
-    print('All existing admin areas show honest unavailable data; access-record revocation and refreshed claim removal/grant passed')
+    print('All connected admin areas render without sample records; access-record revocation and refreshed claim removal/grant passed')
 
     page.set_viewport_size({'width':1440,'height':900})
     page.get_by_role('button',name='View Public Store',exact=False).filter(visible=True).click()
@@ -91,7 +89,7 @@ with sync_playwright() as p:
 
     # Keep a protected route behind this one for the sign-out/Back assertion.
     page.goto(origin+'/admin/orders')
-    page.get_by_role('heading',name='Orders & Shipments',exact=True).wait_for()
+    page.get_by_role('heading',name='Orders',exact=True).wait_for()
     page.get_by_role('button',name='Sign out',exact=True).filter(visible=True).click()
     page.get_by_role('heading',name='Administrator Sign In').wait_for()
     page.go_back()

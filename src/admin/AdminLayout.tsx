@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {AdminNotificationBell} from '../orders/AdminBusiness.tsx';
 
 interface AdminLayoutProps {
   currentPath: string;
@@ -23,7 +24,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     { path: '/admin/products', label: 'Products & Inventory', icon: 'inventory_2' },
     { path: '/admin/categories', label: 'Categories', icon: 'category' },
     { path: '/admin/customers', label: 'Customers', icon: 'group' },
-    { path: '/admin/coupons', label: 'Coupons & Loyalty', icon: 'loyalty' },
+    { path: '/admin/coupons', label: 'Coupons', icon: 'loyalty' },
     { path: '/admin/settings', label: 'Store Settings', icon: 'settings' },
   ];
 
@@ -194,15 +195,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       <div className="flex-1 min-w-0 md:ml-60 flex flex-col min-h-screen">
         {/* Top Header Bar */}
         <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E8DDD6] h-16 px-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               aria-label="Open admin menu" onClick={() => setMobileDrawerOpen(true)}
               className="md:hidden min-w-11 min-h-11 p-2 text-[#231919] hover:text-[#780D24]"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
-            <div className="flex items-baseline gap-2">
-              <span className="font-serif text-[18px] sm:text-[20px] font-semibold text-[#780D24]">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="font-serif text-[16px] sm:text-[20px] font-semibold text-[#780D24] truncate">
                 Administration
               </span>
               <span className="hidden lg:inline text-[12px] font-sans text-[#5F5552]">
@@ -212,7 +213,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           {/* Right Action Cluster */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5"><AdminNotificationBell onNavigate={onNavigate}/>
             <span className="hidden sm:inline text-xs text-[#5F5552] truncate max-w-[110px] sm:max-w-[200px]" title={email}>{email}</span>
             <button onClick={onSignOut} className="min-h-11 px-2 text-xs text-[#780D24] underline md:hidden">Sign out</button>
 

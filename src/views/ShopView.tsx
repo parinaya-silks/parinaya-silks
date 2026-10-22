@@ -1,3 +1,5 @@
+import {usePublicCatalog} from '../products/hooks.ts';
+import {storefrontProduct} from '../products/adapter.ts';
 import { demoEnabled } from '../config/runtime.ts';
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types/index.ts';
@@ -17,7 +19,7 @@ interface ShopViewProps {
 }
 
 export const ShopView: React.FC<ShopViewProps> = ({
-  products,
+  products:initialProducts,
   initialCategory,
   initialSearch = '',
   categorySlug: requestedSlug,
@@ -36,59 +38,19 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number>(Infinity);
-  const priceCeiling = Math.max(1, ...products.map(product => Math.ceil(product.price)));
+  const priceCeiling = Math.max(1, ...initialProducts.map(product => Math.ceil(product.price)));
 
   const { state: categoryState, retry: retryCategories } = useCategories();
   const publicCategories = categoryState.status === 'ready' ? categoryState.items : [];
   const selectedPublic = requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
   const selectedCategory = selectedPublic?.id || 'all';
   const categories = [{ id: 'all', label: 'All Sarees' }, ...publicCategories.map(category => ({ id: category.id, label: category.name }))];
-  const colorOptions = Array.from(new Map(products.flatMap(p => p.variants?.length ? p.variants.map(variant => [variant.name, { name: variant.name, hex: variant.hex }] as const) : p.colorName ? [[p.colorName, { name: p.colorName, hex: p.colorHex }] as const] : [])).values());
+  const page=usePublicCatalog({browse:'1',sort:sortOption,...(selectedPublic?{category:selectedPublic.slug}:{}),...(searchQuery.trim()?{q:searchQuery.trim()}:{}),...(selectedColors.length?{colors:selectedColors.join('|')}:{}),...(inStockOnly?{inStock:'true'}:{}),...(saleOnly?{sale:'true'}:{}),...(Number.isFinite(maxPrice)?{maxPrice:String(Math.round(maxPrice*100))}:{})});
+  const products=page.items.map(storefrontProduct);
+  const colorProducts=[...initialProducts,...products];
+  const colorOptions = Array.from(new Map(colorProducts.flatMap(p => p.variants?.length ? p.variants.map(variant => [variant.name, { name: variant.name, hex: variant.hex }] as const) : p.colorName ? [[p.colorName, { name: p.colorName, hex: p.colorHex }] as const] : [])).values());
 
-  // Filtered & Sorted products
-  const filteredProducts = useMemo(() => {
-    return products
-      .filter((p) => p.status === 'Published')
-      .filter((p) => {
-        // Category filter
-        return !selectedPublic || p.categoryId === selectedPublic.id;
-      })
-      .filter((p) => {
-        // Search query
-        if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          p.name.toLowerCase().includes(q) ||
-          p.subtitle.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.weaveType.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
-        );
-      })
-      .filter(p => !saleOnly || Boolean(p.discountPercent))
-      .filter((p) => {
-        // In-stock filter
-        if (inStockOnly && !p.inStock) return false;
-        return true;
-      })
-      .filter((p) => {
-        // Price filter
-        if (p.price > maxPrice) return false;
-        return true;
-      })
-      .filter((p) => {
-        // Color filter
-        if (selectedColors.length === 0) return true;
-        return selectedColors.some((c) => [p.colorName,...(p.variants||[]).map(variant=>variant.name)].some(name=>name.toLowerCase().includes(c.toLowerCase())));
-      })
-      .sort((a, b) => {
-        if (sortOption === 'price-asc') return a.price - b.price;
-        if (sortOption === 'price-desc') return b.price - a.price;
-        if (sortOption === 'newest') return (b.createdAt||0)-(a.createdAt||0);
-        return Number(b.tags.includes('Featured')) - Number(a.tags.includes('Featured'));
-      });
-  }, [products, selectedCategory, selectedPublic, searchQuery, inStockOnly, maxPrice, selectedColors, sortOption, saleOnly]);
+  const filteredProducts=products;
 
   const activeFilterCount =
     (selectedCategory !== 'all' ? 1 : 0) +
@@ -316,7 +278,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         {(requestedSlug || initialCategory) && (categoryState.status !== 'ready' || !selectedPublic) ? <section className="py-8 text-center space-y-3">
           <h2 className="font-serif text-xl">{categoryState.status === 'ready' ? 'Category not found.' : categoryState.status === 'error' ? 'Category unavailable' : 'Loading category…'}</h2>
           {categoryState.status === 'ready' && <button className="min-h-11 px-5 text-[#780D24] underline" onClick={() => onNavigate('/shop')}>Continue Shopping</button>}
-        </section> : filteredProducts.length === 0 ? (
+        </section> : page.state==='ready' && filteredProducts.length === 0 ? (
           <div className="max-w-xl mx-auto bg-white rounded-xl border border-[#E8DDD6] p-6 text-center my-6 space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EEE5] border border-[#B88A44] flex items-center justify-center text-[#780D24]">
               <span className="material-symbols-outlined text-[32px]">inventory_2</span>
@@ -452,6 +414,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         )}
       </main>
 
+      <div className="text-center p-4 space-y-3">{page.state==='loading'&&<p role="status">Finding products...</p>}{page.state==='error'&&<div role="alert"><p>Unable to load products.</p><button className="min-h-11 underline" onClick={page.retry}>Retry products</button></div>}{page.hasMore&&<button className="min-h-11 border rounded px-5" disabled={page.busy} onClick={page.loadMore}>Load more matching products</button>}</div>
       {/* Slide-Up Filter Drawer */}
       {filterDrawerOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 backdrop-blur-xs">

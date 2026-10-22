@@ -8,6 +8,12 @@ import {loginAppearanceService} from './loginAppearance.ts';
 import {publicProduct} from './publicProduct.ts';
 import {shoppingService} from './shopping.ts';
 import {deliveryService} from './delivery.ts';
+import {newlyLowStock} from '../src/orders/model.ts';
+import {sitemap} from './seo.ts';
+import {browseService} from './browse.ts';
+import {contentService} from './content.ts';
+import {businessService} from './business.ts';
+import {ordersService} from './orders.ts';
 import {shippingService} from './shipping.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
@@ -34,6 +40,9 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return user.uid;
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
+  const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)));
+  const homeMedia=loginAppearanceService(db,media,transactionAccess,'home');
+  const business=businessService(db,transactionAccess);
   const shipping=shippingService(db,transactionAccess);
   const appearance=loginAppearanceService(db,media,transactionAccess);
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
@@ -100,6 +109,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
         images.push({...asset.metadata,mediaId:image.mediaId,alt:image.alt});
       }
       const data={...input,images,schemaVersion:1,revision:(old?.revision||0)+1,lastOperationId:body.operationId,lastOperationHash:operationHash,updatedAt:FieldValue.serverTimestamp(),...(!old?{createdAt:FieldValue.serverTimestamp()}:{})};
+      if(old&&(JSON.stringify(old.inventory)!==JSON.stringify(input.inventory)||old.lowStockThreshold!==input.lowStockThreshold)){transaction.create(db.doc('inventoryAudit/editor_'+body.operationId),{productId,actor:uid,reason:'Product editor inventory or threshold change',before:old.inventory,after:input.inventory,createdAt:FieldValue.serverTimestamp()});if(newlyLowStock(old.inventory,input.inventory,input.lowStockThreshold,old.lowStockThreshold))transaction.create(db.doc('adminNotifications/editor_'+body.operationId),{kind:'stock',target:'/admin/products/edit/'+productId,label:'Stock is low or unavailable',createdAt:FieldValue.serverTimestamp()});}
       if(!slug.exists)transaction.create(slugRef,{productId,createdAt:FieldValue.serverTimestamp()});
       if(previous.exists)transaction.update(reference,data);else transaction.create(reference,data);
     });
@@ -140,15 +150,26 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return {...metadata,mediaId:imageId,alt:''};
   }
   const delivery=deliveryService(db,async(document,name)=>publicProduct(await present(document,name)));
+  const orders=ordersService(db,transactionAccess,delivery.reviewInTransaction);
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
-    publicAppearance:appearance.publicGet,
+    sitemap:()=>sitemap(db),
+    publicBrowse:browseService(db,async(doc,name)=>publicProduct(await present(doc,name))),
+    publicAppearance:appearance.publicGet,publicContent:content.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(body.action==='profile:update')return business.profile((await authenticate(token)).uid,body);
+      if(typeof body.action==='string'&&body.action.startsWith('orders:')){const user=await authenticate(token);return orders.customer(user.uid,user.email||'',body);}
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
+      if(typeof body.action==='string'&&/^(coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
+      if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
+        case 'content:get':keys(body,['action']);return content.get();
+        case 'content:save':return content.save(uid,body);
+        case 'content:sign':return homeMedia.sign(uid,body);
+        case 'content:verify':return homeMedia.verify(uid,body);
         case 'shipping:get': keys(body,['action']);return shipping.get();
         case 'shipping:save':return shipping.save(uid,body);
         case 'appearance:get': keys(body,['action']);return appearance.get();

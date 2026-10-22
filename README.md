@@ -1,6 +1,8 @@
+See [COD completion, security, schema and local acceptance](docs/COMPLETION.md) for the current business implementation. No production deployment or data changes are included.
+
 # PARINAYA SILKS
 
-React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Customer email/password login, registration and password recovery use the shared Firebase Auth instance. Other business modules and checkout remain unconnected.
+React 19 + TypeScript + Vite 8 + Tailwind CSS 4 application. Public browsing uses clean URLs with legacy hash support. Administrator routes use real Firebase Authentication and server-managed permissions. Categories use Firestore; product management now uses the trusted catalog API and Cloudinary media flow. Customer email/password login, registration and password recovery use the shared Firebase Auth instance. COD checkout, customer orders and administrator business modules are implemented locally; see the completion guide for validation and release boundaries.
 
 See [Product CRUD configuration and acceptance](docs/PRODUCTS.md) for the current milestone and [category management](docs/CATEGORIES.md) for its foundation. Product setup requires the local API server and server-only credentials. Owner rules/index publication, server configuration and application release remain necessary. No live test records or uploads were created.
 
@@ -42,11 +44,11 @@ npm.cmd run build
 npm.cmd run preview
 ```
 
-`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer and administrator authentication use real Firebase. Automated customer account creation is restricted to the emulator suite. Checkout and order actions remain unavailable.
+`lint` currently means TypeScript checking, not ESLint. Use test data only. Customer and administrator authentication use real Firebase. Automated customer account creation is restricted to the emulator suite. COD orders use the trusted API; online payments remain on hold.
 
 The **storefront stays visible with clean empty states**. No sample catalogue, customer identity, order history, sale campaigns or fictional reporting is displayed. See [content cleanup and review instructions](docs/CONTENT_CLEANUP.md).
 
-There is no visibility flag or public simulator mode. `demoEnabled` is false in every mode. Checkout and order actions remain unavailable; customer authentication is real. Automated tests import fixtures directly from `tests/fixtures/commerce.ts`; the normal application never imports that dataset.
+There is no visibility flag or public simulator mode. `demoEnabled` is false in every mode. COD checkout and customer authentication use the trusted Firebase/API flows. Automated tests import fixtures directly from `tests/fixtures/commerce.ts`; the normal application never imports that dataset.
 
 A one-time versioned migration removes only the 12 exact retired product IDs from the named legacy bag/wishlist keys. It preserves unknown rows, order/profile data, preferences and Firebase authentication storage. Those legacy records are not read into the normal website. See the cleanup guide for the exact keys and failure behavior.
 

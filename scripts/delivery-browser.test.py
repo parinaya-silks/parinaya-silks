@@ -31,7 +31,7 @@ try:
     page.on('pageerror',lambda error:errors.append(str(error)))
     page.on('request',lambda req:saves.append(req.post_data_json) if req.method=='POST' and '/api/catalog' in req.url and req.post_data_json.get('action')=='addresses:save' else None)
     page.goto(origin+'/checkout');page.wait_for_url('**/login?returnTo=%2Fcheckout');login(page)
-    page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.get_by_role('button',name='Payment unavailable',exact=True).count()==0
+    page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.get_by_role('button',name='Place COD Order',exact=True).count()==0
     page.goto(origin+'/account');page.get_by_role('button',name='Addresses',exact=True).click();page.get_by_role('heading',name='My Addresses',exact=True).wait_for()
     page.get_by_text('No saved addresses yet.',exact=False).wait_for();page.get_by_role('button',name='Add address',exact=True).click()
     dialog=page.get_by_role('dialog');expect(dialog).to_be_visible();expect(page.get_by_label('Recipient full name',exact=True)).to_be_focused()
@@ -54,11 +54,11 @@ try:
     # Existing catalog action adds an item; no direct guest Bag writes.
     page.goto(origin+'/product/shopping-simple');page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for();page.goto(origin+'/bag');page.get_by_role('button',name='Increase quantity',exact=True).click();page.get_by_role('heading',name='My Bag (2)',exact=True).wait_for();page.get_by_role('button',name='Review checkout',exact=True).click()
     page.get_by_role('heading',name='Checkout review',exact=True).wait_for();summary=page.locator('[data-review-address]');expect(summary).to_have_attribute('data-review-address',first);page.locator('[data-checkout-line]').wait_for()
-    assert page.get_by_role('button',name='Payment unavailable',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
+    assert page.get_by_role('button',name='Place COD Order',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
     # Delayed prior-address response must never replace the newer selection.
     held=[]
     def delay_review(route):
-        if route.request.method=='POST' and route.request.post_data_json.get('action')=='checkout:review' and route.request.post_data_json.get('addressId')==first and not held:
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review' and route.request.post_data_json.get('addressId')==first and not held:
             response=route.fetch();held.append((route,response));return
         route.continue_()
     page.route('**/api/catalog',delay_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click()
@@ -95,7 +95,7 @@ try:
         page.keyboard.press('Escape');expect(dialog).not_to_be_visible();expect(page.get_by_role('button',name='Add address',exact=True)).to_be_focused()
     # Network error remains distinct from item validation; saved data is untouched.
     def fail_review(route):
-        if route.request.method=='POST' and route.request.post_data_json.get('action')=='checkout:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
         else:route.continue_()
     page.route('**/api/catalog',fail_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('button',name='Retry checkout review',exact=True).wait_for();assert page.locator('[data-checkout-line]').count()==0;page.unroute('**/api/catalog',fail_review);page.get_by_role('button',name='Retry checkout review',exact=True).click();page.locator('[data-checkout-line]').wait_for()
     fixture('hide');page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('heading',name='Product unavailable',exact=True).wait_for();assert 'Shopping Simple' not in page.locator('body').inner_text()

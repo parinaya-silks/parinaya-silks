@@ -70,3 +70,6 @@
     font-size: 16px !important;
   }
 }
+
+.home-content-banner {object-position:var(--home-mobile-position)}
+@media(min-width:768px){.home-content-banner {object-position:var(--home-desktop-position)}}

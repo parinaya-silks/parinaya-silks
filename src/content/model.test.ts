@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {blankContent,validateContent} from './model.ts';
+const input=()=>{const {revision,...value}=blankContent();return value;};
+test('store content publishes no invented policies and gates return requests on explicit approval',()=>{assert.equal(validateContent(input()).returnsEnabled,false);assert.throws(()=>validateContent({...input(),returnsEnabled:true,returnKinds:['return']}));const policy={...input(),policies:{...input().policies,returns:{text:'Owner approved fixture only.',approved:true}},returnsEnabled:true,returnKinds:['return']};assert.equal(validateContent(policy).returnsEnabled,true);});
+test('malformed content, executable links, forged media and unexpected private fields fail validation',()=>{for(const value of [null,[],{...input(),admin:true},{...input(),banners:[null]},{...input(),contact:null},{...input(),policies:{...input().policies,privacy:null}},{...input(),contact:{...input().contact,instagram:'javascript:alert(1)'}},{...input(),banners:[{id:'a'.repeat(32),enabled:true,title:'Fixture',link:'//evil.example',images:{desktop:null,mobile:null}}]}])assert.throws(()=>validateContent(value),{code:'invalid'});});

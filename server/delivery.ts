@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {FieldValue,type Firestore} from 'firebase-admin/firestore';
+import {FieldValue,type Firestore,type Transaction} from 'firebase-admin/firestore';
 import {ProductError,type PublicProductRecord} from '../src/products/model.ts';
 import {ADDRESS_LIMIT,addressId,validateAddress,type AddressBook,type DeliveryAddress,type CheckoutReview,type CheckoutLine} from '../src/delivery/model.ts';
 import {savedShipping,quoteShipping} from '../src/shipping/model.ts';
@@ -43,10 +43,7 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
       return {id,bookRevision};
     });
   }
-  async function review(uid:string,body:Record<string,unknown>):Promise<CheckoutReview>{
-    fields(body,['action','addressId']);
-    const selected=body.addressId===null?null:addressId(body.addressId);
-    return db.runTransaction(async tx=>{
+  async function reviewInTransaction(tx:Transaction,uid:string,selected:string|null):Promise<CheckoutReview>{
       const bag=await tx.get(root(uid).collection('bag').limit(SHOPPING_LIMIT+1));
       if(bag.size>SHOPPING_LIMIT)throw new ProductError('conflict','Too many bag items. Review your bag first.');
       const addressDoc=selected?await tx.get(root(uid).collection('addresses').doc(selected)):null;
@@ -76,7 +73,7 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
       try{shipping=quoteShipping(savedShipping((await tx.get(db.doc('siteSettings/shipping'))).data()),subtotal,valid);}catch{shipping={state:'unavailable' as const,revision:null,shippingPaise:null,totalPaise:null,free:false,freeShippingEnabled:false,freeThresholdPaise:null};}
       const value={address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid,issues,shipping};
       return {...value,fingerprint:createHash('sha256').update(JSON.stringify(value)).digest('hex')};
-    });
   }
-  return {async action(uid:string,body:Record<string,unknown>){if(body.action==='addresses:list'){fields(body,['action']);return list(uid);}if(body.action==='checkout:review')return review(uid,body);return mutate(uid,body);}};
+  async function review(uid:string,body:Record<string,unknown>){fields(body,['action','addressId']);const selected=body.addressId===null?null:addressId(body.addressId);return db.runTransaction(tx=>reviewInTransaction(tx,uid,selected));}
+  return {reviewInTransaction,async action(uid:string,body:Record<string,unknown>){if(body.action==='addresses:list'){fields(body,['action']);return list(uid);}if(body.action==='checkout:review')return review(uid,body);return mutate(uid,body);}};
 }

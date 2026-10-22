@@ -19,6 +19,8 @@ import {
 } from './types/index.ts';
 
 // Customer Shell Components
+import {Seo} from './content/Seo.tsx';
+import {StoreContentProvider} from './content/public.tsx';
 import { Header } from './components/Header.tsx';
 import { Footer } from './components/Footer.tsx';
 import { MobileBottomNav } from './components/MobileBottomNav.tsx';
@@ -38,6 +40,7 @@ import { AboutView } from './views/AboutView.tsx';
 import { PoliciesView } from './views/PoliciesView.tsx';
 import {CustomerAuthProvider,useCustomerAuth} from './customer/CustomerAuth.tsx';
 import {useShopping} from './shopping/useShopping.ts';
+import {CustomerOrders} from './orders/ui.tsx';
 import {CheckoutView} from './views/CheckoutView.tsx';
 import {AddressesView} from './delivery/AddressesView.tsx';
 import {CustomerGate} from './delivery/CustomerGate.tsx';
@@ -85,7 +88,7 @@ function customerLocation() {
   return normalizePath(window.location.hash.startsWith('#/') ? window.location.hash.slice(1) : window.location.pathname + window.location.search);
 }
 
-function Storefront() {return <CustomerAuthProvider><StorefrontContent/></CustomerAuthProvider>;}
+function Storefront() {return <CustomerAuthProvider><StoreContentProvider><StorefrontContent/></StoreContentProvider></CustomerAuthProvider>;}
 
 function StorefrontContent() {
   const session=useCustomerAuth();
@@ -145,7 +148,7 @@ function StorefrontContent() {
   }, [currentPath,session.status]);
 
   const authRoute=currentPath.split('?')[0];
-  const authExperience=['/login','/register','/forgot-password','/verify-email','/account','/account/orders'].includes(authRoute);
+  const authExperience=['/login','/register','/forgot-password','/verify-email','/account'].includes(authRoute);
 
   const shopping=useShopping(currentPath,navigate);
   const isWishlisted=shopping.isWishlisted;
@@ -156,12 +159,10 @@ function StorefrontContent() {
   // Render Customer Storefront Views
   let customerView: React.ReactNode = null;
 
-  const unavailable = !demoEnabled && (
-    /^\/(?:order-result|order-confirmed|order-tracking)(?:\/|\?|$)/.test(currentPath) ? ['Orders unavailable', 'Online order history and tracking are not available yet. Please contact us for assistance.'] : null
-  );
-
-  if (unavailable) {
-    customerView = <FeatureUnavailable title={unavailable[0]} onNavigate={navigate}>{unavailable[1]}</FeatureUnavailable>;
+  if (/^\/(?:order-result|order-confirmed|order-tracking)\//.test(authRoute)) {
+    const id=authRoute.split('/')[2];customerView=<CustomerGate path={authRoute} onNavigate={navigate}><CustomerOrders id={id} confirmed={authRoute.startsWith('/order-confirmed/')} onNavigate={navigate}/></CustomerGate>;
+  } else if (authRoute === '/account/orders') {
+    customerView=<CustomerGate path={authRoute} onNavigate={navigate}><CustomerOrders onNavigate={navigate}/></CustomerGate>;
   } else if (currentPath === '/' || currentPath === '') {
     customerView = (
       <HomeView
@@ -208,7 +209,7 @@ function StorefrontContent() {
     customerView = <CustomerGate path="/checkout" onNavigate={navigate}><CheckoutView shopping={shopping} onNavigate={navigate}/></CustomerGate>;
   } else if (authRoute === '/account/addresses') {
     customerView = <CustomerGate path="/account/addresses" onNavigate={navigate}><AddressesView onNavigate={navigate}/></CustomerGate>;
-  } else if (authRoute === '/account' || authRoute === '/account/orders') {
+  } else if (authRoute === '/account') {
     customerView = <AccountView currentPath={currentPath} onNavigate={navigate}/>;
   } else if (authRoute === '/login') {
     customerView = <LoginView currentPath={currentPath} onNavigate={navigate}/>;
@@ -264,6 +265,7 @@ function StorefrontContent() {
 
   return (
     <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")}>
+      <Seo path={currentPath}/>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
@@ -293,7 +295,7 @@ function StorefrontContent() {
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}
-        {!authExperience && catalog.state === 'ready' && catalog.hasMore && !currentPath.startsWith('/product/') && !['/bag','/wishlist'].includes(currentPath) && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
+        {!authExperience && catalog.state === 'ready' && catalog.hasMore && currentPath==='/' && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
       </main>
 
       {/* Storefront Footer */}

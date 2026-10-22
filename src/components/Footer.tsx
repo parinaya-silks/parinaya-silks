@@ -1,3 +1,4 @@
+import {usePublicContact} from '../content/public.tsx';
 import React from 'react';
 
 interface FooterProps {
@@ -5,6 +6,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const contact=usePublicContact();
   return (
     <footer className="bg-[#231919] text-[#E7DFD5] mt-16 pt-12 pb-28 border-t border-[#3A2D2D]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,38 +22,38 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </span>
             </div>
             <p className="text-[13px] text-[#C4B7AC] leading-relaxed">
-              Hyderabad, India
+              {contact.address}
             </p>
             <div className="pt-2 text-[13px] space-y-1.5 text-[#C4B7AC]">
               <p>
                 WhatsApp:{' '}
                 <a
                   className="text-[#F2BE72] hover:underline"
-                  href="https://wa.me/918367383073"
+                  href={'https://wa.me/'+contact.mobile.replace('+','')}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  +91 8367383073
+                  {contact.mobile}
                 </a>
               </p>
               <p>
                 Email:{' '}
                 <a
                   className="text-[#F2BE72] hover:underline"
-                  href="mailto:parinayasilks.in@gmail.com"
+                  href={'mailto:'+contact.email}
                 >
-                  parinayasilks.in@gmail.com
+                  {contact.email}
                 </a>
               </p>
               <p>
                 Instagram:{' '}
                 <a
                   className="text-[#F2BE72] hover:underline"
-                  href="https://instagram.com/parinaya_3999"
+                  href={contact.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  @parinaya_3999
+                  {new URL(contact.instagram).pathname.replaceAll('/','')}
                 </a>
               </p>
             </div>

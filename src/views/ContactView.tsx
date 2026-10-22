@@ -1,3 +1,4 @@
+import {usePublicContact} from '../content/public.tsx';
 import React, { useState } from 'react';
 
 interface ContactViewProps {
@@ -5,11 +6,12 @@ interface ContactViewProps {
 }
 
 export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
+  const contact=usePublicContact();
   const [orderRef, setOrderRef] = useState('');
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   const getWhatsAppUrl = () => {
-    const base = 'https://wa.me/918367383073';
+    const base = 'https://wa.me/'+contact.mobile.replace('+','');
     if (orderRef.trim()) {
       const msg = encodeURIComponent(
         `Namaste Parinaya Silks, I am inquiring regarding my Order ${orderRef.trim()}. Could you please assist me?`
@@ -60,7 +62,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                 WhatsApp
               </span>
               <span className="font-sans text-[18px] font-bold text-[#231919]">
-                +91 8367383073
+                {contact.mobile}
               </span>
             </div>
           </div>
@@ -109,13 +111,13 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                 Email
               </span>
               <span className="font-sans text-[15px] sm:text-[16px] font-bold text-[#231919] break-all">
-                parinayasilks.in@gmail.com
+                {contact.email}
               </span>
             </div>
           </div>
 
           <a
-            href="mailto:parinayasilks.in@gmail.com"
+            href={'mailto:'+contact.email}
             className="w-full h-11 bg-white border border-[#780D24] hover:bg-[#F4EEE5] text-[#780D24] text-[14px] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">send</span>
@@ -134,13 +136,13 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                 Instagram
               </span>
               <span className="font-sans text-[16px] font-bold text-[#231919]">
-                @parinaya_3999
+                {new URL(contact.instagram).pathname.replaceAll('/','')}
               </span>
             </div>
           </div>
 
           <a
-            href="https://instagram.com/parinaya_3999"
+            href={contact.instagram}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full h-11 bg-white border border-[#E8DDD6] hover:border-[#780D24] text-[#231919] text-[14px] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
@@ -160,7 +162,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
               Location
             </span>
             <span className="font-serif text-[18px] text-[#231919] font-medium">
-              Hyderabad, India
+              {contact.address}
             </span>
           </div>
         </div>
@@ -193,13 +195,13 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
             {faqOpen === 1 && (
               <div className="px-4 pb-4 pt-1 border-t border-[#F4EEE5] text-[#5F5552] text-[14px] leading-relaxed">
                 <p className="mb-3">
-                  Online order tracking is not available yet. Please contact us via WhatsApp or email for assistance.
+                  Sign in to My orders to see current order progress and courier tracking. Customers receive updates on this website.
                 </p>
                 <button
-                  onClick={() => onNavigate('/account')}
+                  onClick={() => onNavigate('/account/orders')}
                   className="inline-flex items-center gap-1 text-[13px] text-[#780D24] font-semibold hover:underline"
                 >
-                  <span>View account availability</span>
+                  <span>View my orders</span>
                   <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </button>
               </div>

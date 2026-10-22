@@ -133,7 +133,7 @@ with sync_playwright() as p:
         page.get_by_role('button',name='Sign out',exact=True).wait_for()
         page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
         assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address','Mobile number']
-        assert page.locator('.customer-account-details + .customer-auth-actions button').all_text_contents()==['Addresses','Browse sarees','Sign out']
+        assert page.locator('.customer-auth-actions').last.locator('button').all_text_contents()==['My orders','Addresses','Browse sarees','Sign out']
         assert 'verif' not in page.locator('main').inner_text().lower()
         assert 'VERIFY_EMAIL' not in mail_actions,'No verification email request is permitted'
     assert_clean_account()
@@ -141,7 +141,7 @@ with sync_playwright() as p:
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900})
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
-        gap=page.evaluate('document.querySelector(".customer-account-details + .customer-auth-actions").getBoundingClientRect().top-document.querySelector(".customer-account-details div:last-child dd").getBoundingClientRect().bottom')
+        gap=page.evaluate('document.querySelector(".customer-account-details + button").getBoundingClientRect().top-document.querySelector(".customer-account-details div:last-child dd").getBoundingClientRect().bottom')
         assert 0<=gap<=32,('No leftover verification gap',width,gap)
         control=page.get_by_role('button',name='Sign out',exact=True)
         control.evaluate('(el)=>el.scrollIntoView({block:"center",behavior:"instant"})')

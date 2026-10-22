@@ -1,6 +1,9 @@
 import React from 'react';
+import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
 import { AdminDashboard } from './AdminDashboard.tsx';
+import {AdminCoupons,AdminCustomerDirectory,AdminReports} from '../orders/AdminBusiness.tsx';
+import {AdminOrderWorkspace} from '../orders/ui.tsx';
 import { AdminOrders } from './AdminOrders.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import { AdminCustomers } from './AdminCustomers.tsx';
@@ -21,23 +24,23 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   };
   let content: React.ReactNode;
   if (path === '/admin' || path === '/admin/dashboard' || path === '/admin/login') {
-    content = <AdminDashboard unavailable orders={[]} products={[]} onNavigate={navigate} onAdjustStock={unavailableWrite} />;
+    content = <AdminReports/>;
   } else if (path === '/admin/categories') {
     content = <AdminCategories onNavigate={navigate} />;
-  } else if (path === '/admin/orders') {
-    content = <fieldset disabled className="min-w-0"><AdminOrders unavailable orders={[]} onNavigate={navigate} onUpdateStatus={unavailableWrite} onBulkUpdateStatus={unavailableWrite} /></fieldset>;
+  } else if (path === '/admin/orders'||path.startsWith('/admin/orders/')) {
+    content = <AdminOrderWorkspace id={path.split('/')[3]} onNavigate={navigate}/>;
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
-    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
+    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/><AdminContent/></div>;
   } else if (path === '/admin/customers') {
-    content = <fieldset disabled className="min-w-0"><AdminCustomers unavailable customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
+    content = <AdminCustomerDirectory onNavigate={navigate}/>;
+  } else if(path==='/admin/coupons'){content=<AdminCoupons/>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;
   }
   return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email}>
-    {path !== '/admin/settings' && path !== '/admin/categories' && !path.startsWith('/admin/products') && <div role="note" className="mb-5 rounded-lg border border-[#B88A44]/40 bg-[#F4EEE5] p-4 text-sm text-[#5F5552]">Administrator access is active. This business module is not connected yet. No live records are displayed and no changes can be saved.</div>}
     <div key={path}>{content}</div>
   </AdminLayout>;
 }

@@ -38,7 +38,7 @@ export function AdminLoginAppearance(){
     finally{lock.current=false;if(mounted.current)setBusy(false);}
   }
   return <section className="max-w-5xl space-y-5">
-    <header><h1 className="font-serif text-2xl">Store Settings</h1><h2 className="font-serif text-xl mt-5">Login Page Appearance</h2><p className="text-sm text-[#5F5552] mt-2">Choose separate photos for the tall desktop portrait and shallow mobile banner. Uploading only prepares an image; Save applies it to the customer pages. Shipping controls are available below; other store settings remain unavailable.</p></header>
+    <header><h1 className="font-serif text-2xl">Store Settings</h1><h2 className="font-serif text-xl mt-5">Login Page Appearance</h2><p className="text-sm text-[#5F5552] mt-2">Choose separate photos for the tall desktop portrait and shallow mobile banner. Uploading only prepares an image; Save applies it to the customer pages. Shipping, homepage and policy controls are available below.</p></header>
     {loading?<p role="status">Loading login appearance...</p>:<>
       {error&&<div role="alert" className="p-3 bg-red-50 border rounded-lg"><p>{error}</p><button className="min-h-11 underline" onClick={()=>void load()}>Retry loading saved appearance</button></div>}
       {notice&&<p role="status" className="p-3 bg-green-50 border rounded-lg">{notice}</p>}

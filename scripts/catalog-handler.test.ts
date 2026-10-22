@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {once} from 'node:events';
+import {blankContent} from '../src/content/model.ts';
 import {catalogHandler} from '../server/handler.ts';
 import {CatalogConfigurationError} from '../server/errors.ts';
 import {ProductError} from '../src/products/model.ts';
@@ -14,7 +15,7 @@ test('handler distinguishes request, permission, configuration and internal fail
   const handler=catalogHandler(()=>{
     calls++;
     if(failure)throw failure;
-    return {publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
+    return {sitemap:async()=>'<urlset/>',publicBrowse:async()=>({items:[],nextCursor:null}),publicContent:async()=>({...blankContent(),banners:[],featuredProducts:[],featuredCategories:[]}),publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
   },diagnostic=>diagnostics.push(diagnostic));
   const server=createServer(handler).listen(0,'127.0.0.1');
   await once(server,'listening');
@@ -28,6 +29,8 @@ test('handler distinguishes request, permission, configuration and internal fail
     result=await fetch(url,{method:'DELETE'});assert.equal(result.status,405);assert.equal(result.headers.get('allow'),'GET, POST');
     result=await send('{"action":"list"}');assert.equal(result.status,403);
     result=await fetch(url);assert.equal(result.status,200);assert.deepEqual(await result.json(),{items:[],nextCursor:null});
+    result=await fetch(url+'?seo=sitemap');assert.equal(result.status,200);assert.match(result.headers.get('content-type')||'',/application\/xml/);assert.equal(await result.text(),'<urlset/>');
+    result=await fetch(url+'?seo=sitemap&private=true');assert.equal(result.status,400);
     const privateDetail='synthetic-private-value';
     for(const [error,status,code]of [
       [new CatalogConfigurationError(privateDetail,'firebase-initialization',{cause:new Error(privateDetail)}),503,'configuration'],

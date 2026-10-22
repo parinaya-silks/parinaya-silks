@@ -1,4 +1,6 @@
+import {usePublicContact} from '../content/public.tsx';
 import React, { useState, useEffect } from 'react';
+import {useStoreContent} from '../content/public.tsx';
 
 type PolicyKey = 'shipping' | 'returns' | 'privacy' | 'terms';
 
@@ -8,6 +10,8 @@ interface PoliciesViewProps {
 }
 
 export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shipping', onNavigate }) => {
+  const contact=usePublicContact();
+  const {content}=useStoreContent();
   const [activeKey, setActiveKey] = useState<PolicyKey>(initialTab);
   const [tocOpen, setTocOpen] = useState(false);
 
@@ -28,7 +32,7 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
 
   return (
     <div className="pb-28">
-      <p role="note" className="bg-amber-50 text-amber-950 border-b border-amber-200 p-4 text-sm text-center">Policy terms are pending final approval.</p>
+      {!content.policies[activeKey]?.approved&&<p role="note" className="bg-amber-50 text-amber-950 border-b border-amber-200 p-4 text-sm text-center">Policy terms are pending final approval.</p>}
       {/* Breadcrumb Strip */}
       <section className="bg-[#F4EEE5] border-b border-[#E8DDD6]">
         <div className="max-w-[760px] mx-auto px-4 py-2.5 flex items-center text-[13px] font-sans text-[#5F5552]">
@@ -87,15 +91,7 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
             {currentPolicy.title}
           </h1>
 
-          {/* Draft Annotation Badge */}
-          <div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 bg-[#F4EEE5] border border-[#B88A44]/40 rounded text-[11px] font-sans text-[#5F5552]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B88A44]" />
-            <span>Draft Document • Pending final client approval</span>
-          </div>
-
-          <p className="mt-4 text-[15px] sm:text-[16px] leading-relaxed text-[#5F5552] font-sans">
-            Final policy terms are pending. Please contact us with any questions.
-          </p>
+          {content.policies[activeKey]?.approved?<div className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed">{content.policies[activeKey].text}</div>:<><div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 bg-[#F4EEE5] border border-[#B88A44]/40 rounded text-[11px]">Draft Document - Pending final client approval</div><p className="mt-4 text-[15px] text-[#5F5552]">Final policy terms are pending. Please contact us with any questions.</p></>}
         </div>
 
         {/* Compact Support Row */}
@@ -108,24 +104,24 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
               WhatsApp:{' '}
               <a
                 className="text-[#780D24] font-medium hover:underline"
-                href="https://wa.me/918367383073"
+                href={'https://wa.me/'+contact.mobile.replace('+','')}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                +91 8367383073
+                {contact.mobile}
               </a>{' '}
               &nbsp;|&nbsp; Email:{' '}
               <a
                 className="text-[#780D24] font-medium hover:underline"
-                href="mailto:parinayasilks.in@gmail.com"
+                href={'mailto:'+contact.email}
               >
-                parinayasilks.in@gmail.com
+                {contact.email}
               </a>
             </p>
           </div>
           <a
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#780D24] text-white text-[13px] font-semibold rounded-lg hover:bg-[#5E091B] transition-colors shrink-0"
-            href="https://wa.me/918367383073"
+            href={'https://wa.me/'+contact.mobile.replace('+','')}
             target="_blank"
             rel="noopener noreferrer"
           >

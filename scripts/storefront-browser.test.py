@@ -17,7 +17,12 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
     for origin in ['http://127.0.0.1:3000', 'http://127.0.0.1:4173']:
         context = browser.new_context(viewport={'width':390,'height':844}, reduced_motion='reduce')
-        context.route('**/api/catalog*', lambda route: route.fulfill(status=404 if 'slug=' in route.request.url else 200, content_type='application/json', body=json.dumps({'code':'not-found','message':'Product not found.'} if 'slug=' in route.request.url else {'items':[],'nextCursor':None})))
+        def public_api(route):
+            url=route.request.url
+            content={'banners':[],'featuredProductIds':[],'featuredCategoryIds':[],'contact':{'email':'','mobile':'','address':'','instagram':''},'policies':{key:{'text':'','approved':False} for key in ['shipping','returns','privacy','terms']},'returnsEnabled':False,'returnKinds':[]}
+            body=content if 'content=store' in url else {'desktop':None,'mobile':None} if 'appearance=login' in url else {'code':'not-found','message':'Product not found.'} if 'slug=' in url else {'items':[],'nextCursor':None}
+            route.fulfill(status=404 if 'slug=' in url else 200,content_type='application/json',body=json.dumps(body))
+        context.route('**/api/catalog*',public_api)
         errors, backend_requests = [], []
         for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**']:
             context.route(pattern, lambda route: (backend_requests.append(route.request.url),route.abort()))
@@ -62,7 +67,7 @@ with sync_playwright() as p:
         page.get_by_role('heading',name='No products found.',exact=True).wait_for()
         page.get_by_role('button',name='Clear filters',exact=True).click()
         page.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
-        for route,heading in [('/bag','Sign in to view your bag'),('/wishlist','Sign in to view your wishlist'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed?orderId=ord-1089','Orders unavailable'),('/checkout','Welcome back')]:
+        for route,heading in [('/bag','Sign in to view your bag'),('/wishlist','Sign in to view your wishlist'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed/missing','Welcome back'),('/checkout','Welcome back')]:
             page.goto(origin+route)
             page.get_by_role('heading',name=heading,exact=True).wait_for()
             assert page.get_by_role('button',name='Simulate payment',exact=False).count()==0

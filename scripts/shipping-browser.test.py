@@ -42,7 +42,7 @@ try:
     fee.fill('1.001');expect(save).to_be_disabled();fee.fill('-1');expect(save).to_be_disabled();fee.fill('');expect(save).to_be_disabled();cancel.click();expect(fee).to_have_value('123.45')
     held=[]
     def hold_old_review(route):
-        if route.request.method=='POST' and route.request.post_data_json.get('action')=='checkout:review' and not held:
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review' and not held:
             held.append((route,route.fetch()));return
         route.continue_()
     customer.route('**/api/catalog',hold_old_review);customer.get_by_role('button',name='Refresh checkout review',exact=True).click()
@@ -58,11 +58,14 @@ try:
     for width in [320,375,390,768,1024,1440]:
         admin.set_viewport_size({'width':width,'height':900});customer.set_viewport_size({'width':width,'height':900});assert not admin.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width;assert not customer.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
         section.scroll_into_view_if_needed();admin.screenshot(path=str(screens/f'admin-shipping-{width}.png'),full_page=True);customer.screenshot(path=str(screens/f'checkout-shipping-{width}.png'),full_page=True)
-    assert 'provisional' not in customer.locator('body').inner_text().lower();assert customer.get_by_role('button',name='Payment unavailable',exact=True).is_disabled()
+    assert 'provisional' not in customer.locator('body').inner_text().lower()
+    acknowledge=customer.get_by_role('button',name='I have reviewed the updated prices',exact=True)
+    if acknowledge.count():acknowledge.click()
+    expect(customer.get_by_role('button',name='Place COD Order',exact=True)).to_be_enabled()
     fixture('blocked');customer.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(shipping).to_have_attribute('data-shipping-state','blocked');assert 'Total including shipping' not in shipping.inner_text()
     fixture('restore');customer.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(shipping).to_have_attribute('data-shipping-state','ready')
     def fail_review(route):
-        if route.request.method=='POST' and route.request.post_data_json.get('action')=='checkout:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
         else:route.continue_()
     customer.route('**/api/catalog',fail_review);customer.get_by_role('button',name='Refresh checkout review',exact=True).click();customer.get_by_role('button',name='Retry checkout review',exact=True).wait_for();assert 'To be confirmed' in shipping.inner_text();assert 'Total including shipping' not in shipping.inner_text();customer.unroute('**/api/catalog',fail_review);customer.get_by_role('button',name='Retry checkout review',exact=True).click();expect(shipping).to_have_attribute('data-shipping-state','ready')
     fixture('reset');expect(shipping).to_have_attribute('data-shipping-state','missing');assert 'To be confirmed' in shipping.inner_text()
