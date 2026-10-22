@@ -99,6 +99,8 @@ service cloud.firestore {
     }
     // Login appearance is served through a public projection; all settings and
     // media writes use the trusted API with both administrator checks.
+    // Revision-only shipping invalidation; full settings/metadata stay private.
+    match /siteSettings/shippingRevision { allow get: if signedIn(); allow list, write: if false; }
     match /siteSettings/{id} { allow read, write: if false; }
     match /loginAppearanceMedia/{id} { allow read, write: if false; }
     match /productSlugs/{slug} { allow read, write: if false; }

@@ -8,6 +8,7 @@ import {loginAppearanceService} from './loginAppearance.ts';
 import {publicProduct} from './publicProduct.ts';
 import {shoppingService} from './shopping.ts';
 import {deliveryService} from './delivery.ts';
+import {shippingService} from './shipping.ts';
 
 type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
@@ -33,6 +34,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return user.uid;
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
+  const shipping=shippingService(db,transactionAccess);
   const appearance=loginAppearanceService(db,media,transactionAccess);
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
     const data=document.data()!;
@@ -147,6 +149,8 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
       switch(body.action) {
+        case 'shipping:get': keys(body,['action']);return shipping.get();
+        case 'shipping:save':return shipping.save(uid,body);
         case 'appearance:get': keys(body,['action']);return appearance.get();
         case 'appearance:sign':return appearance.sign(uid,body);
         case 'appearance:verify':return appearance.verify(uid,body);

@@ -1,5 +1,7 @@
 # Customer addresses and checkout review (local implementation)
 
+Follow-on local phase: [configurable shipping settings](SHIPPING.md) supplies the newly specified flat-fee policy. Its saved configuration replaces the shipping placeholder when valid; payment and order placement remain unavailable.
+
 This phase connects the existing Bag to authenticated address selection and a trusted merchandise review. All changes and rule preparations stay local: no commit, push, Vercel deployment, Firebase publication or production customer mutation is part of this phase.
 
 ## Routes and design

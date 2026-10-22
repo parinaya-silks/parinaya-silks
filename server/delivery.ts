@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {FieldValue,type Firestore} from 'firebase-admin/firestore';
 import {ProductError,type PublicProductRecord} from '../src/products/model.ts';
 import {ADDRESS_LIMIT,addressId,validateAddress,type AddressBook,type DeliveryAddress,type CheckoutReview,type CheckoutLine} from '../src/delivery/model.ts';
+import {savedShipping,quoteShipping} from '../src/shipping/model.ts';
 import {SHOPPING_LIMIT,resolveItem} from '../src/shopping/model.ts';
 
 const fields=(body:Record<string,unknown>,allowed:string[])=>{if(Object.keys(body).some(key=>!allowed.includes(key))||allowed.some(key=>!(key in body)))throw new ProductError('invalid','Unsupported or missing request fields.');};
@@ -70,7 +71,10 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
         return {id:doc.id,productId:typeof data.productId==='string'?data.productId:'',variantId:validVariant?data.variantId:null,quantity:validQuantity?quantity:0,product,variantName:resolved.variantName,issues};
       });
       const issues=bag.empty?['Your bag is empty.']:!address?['Select a saved delivery address to complete the delivery review.']:[];
-      const value={address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid:!issues.length&&items.every(item=>!item.issues.length),issues};
+      const valid=!issues.length&&complete&&items.every(item=>!item.issues.length);
+      let shipping;
+      try{shipping=quoteShipping(savedShipping((await tx.get(db.doc('siteSettings/shipping'))).data()),subtotal,valid);}catch{shipping={state:'unavailable' as const,revision:null,shippingPaise:null,totalPaise:null,free:false,freeShippingEnabled:false,freeThresholdPaise:null};}
+      const value={address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid,issues,shipping};
       return {...value,fingerprint:createHash('sha256').update(JSON.stringify(value)).digest('hex')};
     });
   }

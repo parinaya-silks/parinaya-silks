@@ -4,6 +4,7 @@ import { AdminDashboard } from './AdminDashboard.tsx';
 import { AdminOrders } from './AdminOrders.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import { AdminCustomers } from './AdminCustomers.tsx';
+import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
 import {AdminLoginAppearance} from '../appearance/AdminLoginAppearance.tsx';
 import { AdminCategories } from './AdminCategories.tsx';
 import { safeAdminDestination } from './accessPolicy.ts';
@@ -28,7 +29,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
-    content = <AdminLoginAppearance/>;
+    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
   } else if (path === '/admin/customers') {
     content = <fieldset disabled className="min-w-0"><AdminCustomers unavailable customers={[]} orders={[]} onNavigate={navigate} /></fieldset>;
   } else {

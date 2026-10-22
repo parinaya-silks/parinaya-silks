@@ -1,3 +1,4 @@
+import type {ShippingQuote} from '../shipping/model.ts';
 import {ProductError,type PublicProductRecord} from '../products/model.ts';
 import {normalizeMobile,mobileCountry} from '../customer/mobile.ts';
 
@@ -27,4 +28,4 @@ export function validateAddress(value:unknown):AddressInput {
   return result;
 }
 export interface CheckoutLine {id:string;productId:string;variantId:string|null;quantity:number;product:PublicProductRecord|null;variantName:string;issues:string[]}
-export interface CheckoutReview {fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[]}
+export interface CheckoutReview {shipping:ShippingQuote;fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[]}
