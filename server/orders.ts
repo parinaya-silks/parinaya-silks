@@ -1,10 +1,11 @@
 import {orderListProjection} from '../src/admin/orders/model.ts';
+import {deliveryRecord,deliveryChanged,deliveryEditable,deliveryFields} from '../src/orders/delivery.ts';
 import {dashboardBounds} from '../src/admin/dashboard/model.ts';
 import {checkoutSource,type CheckoutSource} from '../src/checkout/source.ts';
 import {createHash} from 'node:crypto';
 import {FieldValue,Timestamp,FieldPath,type Firestore,type Transaction,type DocumentSnapshot,type Query} from 'firebase-admin/firestore';
 import {ProductError,type ProductInput} from '../src/products/model.ts';
-import {referenceId,exact,text,noteText,safeLink,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,couponInput,couponDiscount,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
+import {referenceId,exact,text,noteText,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,couponInput,couponDiscount,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
 import type {CheckoutReview} from '../src/delivery/model.ts';
 
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -76,7 +77,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
   function projection(order:OrderRecord,admin:boolean){if(admin)return order;const {internalNotes,history,...safe}=order;return {...safe,history:history.filter(item=>!['Note','Manual refund'].includes(item.action)).map(({action,at})=>({action,at})),refunds:order.refunds.map(({amountPaise,at})=>({amountPaise,at})),collection:order.collection?{at:order.collection.at}:null};}
   async function get(uid:string,body:Record<string,unknown>,admin=false){exact(body,['action','id']);const raw=typeof body.id==='string'&&/^PS-[A-F0-9]{32}$/.test(body.id)?body.id.slice(3).toLowerCase():referenceId(body.id),doc=await db.doc('orders/'+raw).get();if(!doc.exists||(!admin&&doc.data()?.uid!==uid))throw new ProductError('not-found','Order not found.');return projection(present(doc),admin);}
   async function mutate(uid:string,body:Record<string,unknown>,admin:boolean){
-    exact(body,['action','id','expectedRevision','operationId','command'],['note','courier','trackingNumber','trackingUrl','reference','amountPaise','method']);
+    exact(body,['action','id','expectedRevision','operationId','command'],['note',...deliveryFields,'reference','amountPaise','method']);
     const id=referenceId(body.id),op=referenceId(body.operationId),command=text(body.command,40,true),note=noteText(body.note??'',1000),ref=db.doc('orders/'+id),receipt=db.doc('orderOperations/'+digest([uid,op])),hash=digest(body);
     if(!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<1)throw new ProductError('invalid','Invalid order revision.');
     return db.runTransaction(async tx=>{
@@ -95,7 +96,14 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       }else if(orderStatuses.includes(command as never)){
         if(!transitions[old.status].includes(command as never))throw new ProductError('conflict',`Cannot change ${old.status} to ${command}.`);
         if(['Cancelled','Rejected'].includes(command)){if(!note)throw new ProductError('invalid','A cancellation or rejection reason is required.');if(old.paymentStatus==='collected')throw new ProductError('conflict','Collected funds require owner resolution before pre-dispatch cancellation.');restore=!old.stockRestored;update.stockRestored=true;if(old.request?.status==='pending')update.request={...old.request,status:command==='Cancelled'&&old.request.kind==='cancellation'?'approved':'rejected'};}
-        if(command==='Shipped'){update.courier=text(body.courier,100,true);update.trackingNumber=text(body.trackingNumber,100,true);update.trackingUrl=safeLink(body.trackingUrl??'');}update.status=command;
+        if(deliveryFields.some(field=>field in body)||command==='Shipped'){
+          if(!deliveryEditable(old.status)||['Cancelled','Rejected'].includes(command))throw new ProductError('invalid','Delivery fields are not permitted for this transition.');
+          Object.assign(update,deliveryRecord(old,body,command as OrderRecord['status']));
+        }update.status=command;
+      }else if(command==='delivery-details'){
+        if(!deliveryEditable(old.status))throw new ProductError('conflict','Delivery details are read-only for this order state.');
+        const delivery=deliveryRecord(old,body,old.status);if(!deliveryChanged(old,delivery))throw new ProductError('invalid','No delivery details have changed.');
+        Object.assign(update,delivery);history.action='Delivery details updated';
       }else if(command==='collect'){
         if(old.status!=='Delivered'||old.paymentStatus!=='due')throw new ProductError('conflict','COD collection can be recorded once after delivery.');update.paymentStatus='collected';update.collectedPaise=Number(old.totalPaise);update.collection={actor:uid,at:now(),reference:text(body.reference,150,true),note};
       }else if(command==='note'){if(!note)throw new ProductError('invalid','Enter an internal note.');update.internalNotes=note;history.action='Note';}
@@ -108,6 +116,8 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       }else if(command==='manual-refund'){
         if(old.paymentStatus!=='collected'||old.request?.status!=='resolved'||old.refunds.length>=20)throw new ProductError('conflict','A resolved return with collected COD funds is required.');const refundMethod=text(body.method,80,true),refundReference=text(body.reference,150,true);if(old.refunds.some(item=>item.method===refundMethod&&item.reference===refundReference))throw new ProductError('conflict','This external refund reference is already recorded for this order.');const amount=body.amountPaise;if(!Number.isSafeInteger(amount)||(amount as number)<=0||BigInt(amount as number)+old.refunds.reduce((sum,item)=>sum+BigInt(item.amountPaise),0n)>BigInt(old.totalPaise))throw new ProductError('invalid','Refund exceeds the collected amount.');update.refunds=[...old.refunds,{amountPaise:amount,method:refundMethod,reference:refundReference,actor:uid,at:now()}];update.refundPaise=old.refunds.reduce((sum,item)=>sum+item.amountPaise,0)+(amount as number);history.action='Manual refund';
       }else throw new ProductError('invalid','Unsupported order action.');
+      if(deliveryFields.some(field=>field in body)&&(!admin||(!orderStatuses.includes(command as never)&&command!=='delivery-details')))throw new ProductError('invalid','Delivery fields require a delivery update.');
+      if('courier' in update){history.note=[note,...deliveryFields.filter(field=>(old[field]??null)!==(update[field]??null)).map(field=>`${field}: ${old[field]||'Not set'} → ${update[field]||'Cleared'}`)].filter(Boolean).join('\n');}
       if(old.history.length>=250)throw new ProductError('conflict','Order history requires owner archival before further changes.');
       const ids=restore?[...new Set(old.items.map(item=>item.productId))]:[],products=ids.length?await tx.getAll(...ids.map(id=>db.doc('products/'+id))):[];
       const inventories=new Map(products.map(doc=>{if(!doc.exists)throw new ProductError('conflict','A purchased product is missing; stock requires owner review.');return [doc.id,doc.data()!.inventory as ProductInput['inventory']];}));

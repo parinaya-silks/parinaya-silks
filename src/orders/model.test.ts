@@ -1,6 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {customerFailureMessage} from './errorMessage.ts';
+import {deliveryRecord,deliveryChanged,deliveryValues,deliveryDateLabel,indiaDate,deliveryEditable,deliveryTransitions} from './delivery.ts';
+test('delivery metadata validates resulting dispatch record, omission, clearing, URLs and India date-only semantics',()=>{
+ const now=Date.parse('2026-10-23T20:00:00Z');assert.equal(indiaDate(now),'2026-10-24');
+ const old={courier:'Saved Courier',trackingNumber:'AWB-123/IN',trackingUrl:'https://courier.example/track',estimatedDeliveryDate:'2026-01-01'};
+ assert.deepEqual(deliveryRecord(old,{},'Shipped',now),old,'Omitted values and an overdue ETA are preserved');
+ assert.equal(deliveryRecord(old,{estimatedDeliveryDate:null},'Shipped',now).estimatedDeliveryDate,null);
+ assert.equal(deliveryRecord(old,{estimatedDeliveryDate:'2026-10-24'},'Shipped',now).estimatedDeliveryDate,'2026-10-24');
+ for(const date of ['2026-10-23','2026-02-30','2030-01-01','2026-10-24T00:00:00Z',''])assert.throws(()=>deliveryRecord(old,{estimatedDeliveryDate:date},'Shipped',now));
+ for(const url of ['javascript:alert(1)','http://courier.example','https://user:pass@courier.example'])assert.throws(()=>deliveryRecord(old,{trackingUrl:url},'Shipped',now));
+ assert.throws(()=>deliveryRecord({}, {},'Shipped',now));assert.throws(()=>deliveryRecord(old,{courier:''},'Shipped',now));
+ assert.equal(deliveryRecord(old,{trackingNumber:'  BLR 123-45/IN_6  '},'Shipped',now).trackingNumber,'BLR 123-45/IN_6');
+ assert.throws(()=>deliveryRecord(old,{trackingNumber:'<script>'},'Shipped',now));
+ assert.equal(deliveryDateLabel('2026-10-24'),'24/10/2026');assert.equal(deliveryDateLabel(null),'Not set');assert.equal(deliveryChanged({},deliveryValues({})),false);
+ assert.deepEqual(deliveryTransitions('Processing'),['Shipped']);assert.deepEqual(deliveryTransitions('Shipped'),['Delivered']);
+ for(const state of ['Delivered','Cancelled','Rejected'] as const)assert.equal(deliveryEditable(state),false);
+});
 test('customer history failures use loading copy while uncertain order mutations retain safe recovery copy',()=>{
  assert.equal(customerFailureMessage('orders:list'),'We couldn’t load your orders. Please try again.');
  assert.equal(customerFailureMessage('orders:review'),'Unable to load checkout review. Please try again.');

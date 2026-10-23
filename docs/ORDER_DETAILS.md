@@ -20,20 +20,20 @@ Email/mobile copy controls provide success/failure feedback and clean up timers.
 
 ## Actual workflow and deliberate design differences
 
-The former working order-action form was extracted into `OrderActions.tsx`; its existing `adminOrders:update` transition service and request field names are retained. The unused old list/detail workspace was removed from the shared customer/order UI module. No customer tracking layout or backend transition logic was changed.
+The former working order-action form was extracted into `OrderActions.tsx`; its existing `adminOrders:update` transition service and request field names are retained. The unused old list/detail workspace was removed from the shared customer/order UI module. The delivery extension is documented in [DELIVERY_UPDATE.md](DELIVERY_UPDATE.md); it adds a dedicated drawer and narrow delivery-metadata support to the same service.
 
-Header actions focus/select the existing action form. Save opens an accessible explicit confirmation before the mutation. All existing supported actions remain: confirmation, processing, dispatch, delivery, pre-dispatch cancellation/rejection, internal note, request review, inspected return restock/resolution, external collection and external manual refund. Required reasons, courier details, references and refund amounts remain validated by the trusted server.
+General header actions focus/select the existing action form; dispatch and delivery shortcuts open the Delivery Update panel. Save opens an accessible explicit confirmation before the mutation. All existing supported actions remain: confirmation, processing, dispatch, delivery, pre-dispatch cancellation/rejection, internal note, request review, inspected return restock/resolution, external collection and external manual refund. Required reasons, courier details, references and refund amounts remain validated by the trusted server.
 
 The reference contains capabilities the service does not implement; the page does not advertise them as working:
 
 - There is no Packed or Ready to Dispatch state.
-- Update Delivery selects the working dispatch fields only when a Processing order can transition to Shipped. Courier/tracking updates after dispatch and an estimated-delivery editor are not supported by the current engine. Existing saved courier/tracking values remain visible, and estimated delivery displays Not set.
+- Update Delivery now opens the dedicated status/details panel for eligible pre-terminal orders. Courier/tracking edits and date-only estimated delivery are persisted through the existing authorized transaction; see [DELIVERY_UPDATE.md](DELIVERY_UPDATE.md).
 - There is no stored customer delivery-instruction field. The actual saved landmark is shown as Landmark, separately from administrator internal notes. No dispatch promises or courier synchronization are implied.
 - COD collection can be recorded only after delivery, and the existing service completes the full remaining balance. Historical partial collections are displayed accurately; no new arbitrary partial-entry API is introduced. The amount shown for confirmation is read-only, derived from the stored record.
 - No delivery event automatically records a collection. Active due-order outstanding equals stored total minus recorded collections; cancelled/rejected and already-collected orders have no outstanding delivery payment. Refunds describe external returns of previously collected funds and do not create new COD debt. These are the existing report/dashboard semantics.
 - Record Collection and manual refund explicitly describe external actions. This screen does not charge the customer or transfer money. Razorpay remains on hold; no cancellation automatically initiates a refund.
 
-The reference's combined mobile financial section is implemented as adjacent summary and collection cards for reuse with the desktop columns. The action form stays below the detail cards, retaining the working courier/refund/request controls rather than introducing the separately planned Delivery Update redesign.
+The reference's combined mobile financial section is implemented as adjacent summary and collection cards for reuse with the desktop columns. The general action form stays below the detail cards for existing refund/request controls. Delivery Update now uses its own responsive drawer while retaining the same trusted order service.
 
 ## Concurrency, refresh and security
 
