@@ -20,6 +20,7 @@ await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/orders-emulat
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/business-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/dashboard-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/orders-list-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/order-details-emulator.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -61,6 +62,7 @@ try {
   await run('python', ['scripts/catalog-recovery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/purchase-journey-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/cod-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await run('python', ['scripts/order-details-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/orders-list-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/dashboard-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

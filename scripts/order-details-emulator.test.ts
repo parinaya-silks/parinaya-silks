@@ -1,0 +1,30 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';import {randomUUID} from 'node:crypto';import {createServer} from 'node:http';import {once} from 'node:events';
+import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import handler from '../api/catalog.ts';import {serverFirebase} from '../server/firebase.ts';import {customRange} from '../src/admin/dashboard/model.ts';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw new Error('Loopback emulators required.');
+process.env.PARINAYA_SERVER_EMULATORS='true';
+test('order details handler: immutable snapshots, dual authorization, collection/refund receipts and safe historical reads',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),{database:db,auth}=serverFirebase(),tokens:Record<string,string>={},users:string[]=[],op=()=>randomUUID().replaceAll('-','');
+ const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
+ const call=async(body:Record<string,unknown>,role='owner')=>{const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...(tokens[role]?{Authorization:'Bearer '+tokens[role]}:{})},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
+ const id='6'.repeat(32),pid='d'.repeat(20),request={action:'adminOrders:get',id};
+ try{
+  await env.clearFirestore();
+  for(const [role,claim,enabled]of [['owner',true,true],['customer',false,false],['claim',true,false],['record',false,true]] as const){const uid='detail-'+role,password=randomUUID()+'Aa9!';users.push(uid);await auth.createUser({uid,email:uid+'@example.test',password});await auth.setCustomUserClaims(uid,{admin:claim});if(enabled)await db.doc('adminAccess/'+uid).set({enabled:true});const response=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=synthetic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:uid+'@example.test',password,returnSecureToken:true})});tokens[role]=(await response.json()).idToken;}
+  assert.equal((await call(request,'guest')).status,401);for(const role of ['customer','claim','record'])assert.equal((await call(request,role)).status,403);assert.equal((await call(request)).status,404);
+  const time=Date.parse('2026-10-22T06:00:00Z'),ref=db.doc('orders/'+id);
+  await ref.set({uid:'detail-customer',email:'historical@example.test',reference:'PS-'+id,totalPaise:'1250000',subtotalPaise:'1300000',shippingPaise:'0',discountPaise:'50000',reportingPaise:1250000,collectedPaise:500000,refundPaise:0,paymentStatus:'due',paymentMethod:'COD',status:'Delivered',currency:'INR',revision:1,history:[{action:'Placed',actor:'detail-customer',at:time,note:'Accepted'}],address:{recipientName:'Historical recipient',mobileNumber:'+919840123456',line1:'Historical street'},items:[{productId:pid,name:'Historical saree',variantId:null,quantity:1,unitPaise:1300000,linePaise:'1300000',sku:'OLD-SKU',variantName:'Historical crimson',imageUrl:''}],refunds:[],request:null,stockRestored:false,internalNotes:'Internal note',collection:null,courier:'Stored Courier',trackingNumber:'STORED',trackingUrl:'https://courier.example.test/track',createdAt:new Date(time),updatedAt:new Date(time)});
+  await db.doc('products/'+pid).set({name:'Today renamed product',pricePaise:999,inventory:{mode:'simple',quantity:5},revision:1});await db.doc('customerProfiles/detail-customer').set({displayName:'Current profile',mobileNumber:'+919999999999'});await db.doc('siteSettings/shipping').set({basePaise:1});
+  const original=(await call(request)).data;assert.equal(original.items[0].name,'Historical saree');assert.equal(original.address.line1,'Historical street');assert.equal(original.totalPaise,'1250000');assert.equal(original.collectedPaise,500000);assert.equal(original.history.length,1);
+  await db.doc('products/'+pid).delete();assert.deepEqual((await call(request)).data,original);
+  const update={action:'adminOrders:update',id,expectedRevision:1,operationId:op(),command:'collect',reference:'External remittance',note:'Remaining COD collected'};
+  assert.equal((await call({...update,command:'Processing'})).status,409);assert.equal((await call({...update,expectedRevision:2})).status,409);
+  assert.equal((await call(update)).status,200);assert.equal((await call(update)).status,200);let saved=(await call(request)).data;assert.equal(saved.collectedPaise,1250000);assert.equal(saved.history.filter((event:any)=>event.action==='collect').length,1);assert.equal(saved.paymentStatus,'collected');
+  assert.equal((await call({...update,operationId:op(),expectedRevision:saved.revision})).status,409);
+  await ref.update({request:{kind:'return',status:'resolved',reason:'Return resolved',restocked:false}});
+  const refund={action:'adminOrders:update',id,expectedRevision:saved.revision,operationId:op(),command:'manual-refund',reference:'External refund',method:'Bank transfer',amountPaise:250000,note:'External refund record'};
+  assert.equal((await call({...refund,amountPaise:1500000})).status,400);assert.equal((await call(refund)).status,200);assert.equal((await call(refund)).status,200);saved=(await call(request)).data;assert.equal(saved.refunds.length,1);assert.equal(saved.refundPaise,250000);
+  assert.equal((await call({action:'orders:get',id},'record')).status,404);await db.doc('adminAccess/detail-owner').update({enabled:false});assert.equal((await call(request)).status,403);assert.equal((await call({...refund,operationId:op()})).status,403);
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));for(const uid of users)await auth.deleteUser(uid);await env.clearFirestore();await env.cleanup();}
+});

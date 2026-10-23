@@ -39,7 +39,7 @@ try:
   # recovery must read the accepted operation, without submitting it again.
   page.evaluate('(body)=>localStorage.setItem("parinaya:cod-pending:test-customer",JSON.stringify(body))',requests[0]);page.goto(origin+'/checkout');page.wait_for_url('**/order-confirmed/'+order_id);page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();assert len(operations)==2;fixture('assert-single')
   a=context();admin=a.new_page();calls=[];admin.on('response',lambda response:calls.append((response.request.post_data_json.get('action'),response.status)) if '/api/catalog' in response.url and response.request.method=='POST' else None);admin.on('pageerror',lambda error:errors.append(str(error)));admin.goto(origin+'/admin/orders/'+order_id);login(admin,True);admin.get_by_role('heading',name='Order details',exact=True).wait_for();action=admin.get_by_label('Action',exact=True)
-  try:admin.get_by_role('heading',name='Record an action',exact=True).wait_for()
+  try:admin.get_by_role('heading',name='Order actions',exact=True).wait_for()
   except Exception:
    print('COD admin API status only:',calls,flush=True);print('COD admin alerts:',admin.get_by_role('alert').all_text_contents(),flush=True);admin.screenshot(path=str(screens/'admin-load-failure.png'),full_page=True);raise
   for command in ['Confirmed','Processing','Shipped','Delivered']:
@@ -47,9 +47,9 @@ try:
    except Exception:
     print('COD action wait:',command,'API statuses:',calls,'alerts:',admin.get_by_role('alert').all_text_contents(),'page error count:',len(errors),'select count:',admin.locator('select').count(),'labels:',admin.locator('label').all_text_contents(),flush=True);admin.screenshot(path=str(screens/'admin-action-failure.png'),full_page=True);raise
    if command=='Shipped':admin.get_by_label('Courier',exact=True).fill('Emulator Courier');admin.get_by_label('Tracking number',exact=True).fill('TRACK-LOCAL')
-   admin.get_by_role('button',name='Save action',exact=True).click();expect(action).to_have_value('');admin.get_by_text('Revision ',exact=False).wait_for()
+   admin.get_by_role('button',name='Save action',exact=True).click();admin.get_by_role('dialog',name='Confirm order action',exact=True).get_by_role('button',name='Confirm action',exact=True).click();expect(action).to_have_value('');admin.get_by_text('Revision ',exact=False).wait_for()
   page.goto(origin+'/order-tracking/'+order_id);page.get_by_text('Cash on Delivery',exact=False).filter(has_text='Payment due').wait_for();assert 'Collection recorded on' not in page.locator('body').inner_text()
-  action.select_option('collect');admin.get_by_label('External reference',exact=True).fill('Emulator remittance');admin.get_by_role('button',name='Save action',exact=True).click();expect(action).to_have_value('');page.reload();page.get_by_text('Collection recorded',exact=False).first.wait_for()
+  action.select_option('collect');admin.get_by_label('External reference',exact=True).fill('Emulator remittance');admin.get_by_role('button',name='Save action',exact=True).click();admin.get_by_role('dialog',name='Confirm order action',exact=True).get_by_role('button',name='Confirm action',exact=True).click();expect(action).to_have_value('');page.reload();page.get_by_text('Collection recorded',exact=False).first.wait_for()
   for width in [320,375,390,768,1024,1440]:
    for label,view in [('customer-order',page),('admin-order',admin)]:
     view.set_viewport_size({'width':width,'height':900});view.screenshot(path=str(screens/f'{label}-{width}.png'),full_page=True)

@@ -7,7 +7,7 @@ import {periodRange} from './dashboard/model.ts';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
 import {AdminCoupons,AdminCustomerDirectory,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
-import {AdminOrderWorkspace} from '../orders/ui.tsx';
+import {OrderDetails} from './orders/OrderDetails.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
 import {AdminLoginAppearance} from '../appearance/AdminLoginAppearance.tsx';
@@ -17,6 +17,7 @@ import { safeAdminDestination } from './accessPolicy.ts';
 function unavailableWrite(): never { throw new Error('This module is not connected. No live changes were saved.'); }
 
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
+  const [customerUid,setCustomerUid]=useState('');
   const [ordersState,setOrdersState]=useState(initialOrderList);
   const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
@@ -32,13 +33,13 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path === '/admin/categories') {
     content = <AdminCategories onNavigate={navigate} />;
   } else if (path === '/admin/orders'||path.startsWith('/admin/orders/')) {
-    content = path==='/admin/orders'?<OrdersList state={ordersState} onState={setOrdersState} onNavigate={navigate}/>:<AdminOrderWorkspace id={path.split('/')[3]} onNavigate={navigate}/>;
+    content = path==='/admin/orders'?<OrdersList state={ordersState} onState={setOrdersState} onNavigate={navigate}/>:<OrderDetails id={path.split('/')[3]} onNavigate={navigate} onCustomer={uid=>{setCustomerUid(uid);navigate('/admin/customers');}}/>;
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
     content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
   } else if (path === '/admin/customers') {
-    content = <AdminCustomerDirectory onNavigate={navigate}/>;
+    content = <AdminCustomerDirectory onNavigate={navigate} initialCustomerUid={customerUid}/>;
   } else if(path==='/admin/coupons'||path==='/admin/marketing'){content=<AdminCoupons/>;
   } else if(path==='/admin/inventory'){content=<AdminInventory/>;
   } else if(path==='/admin/banners'){content=<AdminContent section="banners"/>;
