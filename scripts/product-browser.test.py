@@ -1,7 +1,7 @@
 """Real SDK/API against loopback emulators; Cloudinary uploads/metadata are fixtures."""
 import base64,json,os,re
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright,expect
 
 assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
 assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
@@ -123,7 +123,7 @@ with sync_playwright() as p:
     public.reload()
     public.get_by_role('heading',name='Emulator Saree',exact=True).wait_for()
     assert '₹1,250.05' in public.locator('body').inner_text()
-    assert public.get_by_role('button',name='Checkout unavailable',exact=False).is_disabled()
+    expect(public.get_by_role('button',name='Buy Now',exact=True)).to_be_enabled()
     assert public.locator('img').first.evaluate('(image)=>getComputedStyle(image).objectFit')=='contain'
 
     page.get_by_label('Product name',exact=True).fill('Emulator Renamed')

@@ -54,6 +54,21 @@ test('exported COD handler: atomic stock, retries, ownership, changed review, fu
   await product.update({inventory:{mode:'variants',variants:[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:1},{id:'gold',name:'Gold',hex:'#B88A44',sku:'GOLD',quantity:2}]}});
   for(const role of ['customer','other']){await bag(role).delete();await db.doc(`customerShopping/cod-${role}/bag/${pid}--v-wine`).set({productId:pid,variantId:'wine',quantity:1,createdAt:new Date(),updatedAt:new Date()});}
   const reviews=await Promise.all([review('customer'),review('other')]),races=await Promise.all([place(reviews[0].data.fingerprint,op(),'customer'),place(reviews[1].data.fingerprint,op(),'other')]);assert.equal(races.filter(item=>item.data.order).length,1);assert.equal(races.filter(item=>item.data.changed).length,1);const variantStock=(await product.get()).data()!.inventory.variants;assert.equal(variantStock[0].quantity,0);assert.equal(variantStock[1].quantity,2);
+  // Buy Now uses the same order engine but never reads or mutates the Bag.
+  await product.update({status:'Published',inventory:{mode:'simple',quantity:10},pricePaise:100000,revision:40});
+  const unrelated='u'.repeat(20);await db.doc('products/'+unrelated).set({...((await product.get()).data()!),name:'Unrelated fixture',slug:'unrelated',sku:'UNRELATED'});
+  const ownerBag=db.collection('customerShopping/cod-customer/bag');for(const doc of (await ownerBag.get()).docs)await doc.ref.delete();
+  await bag('customer').set({productId:pid,variantId:null,quantity:3,createdAt:new Date(),updatedAt:new Date()});await ownerBag.doc(unrelated+'--simple').set({productId:unrelated,variantId:null,quantity:4,createdAt:new Date(),updatedAt:new Date()});
+  const bagBefore=(await ownerBag.get()).docs.map(doc=>[doc.id,doc.data()]);const buySource={kind:'buy-now',productId:pid,variantId:null,quantity:2};
+  const buyReview=async(source:unknown=buySource)=>call({action:'orders:review',addressId:aid,couponCode:null,source});
+  let single=(await buyReview()).data;assert.equal(single.items.length,1);assert.equal(single.items[0].quantity,2);assert.equal(single.totalPaise,'209900');assert.equal((await product.get()).data()!.inventory.quantity,10,'Review must never deduct inventory');
+  const buyOp=op(),buyBody={action:'orders:place',addressId:aid,couponCode:null,source:buySource,fingerprint:single.fingerprint,operationId:buyOp};
+  const accepted=await Promise.all([call(buyBody),call(buyBody)]);assert.equal(accepted[0].data.order.id,accepted[1].data.order.id);assert.equal(accepted[0].data.order.paymentStatus,'due');assert.equal((await product.get()).data()!.inventory.quantity,8);assert.deepEqual((await ownerBag.get()).docs.map(doc=>[doc.id,doc.data()]),bagBefore);assert.equal((await call({...buyBody,source:{...buySource,quantity:1}})).status,409);
+  assert.equal((await call({action:'orders:get',id:accepted[0].data.order.id},'other')).status,404);
+  assert.equal((await buyReview({...buySource,quantity:1.5})).status,400);assert.equal((await buyReview({...buySource,totalPaise:1})).status,400);assert.equal((await buyReview({...buySource,quantity:9})).data.valid,false);
+  const stable=(await buyReview()).data;await product.update({pricePaise:100001});const changed=await call({...buyBody,fingerprint:stable.fingerprint,operationId:op()});assert.equal(changed.data.changed,true);assert.equal((await product.get()).data()!.inventory.quantity,8);
+  await product.update({inventory:{mode:'variants',variants:[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:3}]}});assert.equal((await buyReview()).data.valid,false);assert.equal((await buyReview({...buySource,variantId:'wine'})).data.valid,true);
+  await product.update({status:'Draft'});assert.equal((await buyReview({...buySource,variantId:'wine'})).data.valid,false);
   const customer=env.authenticatedContext('cod-customer').firestore();await assertFails(setDoc(doc(customer,'orders',order.id),{paymentStatus:'collected'}));await assertFails(getDoc(doc(customer,'orders',winner.data.order.id)));await assertFails(getDoc(doc(customer,'adminNotifications',order.id)));
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));for(const uid of users)await auth.deleteUser(uid);await env.clearFirestore();await env.cleanup();}
 });

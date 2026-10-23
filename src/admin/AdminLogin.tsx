@@ -49,7 +49,7 @@ export function AdminLogin() {
 }
 
 export function AdminAccessFrame({ children }: { children: React.ReactNode }) {
-  return <main className="min-h-screen bg-[#FBF7F0] text-[#231919] flex items-center justify-center px-4 py-10 font-sans">
+  return <main className="parinaya-admin min-h-screen bg-[#FBF7F0] text-[#231919] flex items-center justify-center px-4 py-10 font-sans">
     <section className="w-full max-w-md rounded-xl border border-[#E8DDD6] bg-white p-6 sm:p-8 shadow-sm space-y-6">{children}</section>
   </main>;
 }

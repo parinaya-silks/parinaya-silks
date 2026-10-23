@@ -1,26 +1,19 @@
-import React from 'react';
-import { Order, Product } from '../types/index.ts';
-import { formatINR } from '../utils/pricing.ts';
+import {ShoppingBag,PackageCheck,Truck,Wallet,type LucideIcon} from 'lucide-react';
+import {money} from '../shopping/model.ts';
+import {useAdminResource} from './dashboard/resource.tsx';
+import {ResourceStatus} from './dashboard/Status.tsx';
+import {RecentOrders} from './dashboard/RecentOrders.tsx';
+import {lowStockLines,type DashboardBacklog,type DashboardRange,type StockProduct} from './dashboard/model.ts';
 
-interface AdminDashboardProps {
-  unavailable?: boolean;
-  orders: Order[];
-  products: Product[];
-  onNavigate: (path: string) => void;
-  onAdjustStock: (product: Product, delta: number) => void;
+function Metric({title,icon:Icon,value,scope,loading}:{title:string;icon:LucideIcon;value?:string|number;scope:string;loading:boolean}){return <article className={'dashboard-metric'+(typeof value==='string'&&value.length>11?' dashboard-wide-amount':'')} aria-label={title}><h2>{title}</h2><span className="metric-icon"><Icon size={18} aria-hidden="true"/></span>{value===undefined&&loading?<div role="status" aria-label={'Loading '+title} className="dashboard-skeleton"/>:<p className="dashboard-value" data-metric={title}>{value===undefined?'—':value}</p>}<p className="dashboard-scope">{scope}</p></article>;}
+export function AdminDashboard({range,onNavigate}:{range:DashboardRange;onNavigate:(path:string)=>void}){
+ const period=useAdminResource<{count:number}>({action:'dashboard:period',from:range.from,to:range.to},'Unable to load new orders. Please try again.'),backlog=useAdminResource<DashboardBacklog>({action:'dashboard:backlog'},'Unable to load current backlog and COD amounts. Please try again.');
+ return <div className="dashboard-stack"><div><div className="dashboard-metrics"><Metric title="New Orders" icon={ShoppingBag} value={period.data?.count} scope={'Placed · '+range.start+' to '+range.end+' IST'} loading={period.refreshing}/><Metric title="To Pack" icon={PackageCheck} value={backlog.data?.toPack} scope="Current · Confirmed · all dates" loading={backlog.refreshing}/><Metric title="Processing" icon={Truck} value={backlog.data?.processing} scope="Current · Processing · all dates" loading={backlog.refreshing}/><Metric title="COD to Collect" icon={Wallet} value={backlog.data?money(backlog.data.duePaise):undefined} scope="Current outstanding · all dates" loading={backlog.refreshing}/></div><ResourceStatus resource={period} label="new orders"/><ResourceStatus resource={backlog} label="current backlog"/></div><RecentOrders range={range} onNavigate={onNavigate}/><LowStock onNavigate={onNavigate}/><p className="dashboard-freshness">Order creation periods use Asia/Kolkata. To Pack, Processing and COD are current backlog across all dates. Processing does not confirm packing or readiness for dispatch. Visible pages refresh about every 30 seconds.</p></div>;
 }
-
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({
-  unavailable,
-  orders,
-  products,
-  onNavigate,
-  onAdjustStock,
-}) => {
-  return <div className="space-y-6">
-    <header className="pb-4 border-b border-[#E8DDD6]"><h1 className="font-serif text-[24px] sm:text-[28px] font-semibold">Dashboard</h1><p className="text-sm text-[#5F5552] mt-2">Store reporting is not connected yet.</p></header>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{['Gross Sales', 'Total Orders', 'Awaiting Dispatch', 'Low Stock Sarees'].map(label => <div key={label} className="rounded-xl border border-[#E8DDD6] bg-white p-4 shadow-xs"><p className="text-xs uppercase text-[#5F5552] font-semibold">{label}</p><p className="text-2xl mt-3" aria-label="Unavailable">—</p><p className="text-xs text-[#5F5552] mt-2">Not connected</p></div>)}</div>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5"><section className="lg:col-span-2 bg-white border border-[#E8DDD6] rounded-xl p-5 min-h-52"><h2 className="font-serif text-xl">Revenue Progression</h2><p className="mt-8 text-sm text-[#5F5552]">Reporting will appear after orders are connected.</p></section><section className="bg-white border border-[#E8DDD6] rounded-xl p-5"><h2 className="font-serif text-xl">Inventory Summary</h2><p className="mt-8 text-sm text-[#5F5552]">Inventory is not connected.</p></section></div>
-    <section className="bg-white border border-[#E8DDD6] rounded-xl p-5"><h2 className="font-serif text-xl">Recent Orders</h2><p className="mt-4 text-sm text-[#5F5552]">Order data is unavailable.</p></section>
-  </div>;
-};
+function LowStock({onNavigate}:{onNavigate:(path:string)=>void}){
+ const stock=useAdminResource<{items:StockProduct[];scanned:number;nextCursor:string|null}>({action:'inventory:low'},'Unable to load low stock. Please try again.'),lines=lowStockLines(stock.data?.items||[]).slice(0,5);
+ const image=(line:typeof lines[number])=>line.imageUrl?<img className="dashboard-thumbnail" src={line.imageUrl} alt="" onError={event=>{event.currentTarget.style.visibility='hidden';}}/>:<span className="dashboard-thumbnail" aria-hidden="true"/>;
+ const badge=(line:typeof lines[number])=><span className="dashboard-badge" data-stock={line.quantity===0?'out':'low'}>{line.quantity===0?'Out of stock':line.quantity+' left'}</span>;
+ const update=(line:typeof lines[number])=><button className="admin-secondary" onClick={()=>onNavigate('/admin/products/edit/'+line.productId)}>Update Stock</button>;
+ return <section className="dashboard-panel" aria-label="Low Stock"><header className="dashboard-panel-header"><div><h2>Low Stock</h2><p>Items needing replenishment soon.</p></div><button className="dashboard-text-link" onClick={()=>onNavigate('/admin/inventory')}>View Inventory &rarr;</button></header><div className="dashboard-panel-status"><ResourceStatus resource={stock} label="low stock"/></div>{stock.data&&<><table className="dashboard-table"><thead><tr><th style={{width:'38%'}}>Product Name</th><th>Variant</th><th>Quantity Remaining</th><th style={{width:164}}>Quick Action</th></tr></thead><tbody>{lines.map(line=><tr key={line.id} data-stock-line={line.id}><td><div className="dashboard-stock-product">{image(line)}<span>{line.name}</span></div></td><td>{line.variantName}</td><td>{badge(line)}</td><td>{update(line)}</td></tr>)}</tbody></table><div className="dashboard-cards">{lines.map(line=><article className="dashboard-stock-card" key={line.id} data-stock-line={line.id}><header><div className="dashboard-stock-product">{image(line)}<strong>{line.name}</strong></div></header><p>{line.variantName} · Threshold {line.threshold}</p><footer>{badge(line)}{update(line)}</footer></article>)}</div>{!lines.length&&<p className="dashboard-empty">No low-stock items in the scanned products.</p>}<p className="dashboard-freshness" style={{padding:'12px 20px'}}>Showing up to 5 low-stock variants from {stock.data.scanned} scanned products{stock.data.nextCursor?' (more products remain)':''}. This is not a store-wide inventory count.</p></>}</section>;
+}

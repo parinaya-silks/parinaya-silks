@@ -1,5 +1,3 @@
-import { demoEnabled } from '../config/runtime.ts';
-import { FeatureNotice } from '../components/FeatureUnavailable.tsx';
 import React, { useState } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -9,6 +7,7 @@ interface ProductDetailViewProps {
   allProducts: Product[];
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product, quantity?: number, selectedColor?: string) => void;
+  onBuyNow: (product: Product, quantity:number, selectedColor?:string)=>void;
   onToggleWishlist: (product: Product) => void;
   isWishlisted: (productId: string) => boolean;
 }
@@ -18,12 +17,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   allProducts,
   onNavigate,
   onAddToCart,
+  onBuyNow,
   onToggleWishlist,
   isWishlisted,
 }) => {
   const [activeImageKey, setActiveImageKey] = useState<string>(product.gallery?.find(image=>image.url===product.images.full)?.mediaId || 'full');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
-  const [rewardsModalOpen, setRewardsModalOpen] = useState(false);
+  const [purchaseError,setPurchaseError]=useState('');
   const [selectedColor, setSelectedColor] = useState(product.variants?.length ? '' : product.colorName);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('500034');
@@ -45,7 +45,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const handleCheckPincode = () => {
     if (/^[1-9][0-9]{5}$/.test(pincode)) {
       setDeliveryResult(
-        `PIN ${pincode} has a valid format. Delivery serviceability and estimates are not connected.`
+        `PIN ${pincode} has a valid format. Contact our team to confirm courier availability and delivery estimates.`
       );
     } else {
       setDeliveryResult('Please enter a valid 6-digit India postal PIN code.');
@@ -58,8 +58,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   };
 
   const handleBuyNow = () => {
-    onAddToCart(product, quantity, selectedColor);
-    onNavigate('/checkout');
+    setPurchaseError('');if(!Number.isSafeInteger(quantity)||quantity<1||quantity>selectedStock){setPurchaseError('Choose an available colour and quantity.');return;}
+    try{onBuyNow(product, quantity, selectedColor);}catch(error){setPurchaseError(error instanceof Error?error.message:'Unable to start checkout. Please retry.');}
   };
 
   const relatedProducts = allProducts.filter((p) => p.id !== product.id).slice(0, 4);
@@ -68,7 +68,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   return (
     <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4" style={{overflowWrap:'anywhere'}}>
-      {product.variants?.length&&!selectedColor&&<p className="mb-4 p-3 rounded bg-[#F4EEE5] text-sm text-[#780D24]" role="note">Please select a colour before adding to your bag.</p>}
+      {Boolean(product.variants?.length)&&!selectedColor&&<p className="mb-4 p-3 rounded bg-[#F4EEE5] text-sm text-[#780D24]" role="note">Please select a colour before adding to your bag or buying now.</p>}
+      {purchaseError&&<p role="alert" className="mb-4 text-[#780D24]">{purchaseError}</p>}
       {/* Breadcrumb strip */}
       <nav aria-label="Breadcrumb" className="mb-4 text-[12px] font-sans text-[#5F5552] flex items-center gap-1.5 flex-wrap">
         <button onClick={() => onNavigate('/')} className="hover:text-[#780D24]">
@@ -168,7 +169,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
         {/* RIGHT COLUMN: Product Information & Controls */}
         <div className="space-y-4">
-          <FeatureNotice>Online checkout is unavailable. Your bag and wishlist are saved to your account.</FeatureNotice>
+
           {/* Summary Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -177,7 +178,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </span>
               <div className="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                {selectedStock > 0 ? 'In Stock' : 'Out of stock'}
+                {product.variants?.length&&!selectedColor?'Choose a colour':selectedStock > 0 ? 'In Stock' : 'Out of stock'}
               </div>
             </div>
 
@@ -195,7 +196,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {formatINR(product.originalPrice)}
                 </span>
               )}
-              {product.discountPercent && (
+              {Boolean(product.discountPercent) && (
                 <span className="font-sans text-[11px] text-[#780D24] font-bold bg-[#780D24]/10 px-2 py-0.5 rounded">
                   {product.discountPercent}% OFF
                 </span>
@@ -203,28 +204,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
 
             <p className="font-sans text-[13px] text-[#5F5552]">
-              Contact us for delivery information before ordering.
+              Cash on Delivery is available at checkout, subject to current stock and shipping.
             </p>
 
-            {/* Loyalty Points callout */}
-            <div
-              onClick={() => setRewardsModalOpen(true)}
-              className="pt-3 border-t border-[#E8DDD6] flex items-center justify-between text-[13px] font-sans cursor-pointer group"
-            >
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#B88A44] text-[18px]">
-                  workspace_premium
-                </span>
-                <span className="text-[#231919]">
-                  Loyalty rewards are not connected
-                </span>
-              </div>
-              <span className="text-[#780D24] font-medium text-[12px] group-hover:underline flex items-center">
-                Learn more <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-              </span>
-            </div>
-          </div>
 
+          </div>
           {/* Color & Quantity Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -463,7 +447,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </span>
               </summary>
               <div className="px-4 pb-4 pt-1 font-sans text-[13px] text-[#5F5552] space-y-1.5 leading-relaxed">
-                <p>Shipping charges, dispatch estimates and exchange terms require business approval. See our <button onClick={() => onNavigate('/shipping-policy')} className="text-[#780D24] underline">draft policies</button>.</p>
+                <p>Shipping is calculated at checkout. For dispatch and delivery information, see our <button onClick={() => onNavigate('/shipping-policy')} className="text-[#780D24] underline">shipping policy</button> or contact the store.</p>
               </div>
             </details>
           </div>
@@ -530,47 +514,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </div>
       )}
 
-      {/* Heirloom Points Modal */}
-      {rewardsModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white max-w-sm w-full p-5 rounded-xl border border-[#E8DDD6] shadow-xl space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#B88A44] text-[22px]">
-                  workspace_premium
-                </span>
-                <h4 className="font-serif text-[17px] text-[#231919] font-semibold">
-                  Silk Club Points
-                </h4>
-              </div>
-              <button
-                onClick={() => setRewardsModalOpen(false)}
-                className="text-[#5F5552] hover:text-[#231919]"
-                type="button"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <p className="font-sans text-[13px] text-[#5F5552] leading-relaxed">
-              Loyalty earning and redemption are not connected. No points are awarded or redeemed in this preview.
-            </p>
-            <button
-              onClick={() => setRewardsModalOpen(false)}
-              className="w-full h-10 bg-[#780D24] text-white font-sans text-[13px] font-semibold rounded-lg hover:bg-[#5E091B]"
-            >
-              Understood
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Sticky Mobile Commerce Action Bar */}
       <aside className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 w-full z-40 bg-white/95 backdrop-blur-md border-t border-[#E8DDD6] shadow-[0_-4px_16px_rgba(35,25,25,0.08)] pb-safe">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           <button
             aria-label="Add to Bag"
             onClick={handleAdd}
-            disabled={!product.inStock}
+            disabled={selectedStock<1||quantity>selectedStock}
             className={`flex-1 h-12 border-2 border-[#780D24] text-[#780D24] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
               product.inStock ? 'hover:bg-[#780D24]/5 bg-white' : 'opacity-50 cursor-not-allowed'
             }`}
@@ -581,14 +531,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </button>
           <button
             onClick={handleBuyNow}
-            disabled={!demoEnabled || !product.inStock}
+            disabled={selectedStock<1||quantity>selectedStock}
             className={`flex-1 h-12 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans font-semibold rounded-lg flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all ${
               product.inStock ? '' : 'opacity-50 cursor-not-allowed'
             }`}
             type="button"
           >
-            <span className="material-symbols-outlined text-[20px]">bolt</span>
-            <span>{demoEnabled ? 'Buy Now' : 'Checkout unavailable'}</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[20px]">bolt</span>
+            <span>Buy Now</span>
           </button>
         </div>
       </aside>

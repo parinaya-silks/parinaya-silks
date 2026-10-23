@@ -73,7 +73,7 @@ with sync_playwright() as p:
     print('All connected admin areas render without sample records; access-record revocation and refreshed claim removal/grant passed')
 
     page.set_viewport_size({'width':1440,'height':900})
-    page.get_by_role('button',name='View Public Store',exact=False).filter(visible=True).click()
+    page.get_by_role('button',name='View Website',exact=False).filter(visible=True).click()
     page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
     assert page.url==origin+'/'
     persistence_before=page.evaluate('({local:Object.keys(localStorage).filter(k=>k.startsWith("firebase:authUser:")).length,session:Object.keys(sessionStorage).filter(k=>k.startsWith("firebase:authUser:")).length})')
@@ -85,7 +85,7 @@ with sync_playwright() as p:
     page.goto(origin+'/admin')
     page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
     page.set_viewport_size({'width':390,'height':844})
-    print('Authorized View Public Store link opens the actual homepage and administrator session remains valid')
+    print('Authorized View Website link opens the actual homepage and administrator session remains valid')
 
     # Keep a protected route behind this one for the sign-out/Back assertion.
     page.goto(origin+'/admin/orders')

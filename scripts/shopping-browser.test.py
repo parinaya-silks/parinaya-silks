@@ -16,6 +16,9 @@ try:
     browser=p.chromium.launch()
     def context():
         ctx=browser.new_context(viewport={'width':390,'height':900},reduced_motion='reduce')
+        # This is a loopback fixture suite; external assets must not hold page
+        # reloads open when a public image/font host is slow or unavailable.
+        ctx.route('https://**/*',lambda route:route.abort())
         for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**']:
             ctx.route(pattern,lambda route:route.abort())
         ctx.route('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v2/passwordPolicy*',lambda route:route.fulfill(status=200,content_type='application/json',body=json.dumps({'schemaVersion':1,'enforcementState':'ENFORCE','customStrengthOptions':{'minPasswordLength':12},'allowedNonAlphanumericCharacters':['!','-',' ']})))
@@ -60,8 +63,8 @@ try:
     page.get_by_role('button',name='Retry change',exact=True).click();page.get_by_role('heading',name='Your wishlist is empty',exact=True).wait_for()
     assert operation_ids[0]==operation_ids[1]
     page.unroute('**/api/catalog',fail_remove)
-    page.goto(origin+'/product/shopping-colours');page.get_by_role('button',name='Add to Bag',exact=True).click()
-    assert page.get_by_text('Please select a colour before adding to your bag.',exact=True).count()>=1
+    page.goto(origin+'/product/shopping-colours');expect(page.get_by_role('button',name='Add to Bag',exact=True)).to_be_disabled()
+    assert page.get_by_text('Please select a colour before adding to your bag or buying now.',exact=True).count()>=1
     page.get_by_role('button',name='Wine',exact=True).click();page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for()
     page.locator('[data-shopping-status="ready"]').wait_for();page.get_by_role('button',name='Save to Wishlist',exact=True).click();page.get_by_role('status').filter(has_text='Saved to your wishlist.').wait_for()
     page.goto(origin+'/wishlist');expect(page.locator('[data-wishlist-product]')).to_have_count(1)
@@ -100,7 +103,7 @@ try:
     new.get_by_role('button',name='Create account',exact=True).click()
     new.get_by_role('status').filter(has_text='Saved to your wishlist.').wait_for();new.goto(origin+'/wishlist');expect(new.locator('[data-wishlist-product]')).to_have_count(1)
     new.get_by_role('button',name='Select colour',exact=True).click();new.wait_for_url('**/product/shopping-colours?select=colour')
-    new.get_by_text('Please select a colour before adding to your bag.',exact=True).wait_for()
+    new.get_by_text('Please select a colour before adding to your bag or buying now.',exact=True).wait_for()
     assert not errors,errors
     browser.close()
     print('Shopping browser checks passed: intent/login/registration, replay, cross-device, writes/retry, stock/privacy and six widths.')

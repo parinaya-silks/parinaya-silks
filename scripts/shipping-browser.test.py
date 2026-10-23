@@ -13,12 +13,17 @@ try:
     browser=p.chromium.launch()
     def context():
         ctx=browser.new_context(viewport={'width':390,'height':900},reduced_motion='reduce')
+        ctx.route('https://**/*',lambda route:route.abort())
         for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**']:ctx.route(pattern,lambda route:route.abort())
         ctx.route('https://res.cloudinary.com/parinaya-emulator/**',lambda route:route.abort());return ctx
     def login(page,admin=False):
         page.get_by_label('Email' if admin else 'Email address',exact=True).fill('parinayasilks.in@gmail.com' if admin else 'customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click()
     c=context();customer=c.new_page();errors=[];customer.on('pageerror',lambda error:errors.append(str(error)))
-    customer.goto(origin+'/login?returnTo=%2Faccount%2Faddresses');login(customer);customer.get_by_role('button',name='Add address',exact=True).click()
+    customer.goto(origin+'/login?returnTo=%2Faccount%2Faddresses');login(customer)
+    try:customer.get_by_role('heading',name='My Addresses',exact=True).wait_for()
+    except Exception:
+        print('Shipping login diagnostics:',customer.url,customer.locator('h1').all_text_contents(),customer.get_by_role('alert').all_text_contents(),flush=True);customer.screenshot(path=str(screens/'login-failure.png'),full_page=True);raise
+    customer.get_by_role('button',name='Add address',exact=True).click()
     for label,value in [('Recipient full name','Shipping Customer'),('Mobile number','9876543210'),('PIN code','500034'),('House, building and street','Example street 12'),('Area / locality','Example Area'),('City / town','Hyderabad')]:customer.get_by_label(label,exact=True).fill(value)
     customer.get_by_label('State / Union Territory',exact=True).select_option('Telangana');customer.get_by_role('button',name='Save address',exact=True).click();customer.get_by_role('dialog').wait_for(state='hidden')
     customer.goto(origin+'/product/shopping-simple');customer.get_by_role('button',name='Add to Bag',exact=True).click();customer.get_by_role('status').filter(has_text='Added to your bag.').wait_for();customer.goto(origin+'/checkout');shipping=customer.locator('[data-shipping-state]');expect(shipping).to_have_attribute('data-shipping-state','missing');assert 'To be confirmed' in shipping.inner_text()
@@ -61,7 +66,7 @@ try:
     assert 'provisional' not in customer.locator('body').inner_text().lower()
     acknowledge=customer.get_by_role('button',name='I have reviewed the updated prices',exact=True)
     if acknowledge.count():acknowledge.click()
-    expect(customer.get_by_role('button',name='Place COD Order',exact=True)).to_be_enabled()
+    expect(customer.get_by_role('button',name='Continue to Summary',exact=True)).to_be_enabled()
     fixture('blocked');customer.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(shipping).to_have_attribute('data-shipping-state','blocked');assert 'Total including shipping' not in shipping.inner_text()
     fixture('restore');customer.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(shipping).to_have_attribute('data-shipping-state','ready')
     def fail_review(route):

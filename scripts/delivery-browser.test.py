@@ -54,7 +54,7 @@ try:
     # Existing catalog action adds an item; no direct guest Bag writes.
     page.goto(origin+'/product/shopping-simple');page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for();page.goto(origin+'/bag');page.get_by_role('button',name='Increase quantity',exact=True).click();page.get_by_role('heading',name='My Bag (2)',exact=True).wait_for();page.get_by_role('button',name='Review checkout',exact=True).click()
     page.get_by_role('heading',name='Checkout review',exact=True).wait_for();summary=page.locator('[data-review-address]');expect(summary).to_have_attribute('data-review-address',first);page.locator('[data-checkout-line]').wait_for()
-    assert page.get_by_role('button',name='Place COD Order',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
+    assert page.get_by_role('button',name='Continue to Summary',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
     # Delayed prior-address response must never replace the newer selection.
     held=[]
     def delay_review(route):

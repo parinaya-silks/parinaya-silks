@@ -6,6 +6,7 @@ import {AggregateField} from 'firebase-admin/firestore';
 import {readFileSync} from 'node:fs';
 import {browseService} from '../server/browse.ts';
 import {businessService} from '../server/business.ts';
+import {ordersService} from '../server/orders.ts';
 import {ReportingQueryError} from '../server/errors.ts';
 import {catalogDiagnostic,catalogFailure,firestoreIndexLink} from '../server/diagnostics.ts';
 const evidence=JSON.parse(readFileSync('scripts/fixtures/report-index-evidence.json','utf8'));
@@ -28,6 +29,11 @@ function database(){
 function covered(name:string,fields:any[]){
  assert.ok(indexes.some((index:any)=>index.collectionGroup===name&&index.queryScope==='COLLECTION'&&JSON.stringify(index.fields)===JSON.stringify(fields)),name+': '+JSON.stringify(fields));
 }
+test('dashboard queries reuse existing count, order-list and canonical report indexes without additions',async()=>{
+ const period=database();await businessService(period.db,async()=>{}).admin('synthetic',{action:'dashboard:period',from:0,to:1000});assert.equal(period.queries.length,1);assert.deepEqual(period.queries[0].filters.map((f:any)=>[f.field,f.operator]),[['status','=='],['createdAt','>='],['createdAt','<=']]);covered('orders',[asc('status'),asc('createdAt')]);
+ for(const status of [undefined,'Placed','Confirmed','Processing']){const recent=database();await ordersService(recent.db,async()=>{},async()=>{throw new Error('No review needed');}).admin('synthetic',{action:'dashboard:orders',from:0,to:1000,...(status?{status}:{})});const query=recent.queries[0];assert.deepEqual(query.orders,[{field:'createdAt',direction:'desc'},{field:'__name__',direction:'desc'}]);if(status)covered('orders',[asc('status'),desc('createdAt')]);}
+ const a=database(),b=database();await businessService(a.db,async()=>{}).admin('synthetic',{action:'reports:get'});await businessService(b.db,async()=>{}).admin('synthetic',{action:'dashboard:backlog'});assert.deepEqual(JSON.parse(JSON.stringify(a.queries)),JSON.parse(JSON.stringify(b.queries)));
+});
 const asc=(fieldPath:string)=>({fieldPath,order:'ASCENDING'}),desc=(fieldPath:string)=>({fieldPath,order:'DESCENDING'});
 test('actual browse sorts, category and combined filters match prepared collection indexes and descending ID tie-break',async()=>{
  for(const sort of [undefined,'featured','newest','price-asc','price-desc'])for(const category of [undefined,'fixture']){

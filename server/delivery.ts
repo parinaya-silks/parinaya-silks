@@ -3,6 +3,7 @@ import {FieldValue,type Firestore,type Transaction} from 'firebase-admin/firesto
 import {ProductError,type PublicProductRecord} from '../src/products/model.ts';
 import {ADDRESS_LIMIT,addressId,validateAddress,type AddressBook,type DeliveryAddress,type CheckoutReview,type CheckoutLine} from '../src/delivery/model.ts';
 import {savedShipping,quoteShipping} from '../src/shipping/model.ts';
+import type {CheckoutSource} from '../src/checkout/source.ts';
 import {SHOPPING_LIMIT,resolveItem} from '../src/shopping/model.ts';
 
 const fields=(body:Record<string,unknown>,allowed:string[])=>{if(Object.keys(body).some(key=>!allowed.includes(key))||allowed.some(key=>!(key in body)))throw new ProductError('invalid','Unsupported or missing request fields.');};
@@ -43,35 +44,36 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
       return {id,bookRevision};
     });
   }
-  async function reviewInTransaction(tx:Transaction,uid:string,selected:string|null):Promise<CheckoutReview>{
-      const bag=await tx.get(root(uid).collection('bag').limit(SHOPPING_LIMIT+1));
-      if(bag.size>SHOPPING_LIMIT)throw new ProductError('conflict','Too many bag items. Review your bag first.');
+  async function reviewInTransaction(tx:Transaction,uid:string,selected:string|null,source:CheckoutSource={kind:'bag'}):Promise<CheckoutReview>{
+      const bag=source.kind==='bag'?await tx.get(root(uid).collection('bag').limit(SHOPPING_LIMIT+1)):null;
+      const entries:{id:string;data:FirebaseFirestore.DocumentData}[]=bag?bag.docs.map(doc=>({id:doc.id,data:doc.data()})):[{id:source.kind==='buy-now'?source.productId+'--buy-now':'',data:source}];
+      if(entries.length>SHOPPING_LIMIT)throw new ProductError('conflict','Too many bag items. Review your bag first.');
       const addressDoc=selected?await tx.get(root(uid).collection('addresses').doc(selected)):null;
       if(selected&&!addressDoc?.exists)throw new ProductError('permission','Choose an address saved to your account.');
       const address=addressDoc?presentAddress(addressDoc):null;
-      const ids=[...new Set(bag.docs.map(doc=>doc.data().productId).filter(id=>typeof id==='string'&&/^[A-Za-z0-9]{20}$/.test(id)))];
+      const ids=[...new Set(entries.map(entry=>entry.data.productId).filter(id=>typeof id==='string'&&/^[A-Za-z0-9]{20}$/.test(id)))];
       const products=ids.length?await tx.getAll(...ids.map(id=>db.doc('products/'+id))):[];
       const categoryIds=[...new Set(products.filter(doc=>doc.exists&&doc.data()?.status==='Published').map(doc=>doc.data()!.categoryId).filter(id=>typeof id==='string'&&/^[A-Za-z0-9]{20}$/.test(id)))];
       const categories=categoryIds.length?await tx.getAll(...categoryIds.map(id=>db.doc('categories/'+id))):[];
       const categoryMap=new Map(categories.map(doc=>[doc.id,doc.data()])),catalog=new Map<string,PublicProductRecord>();
       for(const doc of products){const category=categoryMap.get(doc.data()?.categoryId);if(doc.data()?.status==='Published'&&category?.enabled===true)catalog.set(doc.id,await presentProduct(doc,category.name));}
       let subtotal=0n,complete=true;
-      const items:CheckoutLine[]=bag.docs.map(doc=>{
-        const data=doc.data(),product=catalog.get(data.productId)||null,quantity=data.quantity,issues:string[]=[];
+      const items:CheckoutLine[]=entries.map(entry=>{
+        const data=entry.data,product=catalog.get(data.productId)||null,quantity=data.quantity,issues:string[]=[];
         const validQuantity=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=1000000;
         const validVariant=data.variantId===null||typeof data.variantId==='string'&&/^[A-Za-z0-9_-]{1,40}$/.test(data.variantId);
-        if(!validQuantity)issues.push('Use a positive whole quantity in your bag.');
-        if(!validVariant)issues.push('Choose an available colour in your bag.');
-        const resolved=resolveItem({id:doc.id,productId:data.productId,variantId:validVariant?data.variantId:null,quantity:validQuantity?quantity:1},product,true);
+        if(!validQuantity)issues.push('Use a positive whole quantity.');
+        if(!validVariant)issues.push('Choose an available colour.');
+        const resolved=resolveItem({id:entry.id,productId:data.productId,variantId:validVariant?data.variantId:null,quantity:validQuantity?quantity:1},product,true);
         if(resolved.reason)issues.push(resolved.reason);
         if(product&&validQuantity)subtotal+=BigInt(product.pricePaise)*BigInt(quantity);else complete=false;
-        return {id:doc.id,productId:typeof data.productId==='string'?data.productId:'',variantId:validVariant?data.variantId:null,quantity:validQuantity?quantity:0,product,variantName:resolved.variantName,issues};
+        return {id:entry.id,productId:typeof data.productId==='string'?data.productId:'',variantId:validVariant?data.variantId:null,quantity:validQuantity?quantity:0,product,variantName:resolved.variantName,issues};
       });
-      const issues=bag.empty?['Your bag is empty.']:!address?['Select a saved delivery address to complete the delivery review.']:[];
+      const issues=!entries.length?['Your bag is empty.']:!address?['Select a saved delivery address to complete the delivery review.']:[];
       const valid=!issues.length&&complete&&items.every(item=>!item.issues.length);
       let shipping;
       try{shipping=quoteShipping(savedShipping((await tx.get(db.doc('siteSettings/shipping'))).data()),subtotal,valid);}catch{shipping={state:'unavailable' as const,revision:null,shippingPaise:null,totalPaise:null,free:false,freeShippingEnabled:false,freeThresholdPaise:null};}
-      const value={address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid,issues,shipping};
+      const value={source,address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid,issues,shipping};
       return {...value,fingerprint:createHash('sha256').update(JSON.stringify(value)).digest('hex')};
   }
   async function review(uid:string,body:Record<string,unknown>){fields(body,['action','addressId']);const selected=body.addressId===null?null:addressId(body.addressId);return db.runTransaction(tx=>reviewInTransaction(tx,uid,selected));}

@@ -4,9 +4,10 @@ import {getAuthClients} from '../services/firebase/auth.ts';
 import type {Shopping} from '../shopping/useShopping.ts';
 import type {AddressBookState} from './useAddressBook.ts';
 import type {CheckoutReview} from './model.ts';
+import type {CheckoutSource} from '../checkout/source.ts';
 import {customerAction} from '../orders/client.ts';
 
-export function useCheckoutReview(shopping:Shopping,book:AddressBookState,selected:string,couponCode:string|null=null){
+export function useCheckoutReview(shopping:Shopping,book:AddressBookState,selected:string,couponCode:string|null=null,source:CheckoutSource={kind:'bag'}){
   const uid=book.uid;
   const [shippingSignal,setShippingSignal]=useState({uid:'',value:'loading'});
   useEffect(()=>{
@@ -19,13 +20,13 @@ export function useCheckoutReview(shopping:Shopping,book:AddressBookState,select
   const [accepted,setAccepted]=useState('');
   const baseline=useRef<{uid:string;prices:Map<string,number>}>({uid,prices:new Map(shopping.bag.filter(item=>item.product).map(item=>[item.id,item.product!.pricePaise]))});
   if(baseline.current.uid!==uid)baseline.current={uid,prices:new Map()};
-  const bagKey=JSON.stringify(shopping.bag.map(item=>[item.id,item.quantity,item.product?.pricePaise,item.product?.status,item.stock,item.reason]));
-  const key=JSON.stringify([uid,selected,couponCode,book.addresses.find(address=>address.id===selected)?.revision,book.status,shopping.status,bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading',attempt]);
+  const bagKey=source.kind==='buy-now'?JSON.stringify(source):JSON.stringify(shopping.bag.map(item=>[item.id,item.quantity,item.product?.pricePaise,item.product?.status,item.stock,item.reason]));
+  const key=JSON.stringify([uid,selected,couponCode,book.addresses.find(address=>address.id===selected)?.revision,book.status,source.kind==='bag'?shopping.status:'ready',bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading',attempt]);
   const latest=useRef(key);latest.current=key;
   useEffect(()=>{
-    if(!uid||book.status!=='ready'||shopping.status!=='ready')return;
+    if(!uid||book.status!=='ready'||source.kind==='bag'&&shopping.status!=='ready')return;
     let live=true;const controller=new AbortController();
-    void customerAction<CheckoutReview>(uid,{action:'orders:review',addressId:selected||null,couponCode},controller.signal).then(value=>{
+    void customerAction<CheckoutReview>(uid,{action:'orders:review',addressId:selected||null,couponCode,source},controller.signal).then(value=>{
       if(!live||latest.current!==key)return;
       const prior=previousShipping.current;
       const shippingChanged=!!prior&&prior.uid===uid&&value.shipping.state==='ready'&&(prior.revision!==value.shipping.revision||prior.fee!==value.shipping.shippingPaise||prior.total!==value.shipping.totalPaise);

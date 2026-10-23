@@ -1,3 +1,5 @@
+import {dashboardBounds} from '../src/admin/dashboard/model.ts';
+import {checkoutSource,type CheckoutSource} from '../src/checkout/source.ts';
 import {createHash} from 'node:crypto';
 import {FieldValue,Timestamp,FieldPath,type Firestore,type Transaction,type DocumentSnapshot,type Query} from 'firebase-admin/firestore';
 import {ProductError,type ProductInput} from '../src/products/model.ts';
@@ -10,7 +12,7 @@ const now=()=>Date.now();
 const millis=(value:unknown):unknown=>value instanceof Timestamp?value.toMillis():Array.isArray(value)?value.map(millis):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,item])=>[key,millis(item)])):value;
 const present=(doc:DocumentSnapshot)=>({...(millis(doc.data()) as object),id:doc.id}) as OrderRecord;
 
-export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>Promise<void>,reviewInTransaction:(tx:Transaction,uid:string,addressId:string|null)=>Promise<CheckoutReview>){
+export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>Promise<void>,reviewInTransaction:(tx:Transaction,uid:string,addressId:string|null,source?:CheckoutSource)=>Promise<CheckoutReview>){
   function event(tx:Transaction,id:string,kind:string,target:string,label:string){tx.set(db.doc('adminNotifications/'+id),{kind,target,label,createdAt:stamp()});}
   async function coupon(tx:Transaction,uid:string,code:unknown,subtotal:string){
     if(code===null||code==='')return {code:null,discountPaise:'0',revision:0,input:null as CouponInput|null,uses:0,customerUses:0};
@@ -20,8 +22,8 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     const data=saved.data()!,input=couponInput(Object.fromEntries(['code','kind','value','enabled','startsAt','endsAt','minimumPaise','capPaise','globalLimit','perCustomerLimit'].map(key=>[key,data[key]])));
     return {code:normalized,discountPaise:String(couponDiscount(input,BigInt(subtotal),data.uses||0,usage.data()?.uses||0)),revision:data.revision,input,uses:data.uses||0,customerUses:usage.data()?.uses||0};
   }
-  async function review(tx:Transaction,uid:string,addressId:string|null,code:unknown){
-    const current=await reviewInTransaction(tx,uid,addressId),discount=await coupon(tx,uid,code,current.subtotalPaise);
+  async function review(tx:Transaction,uid:string,addressId:string|null,code:unknown,source:CheckoutSource={kind:'bag'}){
+    const current=await reviewInTransaction(tx,uid,addressId,source),discount=await coupon(tx,uid,code,current.subtotalPaise);
     const totalPaise=current.shipping.state==='ready'?String(BigInt(current.shipping.totalPaise!)-BigInt(discount.discountPaise)):null;
     // Coupon configuration is part of confirmation. Usage is independently checked
     // in this same transaction, but unrelated purchases don't invalidate a review.
@@ -29,14 +31,14 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     return {value:{...value,fingerprint:digest(value)},discount};
   }
   async function place(uid:string,email:string,body:Record<string,unknown>){
-    exact(body,['action','addressId','couponCode','fingerprint','operationId']);
+    exact(body,['action','addressId','couponCode','fingerprint','operationId'],['source']);const source=checkoutSource(body.source);
     const addressId=referenceId(body.addressId),operationId=referenceId(body.operationId);
     if(typeof body.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(body.fingerprint))throw new ProductError('invalid','Review checkout before placing your order.');
-    const orderId=digest([uid,operationId]).slice(0,32),ref=db.doc('orders/'+orderId),receipt=db.doc(`customerShopping/${uid}/operations/${operationId}`),hash=digest([addressId,body.couponCode,body.fingerprint]);
+    const orderId=digest([uid,operationId]).slice(0,32),ref=db.doc('orders/'+orderId),receipt=db.doc(`customerShopping/${uid}/operations/${operationId}`),hash=digest(source.kind==='bag'?[addressId,body.couponCode,body.fingerprint]:[addressId,body.couponCode,body.fingerprint,source]);
     return db.runTransaction(async tx=>{
       const recorded=await tx.get(receipt);
       if(recorded.exists){if(recorded.data()?.hash!==hash||recorded.data()?.orderId!==orderId)throw new ProductError('conflict','This operation was used for a different request.');return {order:projection(present(await tx.get(ref)),false),recovered:true};}
-      const {value:current,discount}=await review(tx,uid,addressId,body.couponCode);
+      const {value:current,discount}=await review(tx,uid,addressId,body.couponCode,source);
       if(current.fingerprint!==body.fingerprint)return {review:current,changed:true};
       if(!current.valid||current.shipping.state!=='ready'||!current.totalPaise)throw new ProductError('conflict','Resolve the checkout review and shipping settings before placing an order.');
       if(BigInt(current.totalPaise)>1000000000000n)throw new ProductError('invalid','Order exceeds the supported COD amount. Contact the store owner.');
@@ -45,16 +47,16 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       if((limit.data()?.count||0)>=50)throw new ProductError('conflict','Daily order submission allowance reached. Contact the store owner.');
       const inventory=new Map(products.map(doc=>[doc.id,structuredClone(doc.data()!.inventory) as ProductInput['inventory']]));
       const items:OrderItem[]=current.items.map(item=>{const product=item.product!,raw=products.find(doc=>doc.id===product.id)!.data()!;inventory.set(product.id,changeStock(inventory.get(product.id)!,item.variantId,-item.quantity));return {productId:product.id,variantId:item.variantId,quantity:item.quantity,name:product.name,slug:product.slug,sku:item.variantId?raw.inventory.variants.find((variant:{id:string})=>variant.id===item.variantId).sku:raw.sku,variantName:item.variantName,imageUrl:(product.images.find(image=>image.mediaId===product.coverMediaId)||product.images[0])?.url||'',unitPaise:product.pricePaise,linePaise:String(BigInt(product.pricePaise)*BigInt(item.quantity))};});
-      const value={schemaVersion:1,uid,email:email.toLowerCase(),reference:'PS-'+orderId.toUpperCase(),currency:'INR',status:'Placed',paymentMethod:'COD',paymentStatus:'due',revision:1,address:current.address,items,subtotalPaise:current.subtotalPaise,discountPaise:current.discountPaise,shippingPaise:current.shipping.shippingPaise,totalPaise:current.totalPaise,couponCode:current.couponCode,couponSnapshot:discount.input,shippingRevision:current.shipping.revision,reportingPaise:Number(current.totalPaise),collectedPaise:0,refundPaise:0,calculationPolicy:'pre-coupon-strict-shipping-v1',stockRestored:false,courier:'',trackingNumber:'',trackingUrl:'',internalNotes:'',collection:null,request:null,refunds:[],history:[{action:'Placed',actor:uid,at:now(),note:'COD payment due; stock deducted on acceptance.'}],createdAt:stamp(),updatedAt:stamp()};
+      const value={schemaVersion:1,checkoutSource:source,uid,email:email.toLowerCase(),reference:'PS-'+orderId.toUpperCase(),currency:'INR',status:'Placed',paymentMethod:'COD',paymentStatus:'due',revision:1,address:current.address,items,subtotalPaise:current.subtotalPaise,discountPaise:current.discountPaise,shippingPaise:current.shipping.shippingPaise,totalPaise:current.totalPaise,couponCode:current.couponCode,couponSnapshot:discount.input,shippingRevision:current.shipping.revision,reportingPaise:Number(current.totalPaise),collectedPaise:0,refundPaise:0,calculationPolicy:'pre-coupon-strict-shipping-v1',stockRestored:false,courier:'',trackingNumber:'',trackingUrl:'',internalNotes:'',collection:null,request:null,refunds:[],history:[{action:'Placed',actor:uid,at:now(),note:'COD payment due; stock deducted on acceptance.'}],createdAt:stamp(),updatedAt:stamp()};
       for(const doc of products){const old=doc.data()!,next=inventory.get(doc.id)!;tx.update(doc.ref,{inventory:next,revision:old.revision+1,updatedAt:stamp()});tx.create(db.doc(`inventoryAudit/${orderId}_${doc.id}`),{productId:doc.id,orderId,actor:uid,reason:'COD order accepted',before:old.inventory,after:next,createdAt:stamp()});if(newlyLowStock(old.inventory,next,old.lowStockThreshold))event(tx,orderId+'_'+doc.id,'stock','/admin/products/edit/'+doc.id,'Stock is low or unavailable');}
-      for(const item of current.items)tx.delete(db.doc(`customerShopping/${uid}/bag/${item.id}`));
+      if(source.kind==='bag')for(const item of current.items)tx.delete(db.doc(`customerShopping/${uid}/bag/${item.id}`));
       if(discount.code){tx.update(db.doc('coupons/'+discount.code),{uses:discount.uses+1});tx.set(db.doc(`coupons/${discount.code}/customers/${uid}`),{uses:discount.customerUses+1,updatedAt:stamp()});}
       tx.create(ref,value);tx.create(receipt,{hash,orderId,createdAt:stamp()});tx.set(limit.ref,{count:(limit.data()?.count||0)+1,updatedAt:stamp()});event(tx,orderId,'order','/admin/orders/'+orderId,'New COD order '+value.reference);
       return {order:projection({...value,id:orderId,createdAt:now(),updatedAt:now()} as OrderRecord,false)};
     });
   }
   async function list(uid:string,body:Record<string,unknown>,admin=false){
-    exact(body,['action'],['cursor','status','paymentStatus','from','to','search','customerUid']);
+    exact(body,['action'],['cursor','status','paymentStatus','from','to','search','customerUid',...(admin?['pageSize']:[])]);
     let query:Query=db.collection('orders');
     if(!admin)query=query.where('uid','==',uid);else if(body.customerUid)query=query.where('uid','==',text(body.customerUid,128,true));
     if(body.status){if(!orderStatuses.includes(body.status as never))throw new ProductError('invalid','Invalid order status.');query=query.where('status','==',body.status);}
@@ -63,7 +65,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     for(const [key,operator]of [['from','>='],['to','<=']] as const)if(body[key]!==undefined){if(!Number.isSafeInteger(body[key])||(body[key] as number)<0)throw new ProductError('invalid','Invalid date filter.');query=query.where('createdAt',operator,Timestamp.fromMillis(body[key] as number));}
     query=query.orderBy('createdAt','desc').orderBy(FieldPath.documentId(),'desc');
     if(body.cursor){const after=await db.doc('orders/'+referenceId(body.cursor)).get();if(!after.exists||(!admin&&after.data()?.uid!==uid))throw new ProductError('invalid','Invalid order cursor.');query=query.startAfter(after);}
-    const docs=await query.limit(25).get();return {items:docs.docs.map(doc=>projection(present(doc),admin)),nextCursor:docs.size===25?docs.docs.at(-1)!.id:null};
+    const pageSize=body.pageSize===undefined?25:body.pageSize;if(!Number.isInteger(pageSize)||(pageSize as number)<1||(pageSize as number)>25)throw new ProductError('invalid','Invalid order page size.');const docs=await query.limit(pageSize as number).get();return {items:docs.docs.map(doc=>projection(present(doc),admin)),nextCursor:docs.size===pageSize?docs.docs.at(-1)!.id:null};
   }
   function projection(order:OrderRecord,admin:boolean){if(admin)return order;const {internalNotes,history,...safe}=order;return {...safe,history:history.filter(item=>!['Note','Manual refund'].includes(item.action)).map(({action,at})=>({action,at})),refunds:order.refunds.map(({amountPaise,at})=>({amountPaise,at})),collection:order.collection?{at:order.collection.at}:null};}
   async function get(uid:string,body:Record<string,unknown>,admin=false){exact(body,['action','id']);const raw=typeof body.id==='string'&&/^PS-[A-F0-9]{32}$/.test(body.id)?body.id.slice(3).toLowerCase():referenceId(body.id),doc=await db.doc('orders/'+raw).get();if(!doc.exists||(!admin&&doc.data()?.uid!==uid))throw new ProductError('not-found','Order not found.');return projection(present(doc),admin);}
@@ -110,5 +112,5 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       return projection({...old,...update,updatedAt:now()} as OrderRecord,admin);
     });
   }
-  return {review,async customer(uid:string,email:string,body:Record<string,unknown>){switch(body.action){case 'orders:review':exact(body,['action','addressId','couponCode']);return db.runTransaction(async tx=>(await review(tx,uid,body.addressId===null?null:referenceId(body.addressId),body.couponCode)).value);case 'orders:place':return place(uid,email,body);case 'orders:list':return list(uid,body);case 'orders:get':return get(uid,body);case 'orders:request':return mutate(uid,body,false);case 'orders:recover':{exact(body,['action','operationId']);const id=digest([uid,referenceId(body.operationId)]).slice(0,32);const doc=await db.doc('orders/'+id).get();return {order:doc.exists?projection(present(doc),false):null};}default:throw new ProductError('invalid','Unsupported order operation.');}},async admin(uid:string,body:Record<string,unknown>){if(body.action==='adminOrders:list')return list(uid,body,true);if(body.action==='adminOrders:get')return get(uid,body,true);if(body.action==='adminOrders:update')return mutate(uid,body,true);throw new ProductError('invalid','Unsupported administrator order operation.');}};
+  return {review,async customer(uid:string,email:string,body:Record<string,unknown>){switch(body.action){case 'orders:review':exact(body,['action','addressId','couponCode'],['source']);return db.runTransaction(async tx=>(await review(tx,uid,body.addressId===null?null:referenceId(body.addressId),body.couponCode,checkoutSource(body.source))).value);case 'orders:place':return place(uid,email,body);case 'orders:list':return list(uid,body);case 'orders:get':return get(uid,body);case 'orders:request':return mutate(uid,body,false);case 'orders:recover':{exact(body,['action','operationId']);const id=digest([uid,referenceId(body.operationId)]).slice(0,32);const doc=await db.doc('orders/'+id).get();return {order:doc.exists?projection(present(doc),false):null};}default:throw new ProductError('invalid','Unsupported order operation.');}},async admin(uid:string,body:Record<string,unknown>){if(body.action==='dashboard:orders'){exact(body,['action','from','to'],['status']);dashboardBounds(body.from,body.to);const result=await list(uid,{...body,action:'adminOrders:list',pageSize:5},true);return {items:result.items.map(order=>({id:order.id,reference:order.reference,status:order.status,revision:order.revision,createdAt:order.createdAt,totalPaise:order.totalPaise,customerName:order.address?.recipientName||'Name not recorded',customerPhone:order.address?.mobileNumber||null})),updatedAt:Date.now()};}if(body.action==='adminOrders:list')return list(uid,body,true);if(body.action==='adminOrders:get')return get(uid,body,true);if(body.action==='adminOrders:update')return mutate(uid,body,true);throw new ProductError('invalid','Unsupported administrator order operation.');}};
 }

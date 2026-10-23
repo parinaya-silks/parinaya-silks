@@ -1,4 +1,7 @@
-import React from 'react';
+import React,{useState} from 'react';
+import {AdminDashboard} from './AdminDashboard.tsx';
+import {DashboardDates} from './dashboard/Dates.tsx';
+import {periodRange} from './dashboard/model.ts';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
 import {AdminCoupons,AdminCustomerDirectory,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
@@ -12,6 +15,7 @@ import { safeAdminDestination } from './accessPolicy.ts';
 function unavailableWrite(): never { throw new Error('This module is not connected. No live changes were saved.'); }
 
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
+  const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
     const next = destination === '/' ? '/' : safeAdminDestination(destination);
@@ -21,7 +25,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   };
   let content: React.ReactNode;
   if (path === '/admin' || path === '/admin/dashboard' || path === '/admin/login') {
-    content = <AdminReports/>;
+    content = <AdminDashboard range={range} onNavigate={navigate}/>;
   } else if (path === '/admin/categories') {
     content = <AdminCategories onNavigate={navigate} />;
   } else if (path === '/admin/orders'||path.startsWith('/admin/orders/')) {
@@ -43,7 +47,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;
   }
-  return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email}>
+  return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email} headerActions={['/admin','/admin/dashboard','/admin/login'].includes(path)?<DashboardDates value={range} onChange={setRange}/>:undefined}>
     <div key={path}>{content}</div>
   </AdminLayout>;
 }

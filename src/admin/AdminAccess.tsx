@@ -11,6 +11,7 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
   const [signingOut, setSigningOut] = useState(false);
   const refresh = useRef<(() => Promise<void>) | undefined>(undefined);
   const signOutLock = useRef(false);
+  useEffect(()=>{const denied=(event:Event)=>{if(session.status==='authorized'&&(event as CustomEvent).detail===session.user.uid){setSession({status:'checking'});void refresh.current?.();}};window.addEventListener('parinaya:admin-api-denied',denied);return()=>window.removeEventListener('parinaya:admin-api-denied',denied);},[session]);
   useEffect(() => {
     setSession({ status: 'checking' });
     try {

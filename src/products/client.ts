@@ -1,12 +1,13 @@
 import { getAdminClients } from '../services/firebase/adminAuth.ts';
 import { ProductError, type ProductInput, type ProductRecord, type ProductImage, type PublicProductRecord } from './model.ts';
 import { catalogResponse, productLoadFailure } from './response.ts';
+import {signalAdminChange} from '../admin/changeSignal.ts';
 
 const response=(result:Response)=>catalogResponse(result,import.meta.env.DEV);
-export async function catalogAction<T>(body:Record<string,unknown>):Promise<T> {
+export async function catalogAction<T>(body:Record<string,unknown>,signal?:AbortSignal):Promise<T> {
   const user=getAdminClients().auth.currentUser;
   if(!user)throw new ProductError('unauthorized','Sign in again to continue.');
-  try {return await response(await fetch('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await user.getIdToken()}`},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)}));}
+  try {const token=await user.getIdToken();if(getAdminClients().auth.currentUser?.uid!==user.uid)throw new ProductError('unauthorized','Your account changed.');const result=await response(await fetch('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(body),signal:signal?AbortSignal.any([signal,AbortSignal.timeout(30000)]):AbortSignal.timeout(30000)}));if(getAdminClients().auth.currentUser?.uid!==user.uid)throw new ProductError('unauthorized','Your account changed.');if(['save','archive','unarchive','inventory:adjust','adminOrders:update','coupons:save','shipping:save','content:save','appearance:save','notifications:read','notifications:readAll'].includes(String(body.action)))signalAdminChange(user.uid);return result;}
   catch(error){if(error instanceof ProductError)throw error;throw new ProductError('unavailable',body.action==='list'?productLoadFailure:'The server could not confirm this operation. Your changes are kept; retry or check your connection.');}
 }
 export interface CatalogPage<T=ProductRecord> {items:T[];nextCursor:string|null}

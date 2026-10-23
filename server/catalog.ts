@@ -163,7 +163,8 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
-      if(typeof body.action==='string'&&/^(coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
+      if(body.action==='dashboard:orders')return orders.admin(uid,body);
+      if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
         case 'content:get':keys(body,['action']);return content.get();

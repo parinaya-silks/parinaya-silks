@@ -1,3 +1,4 @@
+import {AdminIcon} from './AdminIcon.tsx';
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -73,7 +74,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
           onClick={() => onNavigate('/admin/products/new')}
           className="h-10 px-4 bg-[#780D24] hover:bg-[#5E091B] text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <AdminIcon name="add" className="text-[18px]"/>
           <span>+ Add New Saree</span>
         </button>
       </div>
@@ -112,9 +113,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#817567] text-[18px]">
-              search
-            </span>
+            <AdminIcon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#817567] text-[18px]"/>
             <input
               type="text"
               placeholder="Search by saree title, SKU (e.g. PS-KJ), weave, color..."
@@ -127,7 +126,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#817567] hover:text-[#231919]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <AdminIcon name="close" className="text-[16px]"/>
               </button>
             )}
           </div>
@@ -288,14 +287,14 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                             className="p-1.5 rounded border border-[#E8DDD6] hover:border-[#780D24] text-[#780D24] hover:bg-[#F4EEE5] transition-colors"
                             title="Edit Saree Details"
                           >
-                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <AdminIcon name="edit" className="text-[16px]"/>
                           </button>
                           <button
                             onClick={() => window.open(`/product/${p.slug || p.id}`, '_blank', 'noopener,noreferrer')}
                             className="p-1.5 rounded border border-[#E8DDD6] hover:border-[#B88A44] text-[#5F5552] hover:bg-[#F4EEE5] transition-colors"
                             title="View on Storefront"
                           >
-                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            <AdminIcon name="visibility" className="text-[16px]"/>
                           </button>
                         </div>
                       </td>

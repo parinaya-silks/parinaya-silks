@@ -205,8 +205,8 @@ function StorefrontContent() {
     customerView = (
       <BagView shopping={shopping} onNavigate={navigate}/>
     );
-  } else if (authRoute === '/checkout') {
-    customerView = <CustomerGate path="/checkout" onNavigate={navigate}><CheckoutView shopping={shopping} onNavigate={navigate}/></CustomerGate>;
+  } else if (authRoute === '/checkout'||/^\/checkout\/(delivery|summary|payment)$/.test(authRoute)) {
+    customerView = <CustomerGate path={currentPath} onNavigate={navigate}><CheckoutView key={new URLSearchParams(currentPath.split('?')[1]||'').get('buyNow')||'bag'} currentPath={currentPath} shopping={shopping} onNavigate={navigate}/></CustomerGate>;
   } else if (authRoute === '/account/addresses') {
     customerView = <CustomerGate path="/account/addresses" onNavigate={navigate}><AddressesView onNavigate={navigate}/></CustomerGate>;
   } else if (authRoute === '/account') {

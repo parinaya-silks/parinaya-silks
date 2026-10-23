@@ -28,4 +28,4 @@ export function validateAddress(value:unknown):AddressInput {
   return result;
 }
 export interface CheckoutLine {id:string;productId:string;variantId:string|null;quantity:number;product:PublicProductRecord|null;variantName:string;issues:string[]}
-export interface CheckoutReview {shipping:ShippingQuote;fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[];discountPaise?:string;couponCode?:string|null;totalPaise?:string|null}
+export interface CheckoutReview {source?:import('../checkout/source.ts').CheckoutSource;shipping:ShippingQuote;fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[];discountPaise?:string;couponCode?:string|null;totalPaise?:string|null}
