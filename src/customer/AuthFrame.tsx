@@ -1,3 +1,4 @@
+import {BrandLogo} from '../components/BrandLogo.tsx';
 import React from 'react';
 import {LoginPortrait} from '../appearance/LoginPortrait.tsx';
 import {ArrowLeft} from 'lucide-react';
@@ -7,7 +8,7 @@ export function AuthFrame({title,subtitle,children,onNavigate}:{title:string;sub
   return <div className="customer-auth-layout">
     <LoginPortrait/>
     <section className="customer-auth-panel" aria-labelledby="customer-auth-title"><div className="customer-auth-content">
-      <div className="customer-auth-monogram" aria-hidden="true"><span>P</span><span>S</span></div>
+      <BrandLogo className="customer-auth-logo"/>
       <h1 id="customer-auth-title">{title}</h1><p className="customer-auth-subtitle">{subtitle}</p>
       {children}
       <a href="/" className="customer-auth-browse" onClick={event=>{event.preventDefault();onNavigate('/');}}><ArrowLeft size={22} aria-hidden="true"/>Continue browsing</a>

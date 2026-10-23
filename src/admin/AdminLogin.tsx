@@ -1,3 +1,4 @@
+import {BrandLogo} from '../components/BrandLogo.tsx';
 import React, { useRef, useState } from 'react';
 import { adminPasswordReset, adminSignIn } from '../services/firebase/adminAuth.ts';
 import { adminErrorMessage } from './accessPolicy.ts';
@@ -27,7 +28,6 @@ export function AdminLogin() {
     finally { locked.current = false; setBusy(false); }
   };
   return <AdminAccessFrame>
-    <div className="w-11 h-11 mx-auto rounded-full border border-[#B88A44] text-[#780D24] font-serif grid place-items-center" aria-hidden="true">PS</div>
     <header className="text-center space-y-2">
       <p className="font-serif tracking-wider text-[#780D24]">PARINAYA SILKS</p>
       <h1 className="font-serif text-2xl">{reset ? 'Reset administrator password' : 'Administrator Sign In'}</h1>
@@ -50,6 +50,6 @@ export function AdminLogin() {
 
 export function AdminAccessFrame({ children }: { children: React.ReactNode }) {
   return <main className="parinaya-admin min-h-screen bg-[#FBF7F0] text-[#231919] flex items-center justify-center px-4 py-10 font-sans">
-    <section className="w-full max-w-md rounded-xl border border-[#E8DDD6] bg-white p-6 sm:p-8 shadow-sm space-y-6">{children}</section>
+    <section className="w-full max-w-md rounded-xl border border-[#E8DDD6] bg-white p-6 sm:p-8 shadow-sm space-y-6"><BrandLogo className="w-14 h-14 mx-auto"/>{children}</section>
   </main>;
 }

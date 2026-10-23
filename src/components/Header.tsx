@@ -1,3 +1,4 @@
+import {BrandLogo} from './BrandLogo.tsx';
 import React, { useEffect,useRef,useState } from 'react';
 import { CartItem, WishlistItem } from '../types/index.ts';
 
@@ -60,15 +61,13 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
 
-            {/* Brand Logo: Circular PS Badge + PARINAYA SILKS on ONE LINE */}
+            {/* Brand logo and store name */}
             <button
               onClick={() => onNavigate('/')}
               className={'flex items-center gap-2.5 hover:opacity-95 transition-opacity text-left'+(authLayout?' auth-brand':'')}
               type="button"
             >
-              <span className="w-8 h-8 rounded-full border border-[#B88A44]/80 bg-[#5E091B] flex items-center justify-center font-serif text-[13px] font-bold text-[#F2BE72] tracking-wider shrink-0 shadow-inner">
-                PS
-              </span>
+              <BrandLogo className="w-8 h-8" decorative/>
               <span className="font-serif text-[16px] min-[390px]:text-[18px] sm:text-[20px] tracking-[0.10em] sm:tracking-[0.14em] uppercase font-medium text-white whitespace-nowrap">
                 PARINAYA SILKS
               </span>
@@ -213,9 +212,7 @@ export const Header: React.FC<HeaderProps> = ({
       >
         <div className="flex justify-between items-center pb-4 mb-4 border-b border-[#E8DDD6]">
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-full bg-[#780D24] text-[#F2BE72] font-serif flex items-center justify-center text-[12px] font-bold border border-[#B88A44]/60">
-              PS
-            </span>
+            <BrandLogo className="w-8 h-8" decorative/>
             <h2 className="font-serif text-[16px] text-[#780D24] uppercase tracking-wider font-semibold">
               PARINAYA SILKS
             </h2>

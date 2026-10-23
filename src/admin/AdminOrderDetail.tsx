@@ -1,3 +1,4 @@
+import {BrandLogo} from '../components/BrandLogo.tsx';
 import React, { useState } from 'react';
 import { Order, FulfilmentStatus } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -349,9 +350,7 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
           <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl border border-[#B88A44]/30 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-[#E8DDD6]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#780D24] text-white font-serif font-bold flex items-center justify-center text-xs">
-                  PS
-                </div>
+                <BrandLogo className="w-8 h-8" decorative/>
                 <div>
                   <h3 className="font-serif text-[16px] font-bold text-[#780D24]">PARINAYA SILKS</h3>
                   <span className="text-[10px] text-[#5F5552] uppercase tracking-wider">

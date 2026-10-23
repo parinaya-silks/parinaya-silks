@@ -1,3 +1,4 @@
+import {BrandLogo} from './BrandLogo.tsx';
 import {usePublicContact} from '../content/public.tsx';
 import React from 'react';
 
@@ -14,9 +15,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           {/* Col 1: Brand Info */}
           <div className="space-y-3 md:col-span-1">
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-full border border-[#B88A44] bg-[#5E091B] flex items-center justify-center font-serif text-[12px] font-bold text-[#F2BE72]">
-                PS
-              </span>
+              <BrandLogo className="w-8 h-8" decorative/>
               <span className="font-serif text-[17px] tracking-wider uppercase text-white font-medium">
                 PARINAYA SILKS
               </span>
