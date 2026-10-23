@@ -35,6 +35,14 @@ test('dashboard queries reuse existing count, order-list and canonical report in
  const a=database(),b=database();await businessService(a.db,async()=>{}).admin('synthetic',{action:'reports:get'});await businessService(b.db,async()=>{}).admin('synthetic',{action:'dashboard:backlog'});assert.deepEqual(JSON.parse(JSON.stringify(a.queries)),JSON.parse(JSON.stringify(b.queries)));
 });
 const asc=(fieldPath:string)=>({fieldPath,order:'ASCENDING'}),desc=(fieldPath:string)=>({fieldPath,order:'DESCENDING'});
+
+test('orders summary queries use existing indexes for exact reference, multi-status, COD and inclusive dates',async()=>{
+ for(const search of [undefined,'PS-ABC'])for(const statuses of [undefined,['Placed'],['Placed','Confirmed']])for(const paymentStatus of [undefined,'due','collected'])for(const dated of [false,true]){
+  const {db,queries}=database();await ordersService(db,async()=>{},async()=>{throw new Error('No review');}).admin('synthetic',{action:'adminOrders:list',view:'summary',pageSize:10,...(search?{search}:{}),...(statuses?{statuses}:{}),...(paymentStatus?{paymentStatus}:{}),...(dated?{from:0,to:1000}:{})});
+  assert.equal(queries.length,1);const query=queries[0];assert.deepEqual(query.orders,[{field:'createdAt',direction:'desc'},{field:'__name__',direction:'desc'}]);
+  const fields=[...(statuses?[asc('status')]:[]),...(paymentStatus?[asc('paymentStatus')]:[]),...(search?[asc('reference')]:[]),desc('createdAt')];if(fields.length>1)covered('orders',fields);
+ }
+});
 test('actual browse sorts, category and combined filters match prepared collection indexes and descending ID tie-break',async()=>{
  for(const sort of [undefined,'featured','newest','price-asc','price-desc'])for(const category of [undefined,'fixture']){
   const {db,queries}=database();await browseService(db,async()=>{throw new Error('No rows expected');})({browse:'1',...(sort?{sort}:{}),...(category?{category}:{}),q:'saree',colors:'red|gold',maxPrice:'100000',inStock:'true',sale:'true'});

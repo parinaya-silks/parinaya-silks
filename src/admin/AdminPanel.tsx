@@ -1,3 +1,5 @@
+import {OrdersList} from './orders/OrdersList.tsx';
+import {initialOrderList} from './orders/model.ts';
 import React,{useState} from 'react';
 import {AdminDashboard} from './AdminDashboard.tsx';
 import {DashboardDates} from './dashboard/Dates.tsx';
@@ -15,6 +17,7 @@ import { safeAdminDestination } from './accessPolicy.ts';
 function unavailableWrite(): never { throw new Error('This module is not connected. No live changes were saved.'); }
 
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
+  const [ordersState,setOrdersState]=useState(initialOrderList);
   const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
@@ -29,7 +32,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path === '/admin/categories') {
     content = <AdminCategories onNavigate={navigate} />;
   } else if (path === '/admin/orders'||path.startsWith('/admin/orders/')) {
-    content = <AdminOrderWorkspace id={path.split('/')[3]} onNavigate={navigate}/>;
+    content = path==='/admin/orders'?<OrdersList state={ordersState} onState={setOrdersState} onNavigate={navigate}/>:<AdminOrderWorkspace id={path.split('/')[3]} onNavigate={navigate}/>;
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
