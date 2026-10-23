@@ -30,3 +30,5 @@ test('trusted provisioning validates UID/email and preserves other claims on rer
   assert.deepEqual(repeated.claims, { otherRole: 'editor', admin: true });
   assert.deepEqual(prepareAdminProvisioning({ ...user, customClaims: first.claims }, { action: 'revoke', apply: false }).claims, { otherRole: 'editor' });
 });
+
+test('all reorganized administrator sections retain safe direct destinations',()=>{for(const route of ['inventory','marketing','banners','website-content','contact-information','about','enquiries','settings','coupons'])assert.equal(safeAdminDestination('/admin/'+route),'/admin/'+route);});

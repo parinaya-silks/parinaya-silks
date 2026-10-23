@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {once} from 'node:events';
 import {blankContent} from '../src/content/model.ts';
 import {catalogHandler} from '../server/handler.ts';
-import {CatalogConfigurationError} from '../server/errors.ts';
+import {CatalogConfigurationError,ReportingQueryError} from '../server/errors.ts';
 import {ProductError} from '../src/products/model.ts';
 import {catalogResponse,productLoadFailure} from '../src/products/response.ts';
 
@@ -59,4 +59,18 @@ test('production catalog errors are concise, development guidance stays in devel
   await assert.rejects(catalogResponse(Response.json({code:'permission',message:'Active administrator permission is required.'},{status:403})),{code:'permission',message:'Active administrator permission is required.'});
   await assert.rejects(catalogResponse(Response.json({code:'invalid',message:'Invalid product.',fields:{name:'Required'}},{status:400})),{code:'invalid',fields:{name:'Required'}});
   assert.deepEqual(await catalogResponse(Response.json({items:[],nextCursor:null})),{items:[],nextCursor:null});
+});
+test('operation-stage browse and reports missing-index errors stay 503 with correlated safe diagnostics',async()=>{
+ const diagnostics:any[]=[];
+ const link='https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=YWJjZA==';
+ const fail=async()=>{throw Object.assign(new Error('The query requires an index. '+link),{code:9});};
+ const handler=catalogHandler(()=>({publicBrowse:fail,privileged:async()=>{try{return await fail();}catch(cause){throw new ReportingQueryError('status-aggregate-date-range',cause);}}} as any),d=>diagnostics.push(d));
+ const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
+ try{
+  for(const [path,options,action]of [['?browse=1&sort=featured',{},'browse'],['',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer synthetic-test-token'},body:JSON.stringify({action:'reports:get'})},'reports:get']] as const){
+   const result=await fetch(url+path,options),body=await result.json();assert.equal(result.status,503);assert.equal(body.code,'index-required');assert.equal(body.requestId,result.headers.get('x-request-id'));
+   assert.ok(!JSON.stringify(body).includes('console.firebase'));const diagnostic=diagnostics.at(-1);assert.equal(diagnostic.phase,'operation');assert.equal(diagnostic.action,action);assert.equal(diagnostic.requestId,body.requestId);assert.equal(diagnostic.errors.find((item:any)=>item.indexCreationUrl)?.indexCreationUrl,link);if(action==='reports:get'){assert.equal(diagnostic.errors[0].reportQuery,'status-aggregate-date-range');assert.ok(!JSON.stringify(body).includes('reportQuery'));}
+   assert.ok(!JSON.stringify(diagnostic).includes('synthetic-test-token'));
+  }
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

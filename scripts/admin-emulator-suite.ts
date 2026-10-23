@@ -56,5 +56,6 @@ try {
   await run('python', ['scripts/delivery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/shipping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/business-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await run('python', ['scripts/catalog-recovery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/cod-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

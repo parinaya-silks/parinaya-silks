@@ -10,7 +10,13 @@ export async function catalogAction<T>(body:Record<string,unknown>):Promise<T> {
   catch(error){if(error instanceof ProductError)throw error;throw new ProductError('unavailable',body.action==='list'?productLoadFailure:'The server could not confirm this operation. Your changes are kept; retry or check your connection.');}
 }
 export interface CatalogPage<T=ProductRecord> {items:T[];nextCursor:string|null}
-export async function publicCatalog(cursor?:string,options:Record<string,string>={}):Promise<CatalogPage<PublicProductRecord>> {return response(await fetch('/api/catalog?'+new URLSearchParams({...options,...(cursor?{cursor}:{})}),{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
+const catalogFlights=new Map<string,Promise<CatalogPage<PublicProductRecord>>>();
+export function publicCatalog(cursor?:string,options:Record<string,string>={}):Promise<CatalogPage<PublicProductRecord>> {
+  const parameters=new URLSearchParams({...options,...(cursor?{cursor}:{})});parameters.sort();const key=parameters.toString();
+  const existing=catalogFlights.get(key);if(existing)return existing;
+  const flight=fetch('/api/catalog?'+key,{cache:'no-store',signal:AbortSignal.timeout(15000)}).then(response).finally(()=>{if(catalogFlights.get(key)===flight)catalogFlights.delete(key);});
+  catalogFlights.set(key,flight);return flight;
+}
 export async function publicProduct(slug:string):Promise<PublicProductRecord> {return response(await fetch(`/api/catalog?slug=${encodeURIComponent(slug)}`,{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
 export const newOperation=()=>crypto.randomUUID().replaceAll('-','');
 export const saveProduct=(id:string,expectedRevision:number,operationId:string,product:ProductInput)=>catalogAction<ProductRecord>({action:'save',id,expectedRevision,operationId,product});

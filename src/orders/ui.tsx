@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {catalogAction,newOperation} from '../products/client.ts';
 import {getAuthClients} from '../services/firebase/auth.ts';
+import {ProductError} from '../products/model.ts';
 import {customerAction} from './client.ts';
 import {money} from '../shopping/model.ts';
 import {orderStatuses,transitions,csvCell,type OrderRecord} from './model.ts';
@@ -12,9 +13,10 @@ export const input='block min-w-0 max-w-full w-full border border-[#E8DDD6] roun
 const eventLabel=(action:string)=>({'collect':'COD collection recorded','request-cancellation':'Cancellation requested','request-return':'Return requested','request-exchange':'Exchange requested','approve-request':'Request approved','reject-request':'Request rejected','receive-restock':'Returned stock received and restored','resolve-request':'Request resolved','Manual refund':'External manual refund recorded','Note':'Internal note'} as Record<string,string>)[action]||action;
 export function useBusinessData<T>(body:Record<string,unknown>,customer=false){
  const uid=getAuthClients().auth.currentUser?.uid||'',key=JSON.stringify([uid,body]),[attempt,setAttempt]=useState(0),[state,setState]=useState<{key:string;value?:T;error?:string}>(),latest=useRef('');latest.current=key;
- useEffect(()=>{let live=true;const controller=new AbortController();setState(undefined);if(uid)void (customer?customerAction<T>(uid,body,controller.signal):catalogAction<T>(body)).then(value=>{if(live&&latest.current===key)setState({key,value});}).catch(error=>{if(live&&latest.current===key)setState({key,error:error instanceof Error?error.message:'Unable to load data. Please try again.'});});return()=>{live=false;controller.abort();};},[key,attempt]);
+ useEffect(()=>{let live=true;const controller=new AbortController();setState(undefined);if(uid)void (customer?customerAction<T>(uid,body,controller.signal):catalogAction<T>(body)).then(value=>{if(live&&latest.current===key)setState({key,value});}).catch(error=>{if(live&&latest.current===key)setState({key,error:!customer&&error instanceof ProductError&&['internal','configuration','unavailable','index-required','schema'].includes(error.code)?businessLoadMessage(String(body.action)):error instanceof Error?error.message:'Unable to load data. Please try again.'});});return()=>{live=false;controller.abort();};},[key,attempt]);
  const current=state?.key===key?state:undefined;return {data:current?.value,error:current?.error,loading:!current,retry:()=>setAttempt(n=>n+1)};
 }
+function businessLoadMessage(action:string){const section=action==='reports:get'?'order reports':action.startsWith('inventory:')?'inventory':action.startsWith('notifications:')?'notifications':action.startsWith('customers:')?'customers':action.startsWith('coupons:')?'coupons':action.startsWith('content:')?'store content':action.startsWith('adminOrders:')?'orders':'this section';return `Unable to load ${section}. Please try again.`;}
 export function DataState({loading,error,retry}:{loading:boolean;error?:string;retry:()=>void}){return loading?<p role="status" className="py-4">Loading...</p>:error?<div role="alert" className="space-y-3 py-4"><p>{error}</p><button className={button} onClick={retry}>Retry</button></div>:null;}
 export function OrderSummary({order,admin=false}:{order:OrderRecord;admin?:boolean}){return <div className="space-y-5 min-w-0">
  <header><h1 className="font-serif text-2xl text-[#780D24] break-all">{order.reference}</h1><p className="text-sm mt-2">{new Date(order.createdAt).toLocaleString('en-IN')} · {order.status}</p></header>

@@ -30,6 +30,27 @@ test('business APIs enforce dual admin checks, verified purpose-bound CMS media,
   let list=await call({action:'notifications:list'}) as any;assert.equal(list.unreadCount,1);assert.equal((await call({action:'notifications:list'},'second') as any).items[0].read,false);await call({action:'notifications:read',id:list.items[0].id});assert.equal((await call({action:'notifications:list'}) as any).unreadCount,0);assert.equal((await call({action:'notifications:list'},'second') as any).unreadCount,1);await call({action:'notifications:readAll'},'second');assert.equal((await call({action:'notifications:list'},'second') as any).unreadCount,0);
   for(const client of [env.authenticatedContext('customer').firestore(),env.unauthenticatedContext().firestore()])for(const path of ['siteSettings/storeContent','siteSettings/returns','homeBannerMedia/'+imageId,'adminNotifications/'+list.items[0].id,'coupons/TRUSTED']){await assertFails(getDoc(doc(client,path)));await assertFails(setDoc(doc(client,path),{enabled:true}));}
   const cid='c'.repeat(20),imageId2='e'.repeat(32);await db.doc('categories/'+cid).set({name:'Search category',slug:'search-category',enabled:true});const batch=db.batch();for(let i=0;i<60;i++){const id='z'.repeat(18)+String(i).padStart(2,'0');batch.set(db.doc('products/'+id),{...emptyProduct(),schemaVersion:1,revision:1,status:'Published',name:i===59?'Needle beyond first page':'Browse fixture '+i,description:'Emulator fixture',slug:'browse-fixture-'+i,sku:'BROWSE-'+i,categoryId:cid,pricePaise:1000+i,images:[{mediaId:imageId2,alt:'Fixture',url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/fixture.jpg',width:100,height:200}],coverMediaId:imageId2,inventory:{mode:'simple',quantity:2},createdAt:new Date(100000+i),updatedAt:new Date()});}await batch.commit();
+  for(const sort of ['featured','newest','price-asc','price-desc'])for(const category of [undefined,'search-category']){
+   const options={browse:'1',sort,...(category?{category}:{})};let cursor:string|null=null;const ids:string[]=[];
+   do {const result=await service.publicBrowse({...options,...(cursor?{cursor}:{})});ids.push(...result.items.map(item=>item.id));cursor=result.nextCursor;}while(cursor);
+   assert.equal(ids.length,60,sort);assert.equal(new Set(ids).size,60,sort+' pagination must not skip or duplicate');
+   const expected=Array.from({length:60},(_,i)=>'z'.repeat(18)+String(i).padStart(2,'0'));if(sort!=='price-asc')expected.reverse();assert.deepEqual(ids,expected);
+   const combined=await service.publicBrowse({...options,q:'needle',maxPrice:'1059',inStock:'true'});assert.equal(combined.items.length,1);
+   assert.equal((await service.publicBrowse({...options,maxPrice:'1000',q:'needle'})).items.length,0);
+  }
+  await assert.rejects(call({action:'reports:get',from:200,to:100}),{code:'invalid'});
+  await assert.rejects(call({action:'reports:get',from:253402300800000}),{code:'invalid'});
+  const report=await call({action:'reports:get'});assert.equal(report.orderValuePaise,0);assert.equal(report.byStatus.Placed.count,0);
+  // Equal sort values and timestamps must still page deterministically by ID.
+  const tieBatch=db.batch();for(let i=0;i<60;i++)tieBatch.update(db.doc('products/'+'z'.repeat(18)+String(i).padStart(2,'0')),{pricePaise:1000,createdAt:new Date(100000)});await tieBatch.commit();
+  for(const sort of ['featured','newest','price-asc','price-desc']){
+   const first=await service.publicBrowse({browse:'1',sort}),last=await service.publicBrowse({browse:'1',sort,cursor:first.nextCursor!});
+   assert.deepEqual([...first.items,...last.items].map(item=>item.id),Array.from({length:60},(_,i)=>'z'.repeat(18)+String(59-i).padStart(2,'0')));
+  }
+  const restoreBatch=db.batch();for(let i=0;i<60;i++)restoreBatch.update(db.doc('products/'+'z'.repeat(18)+String(i).padStart(2,'0')),{pricePaise:1000+i,createdAt:new Date(100000+i)});await restoreBatch.commit();
+  await db.doc('orders/emulatorIncompleteReport').set({status:'Placed',paymentStatus:'due',createdAt:new Date(500)});
+  await assert.rejects(call({action:'reports:get'}),{code:'schema'});
+  await db.doc('orders/emulatorIncompleteReport').delete();
   const browse=await service.publicBrowse({browse:'1',q:'needle'});assert.equal(browse.items.length,1);assert.equal(browse.items[0].name,'Needle beyond first page');const sorted=await service.publicBrowse({browse:'1',sort:'price-desc',category:'search-category'});assert.equal(sorted.items[0].pricePaise,1059);assert.equal(sorted.items.length,50);const next=await service.publicBrowse({browse:'1',sort:'price-desc',category:'search-category',cursor:sorted.nextCursor!});assert.equal(next.items.length,10);assert.equal(next.nextCursor,null);assert.equal((await service.publicBrowse({browse:'1',q:'needle',sale:'true'})).items.length,0);await db.doc('categories/'+cid).update({enabled:false});assert.equal((await service.publicBrowse({browse:'1',q:'needle'})).items.length,0);
   const xml=await service.sitemap();assert.equal(xml.includes('/account'),false);assert.equal(xml.includes('browse-fixture'),false,'Disabled category products must leave sitemap');
   await db.doc('adminAccess/owner').update({enabled:false});await assert.rejects(call(adjust),{code:'permission'});

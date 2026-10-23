@@ -1,12 +1,9 @@
 import React from 'react';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
-import { AdminDashboard } from './AdminDashboard.tsx';
-import {AdminCoupons,AdminCustomerDirectory,AdminReports} from '../orders/AdminBusiness.tsx';
+import {AdminCoupons,AdminCustomerDirectory,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
 import {AdminOrderWorkspace} from '../orders/ui.tsx';
-import { AdminOrders } from './AdminOrders.tsx';
 import { ProductManager } from './ProductManager.tsx';
-import { AdminCustomers } from './AdminCustomers.tsx';
 import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
 import {AdminLoginAppearance} from '../appearance/AdminLoginAppearance.tsx';
 import { AdminCategories } from './AdminCategories.tsx';
@@ -32,10 +29,16 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
-    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/><AdminContent/></div>;
+    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
   } else if (path === '/admin/customers') {
     content = <AdminCustomerDirectory onNavigate={navigate}/>;
-  } else if(path==='/admin/coupons'){content=<AdminCoupons/>;
+  } else if(path==='/admin/coupons'||path==='/admin/marketing'){content=<AdminCoupons/>;
+  } else if(path==='/admin/inventory'){content=<AdminInventory/>;
+  } else if(path==='/admin/banners'){content=<AdminContent section="banners"/>;
+  } else if(path==='/admin/website-content'){content=<AdminContent section="website"/>;
+  } else if(path==='/admin/contact-information'){content=<AdminContent section="contact"/>;
+  } else if(path==='/admin/about'){content=<ModuleUnavailable title="About Us"/>;
+  } else if(path==='/admin/enquiries'){content=<ModuleUnavailable title="Customer Enquiries"/>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;
@@ -48,6 +51,6 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
 export function ModuleUnavailable({ title }: { title: string }) {
   return <section className="space-y-5">
     <header className="pb-4 border-b border-[#E8DDD6]"><h1 className="font-serif text-2xl sm:text-[28px] font-semibold">{title}</h1></header>
-    <div className="rounded-xl border border-[#E8DDD6] bg-white p-6 text-sm text-[#5F5552]">This module is not connected to production data. Its existing editor will be enabled when this module is connected and tested. No live action is available.</div>
+    <div className="rounded-xl border border-[#E8DDD6] bg-white p-6 text-sm text-[#5F5552]">This section is not implemented. No live action is available.</div>
   </section>;
 }

@@ -98,7 +98,7 @@ function StorefrontContent() {
   });
 
   // Reactive Data State from StoreService
-  const catalog = usePublicCatalog();
+  const catalog = usePublicCatalog({},!/^\/(?:shop|collections|sale|search)(?:[/?]|$)/.test(currentPath));
   const products = catalog.items.map(storefrontProduct);
   const [orders, setOrders] = useState<Order[]>(() => storeService.getOrders());
   const [customer, setCustomer] = useState<Customer>(() => storeService.getCustomer());
@@ -180,7 +180,7 @@ function StorefrontContent() {
     const categoryParam = urlParams.get('category') || undefined;
     const searchParam = urlParams.get('search') || undefined;
 
-    customerView = catalog.state !== 'ready' ? <section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">{catalog.state === 'loading' ? 'Loading products…' : 'Products unavailable'}</h1>{catalog.state === 'error' && <button className="min-h-11 px-5 underline" onClick={catalog.retry}>Retry products</button>}</section> : (
+    customerView = (
       <ShopView
         key={currentPath}
         products={products}

@@ -1,7 +1,7 @@
 import {usePublicCatalog} from '../products/hooks.ts';
 import {storefrontProduct} from '../products/adapter.ts';
 import { demoEnabled } from '../config/runtime.ts';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 import { useCategories } from '../categories/useCategories.ts';
@@ -38,15 +38,17 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number>(Infinity);
-  const priceCeiling = Math.max(1, ...initialProducts.map(product => Math.ceil(product.price)));
+  const knownPriceCeiling = useRef(1);
 
   const { state: categoryState, retry: retryCategories } = useCategories();
   const publicCategories = categoryState.status === 'ready' ? categoryState.items : [];
   const selectedPublic = requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
   const selectedCategory = selectedPublic?.id || 'all';
   const categories = [{ id: 'all', label: 'All Sarees' }, ...publicCategories.map(category => ({ id: category.id, label: category.name }))];
-  const page=usePublicCatalog({browse:'1',sort:sortOption,...(selectedPublic?{category:selectedPublic.slug}:{}),...(searchQuery.trim()?{q:searchQuery.trim()}:{}),...(selectedColors.length?{colors:selectedColors.join('|')}:{}),...(inStockOnly?{inStock:'true'}:{}),...(saleOnly?{sale:'true'}:{}),...(Number.isFinite(maxPrice)?{maxPrice:String(Math.round(maxPrice*100))}:{})});
+  const page=usePublicCatalog({browse:'1',sort:sortOption,...(selectedPublic?{category:selectedPublic.slug}:{}),...(searchQuery.trim()?{q:searchQuery.trim()}:{}),...(selectedColors.length?{colors:selectedColors.join('|')}:{}),...(inStockOnly?{inStock:'true'}:{}),...(saleOnly?{sale:'true'}:{}),...(Number.isFinite(maxPrice)?{maxPrice:String(Math.round(maxPrice*100))}:{})},!(requestedSlug||initialCategory)||(categoryState.status==='ready'&&Boolean(selectedPublic)));
   const products=page.items.map(storefrontProduct);
+  knownPriceCeiling.current=Math.max(knownPriceCeiling.current,...initialProducts.map(product=>Math.ceil(product.price)),...products.map(product=>Math.ceil(product.price)));
+  const priceCeiling=knownPriceCeiling.current;
   const colorProducts=[...initialProducts,...products];
   const colorOptions = Array.from(new Map(colorProducts.flatMap(p => p.variants?.length ? p.variants.map(variant => [variant.name, { name: variant.name, hex: variant.hex }] as const) : p.colorName ? [[p.colorName, { name: p.colorName, hex: p.colorHex }] as const] : [])).values());
 
@@ -89,7 +91,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
               {selectedPublic ? selectedPublic.name : searchQuery ? `Search: "${searchQuery}"` : 'Shop All Sarees'}
             </h1>
             <span className="font-sans text-[11px] sm:text-[12px] text-[#5F5552] uppercase tracking-wider">
-              {filteredProducts.length} Sarees
+              {page.state==='ready'?`${filteredProducts.length}${page.hasMore?' +':''} Sarees`:page.state==='loading'?'Loading sarees...':'Count unavailable'}
             </span>
           </div>
           <span className="font-sans text-[12px] text-[#780D24] font-medium hidden sm:inline">
@@ -561,7 +563,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 onClick={() => setFilterDrawerOpen(false)}
                 className="flex-[2] py-3 bg-[#780D24] hover:bg-[#5E091B] text-white font-sans text-[12px] uppercase tracking-wider rounded-lg font-bold shadow-md"
               >
-                Apply Filters ({filteredProducts.length})
+                Apply Filters {page.state==='ready'?`(${filteredProducts.length})`:''}
               </button>
             </div>
           </div>

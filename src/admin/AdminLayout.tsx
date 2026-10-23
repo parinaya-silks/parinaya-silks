@@ -18,21 +18,25 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  const navItems: Array<{ path: string; label: string; icon: string; badge?: string }> = [
-    { path: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { path: '/admin/orders', label: 'Orders', icon: 'local_mall' },
-    { path: '/admin/products', label: 'Products & Inventory', icon: 'inventory_2' },
-    { path: '/admin/categories', label: 'Categories', icon: 'category' },
-    { path: '/admin/customers', label: 'Customers', icon: 'group' },
-    { path: '/admin/coupons', label: 'Coupons', icon: 'loyalty' },
-    { path: '/admin/settings', label: 'Store Settings', icon: 'settings' },
-  ];
+  const navItems = [
+    ['dashboard','Dashboard','dashboard'], ['products','Products','inventory_2'],
+    ['categories','Categories','category'], ['orders','Orders','local_mall'],
+    ['customers','Customers','group'], ['inventory','Inventory','inventory'],
+    ['marketing','Marketing / Sale Campaigns','loyalty'], ['banners','Banners','image'],
+    ['website-content','Website Content','article'], ['contact-information','Contact Information','call'],
+    ['about','About Us','info'], ['enquiries','Customer Enquiries','chat'], ['settings','Settings','settings'],
+  ].map(([route,label,icon])=>({path:'/admin/'+route,label,icon}));
+  const active = (path:string) => currentPath===path ||
+    (path==='/admin/dashboard' && currentPath==='/admin') ||
+    (path==='/admin/marketing' && currentPath==='/admin/coupons') ||
+    (['/admin/orders','/admin/products'].includes(path) && currentPath.startsWith(path+'/'));
+
 
   return (
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col md:flex-row text-[#231919] font-sans antialiased">
       {/* 240px Fixed Architectural Desktop Sidebar */}
       <aside className="hidden md:flex fixed top-0 left-0 h-screen w-60 flex-col justify-between bg-white border-r border-[#E8DDD6] z-30">
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full min-h-0 overflow-y-auto">
           {/* Brand Masthead */}
           <div className="h-20 flex items-center gap-3 px-4 border-b border-[#E8DDD6]">
             <div className="w-10 h-10 rounded-full border border-[#B88A44] bg-[#F4EEE5] flex items-center justify-center text-[#780D24] font-serif text-[16px] font-bold shrink-0 shadow-xs">
@@ -56,15 +60,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           {/* Nav Links */}
           <nav aria-label="Admin Navigation" className="flex flex-col py-3 w-full font-sans text-[13px]">
             {navItems.map((item) => {
-              const isActive =
-                currentPath === item.path ||
-                (item.path === '/admin/dashboard' && currentPath === '/admin') ||
-                (item.path === '/admin/orders' && currentPath.startsWith('/admin/orders')) ||
-                (item.path === '/admin/products' && currentPath.startsWith('/admin/products'));
+              const isActive = active(item.path);
 
               return (
                 <button
                   key={item.path}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => onNavigate(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left font-medium ${
                     isActive
@@ -80,11 +81,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="ml-auto bg-[#780D24] text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
+
                 </button>
               );
             })}
@@ -92,7 +89,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="border-t border-[#E8DDD6] p-3 space-y-1.5">
+        <div className="border-t border-[#E8DDD6] p-3 space-y-1.5 shrink-0">
           <button
             onClick={() => onNavigate('/')}
             className="w-full flex items-center justify-between px-3 py-2 text-[#5F5552] hover:text-[#780D24] hover:bg-[#F4EEE5] rounded text-[13px] font-medium transition-colors"
@@ -109,7 +106,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             className="w-full flex items-center gap-2 px-3 py-2 text-[#BA1A1A] hover:bg-red-50 rounded text-[13px] font-medium transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
-            <span>Sign Out</span>
+            <span>Logout</span>
           </button>
 
           <div className="p-2.5 bg-[#F4EEE5] border border-[#E8DDD6] rounded flex items-center gap-2">
@@ -132,7 +129,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             onClick={() => setMobileDrawerOpen(false)}
           />
           <div className="relative w-72 max-w-[85%] h-full bg-white flex flex-col justify-between p-4 border-r border-[#E8DDD6] shadow-2xl z-10">
-            <div>
+            <div className="min-h-0 overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-[#E8DDD6]">
                 <div className="flex items-center gap-2">
                   <span className="w-8 h-8 rounded-full bg-[#780D24] text-white font-serif flex items-center justify-center text-[12px] font-bold">
@@ -148,15 +145,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 </button>
               </div>
 
-              <nav className="py-4 space-y-1 font-sans text-[13px]">
+              <nav aria-label="Mobile Admin Navigation" className="py-4 space-y-1 font-sans text-[13px]">
                 {navItems.map((item) => (
                   <button
                     key={item.path}
+                    aria-current={active(item.path) ? 'page' : undefined}
                     onClick={() => {
                       onNavigate(item.path);
                       setMobileDrawerOpen(false);
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded text-left font-medium text-[#231919] hover:bg-[#F4EEE5]"
+                    className={"w-full flex items-center gap-3 px-3 py-2 rounded text-left font-medium hover:bg-[#F4EEE5] "+(active(item.path)?"bg-[#F4EEE5] text-[#780D24]":"text-[#231919]")}
                   >
                     <span className="material-symbols-outlined text-[20px] text-[#780D24]">{item.icon}</span>
                     <span>{item.label}</span>
@@ -184,7 +182,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 className="w-full flex items-center gap-2 px-3 py-2 text-[#BA1A1A]"
               >
                 <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span>Sign Out</span>
+                <span>Logout</span>
               </button>
             </div>
           </div>
