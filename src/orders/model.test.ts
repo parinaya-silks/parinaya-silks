@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {customerFailureMessage} from './errorMessage.ts';
+test('customer history failures use loading copy while uncertain order mutations retain safe recovery copy',()=>{
+ assert.equal(customerFailureMessage('orders:list'),'We couldn’t load your orders. Please try again.');
+ assert.equal(customerFailureMessage('orders:review'),'Unable to load checkout review. Please try again.');
+ for(const action of ['orders:place','orders:request'])assert.match(customerFailureMessage(action),/Retry safely/);
+});
 import {changeStock,transitions,couponInput,couponDiscount,csvCell,safeLink,type CouponInput} from './model.ts';
 const coupon:CouponInput={code:'SAVE10',kind:'percent',value:10,enabled:true,startsAt:null,endsAt:null,minimumPaise:0,capPaise:null,globalLimit:null,perCustomerLimit:null};
 test('COD lifecycle does not imply collection and cannot return from dispatch to cancellation',()=>{assert.deepEqual(transitions.Shipped,['Delivered']);assert.deepEqual(transitions.Delivered,[]);assert.ok(transitions.Placed.includes('Cancelled'));});

@@ -36,6 +36,14 @@ test('dashboard queries reuse existing count, order-list and canonical report in
 });
 const asc=(fieldPath:string)=>({fieldPath,order:'ASCENDING'}),desc=(fieldPath:string)=>({fieldPath,order:'DESCENDING'});
 
+test('customer history preserves trusted UID equality and newest-first document-ID ordering covered by its own index',async()=>{
+ const {db,queries}=database();const result=await ordersService(db,async()=>{},async()=>{throw new Error('No review');}).customer('verified-customer','customer@example.test',{action:'orders:list',customerUid:'forged-other-customer'});
+ assert.deepEqual(queries[0].filters,[{field:'uid',operator:'==',value:'verified-customer'}]);
+ assert.deepEqual(queries[0].orders,[{field:'createdAt',direction:'desc'},{field:'__name__',direction:'desc'}]);
+ covered('orders',[asc('uid'),desc('createdAt')]);
+ assert.deepEqual(result,{items:[],nextCursor:null});
+});
+
 test('orders summary queries use existing indexes for exact reference, multi-status, COD and inclusive dates',async()=>{
  for(const search of [undefined,'PS-ABC'])for(const statuses of [undefined,['Placed'],['Placed','Confirmed']])for(const paymentStatus of [undefined,'due','collected'])for(const dated of [false,true]){
   const {db,queries}=database();await ordersService(db,async()=>{},async()=>{throw new Error('No review');}).admin('synthetic',{action:'adminOrders:list',view:'summary',pageSize:10,...(search?{search}:{}),...(statuses?{statuses}:{}),...(paymentStatus?{paymentStatus}:{}),...(dated?{from:0,to:1000}:{})});

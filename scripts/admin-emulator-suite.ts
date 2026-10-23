@@ -50,6 +50,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!ready) throw new Error('Local test server unavailable.');
+  await run('python', ['scripts/customer-orders-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/customer-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/appearance-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });

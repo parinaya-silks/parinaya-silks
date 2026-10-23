@@ -11,8 +11,28 @@ import {serverFirebase} from '../server/firebase.ts';
 import {emptyProduct} from '../src/products/model.ts';
 import {blankAddress} from '../src/delivery/model.ts';
 import {initialShipping} from '../src/shipping/model.ts';
+import {Timestamp} from 'firebase-admin/firestore';
 if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw new Error('Loopback emulators required.');
 process.env.PARINAYA_SERVER_EMULATORS='true';setLogLevel('silent');
+
+test('customer history handler: token ownership, newest-first ties, pagination, empty history and signed-out rejection',async()=>{
+ const {database:db,auth}=serverFirebase(),uids=['history-customer','history-other','history-empty'],tokens:Record<string,string>={};
+ const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');
+ const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
+ const call=async(body:Record<string,unknown>,uid?:string)=>{const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...(uid?{Authorization:'Bearer '+tokens[uid]}:{})},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
+ const ids=Array.from({length:28},(_,i)=>'abcdef0'+String(i).padStart(25,'0'));
+ try{
+  for(const uid of uids){const password=randomUUID()+'Aa9!';await auth.createUser({uid,email:uid+'@example.test',password,emailVerified:false});const response=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=synthetic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:uid+'@example.test',password,returnSecureToken:true})});tokens[uid]=(await response.json()).idToken;}
+  const batch=db.batch();ids.forEach((id,i)=>batch.set(db.doc('orders/'+id),{uid:i===27?uids[1]:uids[0],createdAt:Timestamp.fromMillis(1000+Math.floor(i/2)),history:[],refunds:[],collection:null,internalNotes:'private'}));await batch.commit();
+  assert.equal((await call({action:'orders:list'})).status,401);
+  const first=await call({action:'orders:list',customerUid:uids[1]},uids[0]);assert.equal(first.status,200);assert.equal(first.data.items.length,25);
+  const expected=ids.slice(0,27).reverse();assert.deepEqual(first.data.items.map((row:any)=>row.id),expected.slice(0,25));assert.ok(first.data.items.every((row:any)=>row.uid===uids[0]&&!('internalNotes' in row)));
+  const second=await call({action:'orders:list',cursor:first.data.nextCursor},uids[0]);assert.equal(second.status,200);assert.deepEqual(second.data.items.map((row:any)=>row.id),expected.slice(25));assert.equal(second.data.nextCursor,null);
+  assert.equal((await call({action:'orders:list',cursor:ids[27]},uids[0])).status,400);
+  assert.equal((await call({action:'orders:get',id:ids[27]},uids[0])).status,404);
+  const empty=await call({action:'orders:list'},uids[2]);assert.equal(empty.status,200);assert.deepEqual(empty.data,{items:[],nextCursor:null});
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));const batch=db.batch();for(const id of ids)batch.delete(db.doc('orders/'+id));await batch.commit();for(const uid of uids)await auth.deleteUser(uid);}
+});
 test('exported COD handler: atomic stock, retries, ownership, changed review, fulfilment, collection and cancellations',async()=>{
  const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),{database:db,auth}=serverFirebase(),tokens:Record<string,string>={},users:string[]=[],op=()=>randomUUID().replaceAll('-','');
  const server=createServer(handler).listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
