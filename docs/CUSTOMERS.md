@@ -1,6 +1,6 @@
 # Customers List and Customer Details
 
-Local implementation only. No commit, push, deployment, rule/index publication, production migration or production record/user modification is part of this task.
+The original implementation and acceptance notes below describe the local release. The authorized production preparation completed on 24 October 2026 is recorded at the end of this document. It did not deploy application code, publish rules or alter source business records.
 
 ## Pages and identity
 
@@ -75,9 +75,11 @@ Six **new** COLLECTION-scope `customerDirectory` definitions are appended to `fi
 
 All three flag groups participate in each query, keeping the index set fixed across filter combinations. Name sorting includes a sortName range along with the joinedAt range. This follows Firebase's [multiple-range-field query guidance](https://firebase.google.com/docs/firestore/query-data/multiple-range-fields). Existing UID/createdAt order-history indexes are reused; no reporting indexes are changed.
 
-**Production readiness of these six indexes was not checked or changed.** Before releasing, the owner must compare existing definitions, create only missing exact matches, wait for READY, then verify actual queries. Do not blindly replace the deployed index set or delete existing indexes.
+Production readiness was not checked during the original UI implementation. The subsequent authorized recovery below compared existing definitions, created only missing exact matches and verified readiness and live queries. Do not blindly replace the deployed index set or delete existing indexes.
 
-Existing profiles require one controlled read-model rebuild, prepared by `scripts/customer-directory-rebuild.ts`. It reads profiles in 50-record pages and only needed order snapshot fields in 200-record chunks, checks concurrent source changes and writes only `customerDirectory`. It does not modify profiles, Auth users, addresses or orders. It is safe to rerun. It logs counts/error codes, not customer information or credential values.
+Existing profiles require one controlled read-model rebuild, prepared by `scripts/customer-directory-rebuild.ts`. It reads profiles in 50-record pages and only needed order snapshot fields in 200-record chunks, and writes only `customerDirectory`. Each customer's current profile, existing directory row and order pages are read within one transaction. Conflicting application synchronization causes a recomputation, with at most five transaction attempts. A per-customer limit of 10,000 orders fails explicitly instead of truncating. Fields owned by this read model are merged; unrelated directory fields are preserved. Invalid/overflowing historical quantities remain unavailable. It does not modify profiles, Auth users, addresses or orders. A failure can leave completed derived rows; rerunning from the beginning safely recomputes them without incrementing counters. The readiness check remains in place throughout. Logs contain counts/error codes, not customer information or credential values.
+
+Preview with `--dry-run` before `--apply`. The preview executes the same bounded source reads without writing, including when directory rows already exist. The exported maintenance function also supports `{verify:true}` to compare every derived field with current sources without writing; `mismatches` must be zero. This count means differences observed before an apply when running in apply mode, not failed writes. Separately reconcile source/directory UID membership and schema versions; do not declare completeness from equal counts alone, prune orphaned rows automatically, or manually set a readiness flag.
 
 Local emulator use (only while the existing loopback Auth/Firestore environment variables are set):
 
@@ -85,7 +87,9 @@ Local emulator use (only while the existing loopback Auth/Firestore environment 
 node --import tsx scripts/customer-directory-rebuild.ts --emulator --apply
 ```
 
-A future owner-authorized production preparation can run the same tool with `--apply --credentials <secure-service-account-path>` outside Git. The tool validates project `parinaya-silks`, explicitly targets `(default)`, rejects emulator mixing and requires explicit apply. Do not paste keys into chat. That production command was **not run** in this task. Existing open browser versions can finish profile creation before synchronizing; any resulting preparation warning must be resolved, not ignored.
+Owner-authorized production preparation uses the same tool with `--apply --credentials <secure-service-account-path>` outside Git. The tool validates project `parinaya-silks`, explicitly targets `(default)`, rejects emulator mixing and requires explicit apply. Do not paste keys into chat. Production preparation was not run during the original UI implementation; the later authorized run is recorded below. Existing open browser versions can finish profile creation before synchronizing; any resulting preparation warning must be resolved, not ignored.
+
+For subsequent explicitly authorized preparation, run `--dry-run --credentials <secure-service-account-path>` first, then `--apply` with the same trusted credential path. Do not put credential files in the repository. Recheck source membership, schema and derived-field consistency after the apply; concurrent new profiles can require another pass. Auth metadata is read per profile, not part of the Firestore transaction, so out-of-band Auth changes also require a fresh verification/rebuild.
 
 ## Local acceptance and files
 
@@ -113,4 +117,29 @@ Fixtures and screenshots live only in isolated emulators/ignored `.cache/custome
 - `test:catalog-runtime`: passed using the pinned local Vercel Node builder. The traced `nodejs24.x` artifact was invoked under local Node 22.22.2, without a tsx loader, with enabled/disabled ESM probes. This is local packaging evidence, not hosted runtime verification.
 - `git diff --check`: passed. Earlier accessible-label and five-row-pagination test mismatches were corrected and the final focused customer run passed.
 
-Release remains separate: compare/create the six exact private-directory indexes, wait for READY, authorize and run the bounded rebuild for existing profiles, deploy the application, then perform signed-in hosted acceptance. No production metadata/index-readiness verification, preparation, publication, application deployment, commit or push was performed here.
+Those original validation results did not establish production readiness. The later authorized production recovery below establishes index and directory preparation separately; signed-in hosted acceptance remains separate from SDK and emulator checks.
+
+## Authorized production recovery - 24 October 2026
+
+Target: `parinaya-silks`, Firestore `(default)`. The `customers:list` schema failure at `ready()` was caused by missing initialization: 3 saved source profiles, 0 directory rows, no incompatible or orphaned rows. This was not a schema-version migration failure. All six exact manifest indexes were also absent.
+
+The create-only procedure compared existing definitions, created the following six COLLECTION-scope indexes, waited for every index to become READY and verified that all 14 previously returned definitions were preserved. No index was deleted or replaced. The implicit `__name__` directions match the manifest convention above.
+
+| Definition from table above | Index ID | State |
+| --- | --- | --- |
+| No search, newest | `CICAgLjy8IAK` | READY |
+| No search, oldest | `CICAgOi3kJAK` | READY |
+| No search, name | `CICAgJjFqZMK` | READY |
+| Search, newest | `CICAgNjp5ZMK` | READY |
+| Search, oldest | `CICAgLjRyYIK` | READY |
+| Search, name | `CICAgLiT6IEK` | READY |
+
+The hardened maintenance tool was reviewed and exercised locally before the live run. Production preview processed 3 profiles with zero writes. Apply created exactly 3 derived `customerDirectory/{uid}` documents. Source-profile/order update fingerprints were unchanged across the apply. No source, Auth, address, product, inventory, administrator or rules writes were performed; no readiness flag or preparation metadata document was invented.
+
+Read-only post-verification found 3 source profiles and exactly the same 3 directory UIDs, all at schema version 1, with zero derived-field mismatches and no orphaned or missing rows. One saved profile has no matching Auth account and remains included with unavailable Auth metadata. The 2 existing Auth accounts both have saved profiles; there are currently zero Auth-only accounts excluded. The coverage policy continues to exclude future Auth-only accounts awaiting profile recovery.
+
+Trusted Admin SDK checks against live Firestore passed 72 list/search/order/contact-filter combinations, six actual name/email/mobile searches, all three sorts, a joined-date range, complete directory traversal, all 3 customers' profile/statistics/address reads and three actual order-service history pages with ownership/link checks, and all four export scopes with all allowed fields and completeness reconciliation. The existing approved administrator still has both the custom claim and enabled access record. Production has only 3 rows, so a second directory page or multi-chunk export was not available to exercise live. Local synthetic tests cover 58 rows, cursor pagination and chunked exports.
+
+The hosted `/api/catalog` rejected a signed-out `customers:list` request with HTTP 401. A signed-in hosted browser session was not accessible to this tooling; refresh `/admin/customers` in the existing authorized administrator session to complete hosted UI acceptance. Live SDK checks are not represented as signed-in Vercel invocation checks. No application or rules deployment is required for this initialization fix; the local changes are maintenance safeguards and their tests/documentation.
+
+Recovery validation: typecheck, all 91 unit tests, production build and `git diff --check` passed. Five focused emulator tests passed across administrator rules, customer rules, Customers handler/preparation and existing orders/COD suites. The Customers browser regression passed filters/sorting/pagination/context, retry versus empty states, export completeness/recovery, details/order links, sign-out cleanup and six responsive widths. Preparation regressions cover zero-write preview, schema repair, merging unrelated fields, fresh profile reads, unchanged historical orders and read-only derived-field verification. Approved UI files were unchanged. No commit, push or application/rules deployment was performed.
