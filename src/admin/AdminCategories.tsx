@@ -1,73 +1,35 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { categorySlug, validateCategory, type Category, type CategoryInput } from '../categories/model.ts';
-import { allocateCategoryId, categoryError, createCategory, editCategory } from '../categories/repository.ts';
-import { useCategories } from '../categories/useCategories.ts';
+import React,{useRef,useState} from 'react';
+import {Plus,Search,ArrowUpRight,Eye,EyeOff,Info,Layers,ArrowUpDown,Lock,Pencil} from 'lucide-react';
+import type {Category} from '../categories/model.ts';
+import {categoryError,editCategory} from '../categories/repository.ts';
+import {useCategories} from '../categories/useCategories.ts';
+import {CategoryEditor} from './categories/CategoryEditor.tsx';
+import {VisibilityConfirm} from './categories/VisibilityConfirm.tsx';
+import {useAdminWritePermission} from './permission.tsx';
+import {getAdminClients} from '../services/firebase/adminAuth.ts';
+import {signalAdminChange} from './changeSignal.ts';
+import './categories/categories.css';
+export {CategoryEditor} from './categories/CategoryEditor.tsx';
 
-const button = 'min-h-11 px-4 rounded-lg border border-[#B88A44] text-[#780D24] disabled:opacity-50';
-const field = 'w-full min-h-12 rounded-lg border border-[#E8DDD6] bg-[#FBF7F0] px-3 text-sm';
-
-export function AdminCategories({ onNavigate }: { onNavigate: (path: string) => void }) {
-  const { state, retry } = useCategories(true);
-  const [editing, setEditing] = useState<Category | 'new' | null>(null);
-  const [success, setSuccess] = useState('');
-  return <section className="space-y-5">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DDD6] pb-4">
-      <div><h1 className="font-serif text-2xl sm:text-[28px] font-semibold">Manage Categories</h1><p className="text-sm text-[#5F5552] mt-1">Names, visibility and display order for the storefront.</p></div>
-      <div className="flex flex-wrap gap-2"><button className={button} onClick={() => onNavigate('/admin/products')}>Products &amp; Inventory</button><button className={button + ' bg-[#780D24] text-white'} disabled={state.status !== 'ready'} onClick={() => { setSuccess(''); setEditing('new'); }}>Add category</button></div>
-    </header>
-    {success && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">{success}</p>}
-    {state.status === 'loading' && <p role="status" className="py-6 text-sm">Loading categories…</p>}
-    {state.status === 'error' && <div role="alert" className="space-y-3 rounded-lg border border-red-200 p-4 text-sm"><p>{state.message}</p><button className={button} onClick={retry}>Retry categories</button></div>}
-    {state.status === 'ready' && (state.items.length === 0 ? <div className="rounded-xl border border-[#E8DDD6] bg-white p-6 text-center space-y-3"><p>No categories yet.</p><p className="text-sm text-[#5F5552]">Add a category when its name and URL are ready.</p></div> : <ul className="space-y-3">
-      {state.items.map(category => <li key={category.id} className="flex flex-wrap gap-3 justify-between items-center rounded-xl border border-[#E8DDD6] bg-white p-4">
-        <div className="min-w-0 flex-1 basis-52"><h2 className="font-serif text-lg break-words">{category.name}</h2><p className="text-xs text-[#5F5552] break-all">/collections/{category.slug}</p>{category.description && <p className="text-sm mt-2 break-words">{category.description}</p>}<p className="text-xs mt-2 text-[#5F5552]">{category.enabled ? 'Enabled' : 'Disabled'} · Display order {category.displayOrder}</p></div>
-        <button className={button} aria-label={`Edit ${category.name}`} onClick={() => { setSuccess(''); setEditing(category); }}>Edit</button>
-      </li>)}
-    </ul>)}
-    <p className="text-sm text-[#5F5552]">Deletion is unavailable until product references can be verified. Disable a category to remove it from public listings.</p>
-    {editing && <CategoryEditor category={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setSuccess('Category saved.'); }} />}
-  </section>;
-}
-
-export function CategoryEditor({ category, onClose, onSaved }: { category?: Category; onClose: () => void; onSaved: (id:string) => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const saveLock = useRef(false);
-  const id = useRef(category?.id || '');
-  const slugChanged = useRef(false);
-  const [draft, setDraft] = useState<CategoryInput>(category || { name: '', slug: '', description: '', enabled: false, displayOrder: 0 });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.current?.showModal();
-    return () => { previous?.focus(); };
-  }, []);
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (saveLock.current) return;
-    let valid: CategoryInput;
-    try { valid = validateCategory(draft); } catch (failure) { setError(failure instanceof Error ? failure.message : 'Check the category fields.'); return; }
-    saveLock.current = true; setSaving(true); setError('');
-    try {
-      if (category) await editCategory(category, valid);
-      else { id.current ||= allocateCategoryId(); await createCategory(id.current, valid); }
-      onSaved(id.current);
-    } catch (failure) { setError(categoryError(failure)); }
-    finally { saveLock.current = false; setSaving(false); }
-  };
-  return <dialog ref={dialog} aria-labelledby="category-editor-title" onCancel={event => { event.preventDefault(); if (!saveLock.current) onClose(); }} className="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-xl border border-[#E8DDD6] bg-white p-5 text-[#231919] shadow-xl backdrop:bg-black/50">
-    <h2 id="category-editor-title" className="font-serif text-2xl">{category ? 'Edit category' : 'Add category'}</h2>
-    <form onSubmit={save} className="space-y-4 mt-4">
-      <fieldset disabled={saving} className="space-y-4 min-w-0">
-        <label className="block text-sm space-y-1"><span>Name</span><input autoFocus required minLength={2} maxLength={80} className={field} value={draft.name} onChange={event => { const name = event.target.value; setDraft(old => ({ ...old, name, ...(!category && !slugChanged.current ? { slug: categorySlug(name) } : {}) })); }} /></label>
-        <label className="block text-sm space-y-1"><span>URL slug</span><input required maxLength={80} readOnly={Boolean(category)} className={field} value={draft.slug} onChange={event => { slugChanged.current = true; setDraft(old => ({ ...old, slug: event.target.value })); }} /></label>
-        <p className="text-xs text-[#5F5552]">{category ? 'The URL stays fixed when you rename this category.' : 'The URL slug is permanent. Review it before saving.'}</p>
-        <label className="block text-sm space-y-1"><span>Description (optional)</span><input maxLength={240} className={field} value={draft.description || ''} onChange={event => setDraft(old => ({ ...old, description: event.target.value }))} /></label>
-        <label className="block text-sm space-y-1"><span>Display order</span><input required type="number" min={0} max={9999} step={1} className={field} value={Number.isNaN(draft.displayOrder) ? '' : draft.displayOrder} onChange={event => setDraft(old => ({ ...old, displayOrder: event.target.value === '' ? NaN : Number(event.target.value) }))} /></label>
-        <label className="flex items-center gap-3 min-h-11 text-sm"><input type="checkbox" className="h-5 w-5 accent-[#780D24]" checked={draft.enabled} onChange={event => setDraft(old => ({ ...old, enabled: event.target.checked }))} />Enabled on storefront</label>
-      </fieldset>
-      {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
-      <div className="flex flex-wrap gap-2"><button type="submit" disabled={saving} className={button + ' bg-[#780D24] text-white'}>{saving ? 'Saving…' : 'Save category'}</button><button type="button" disabled={saving} className={button} onClick={onClose}>Cancel</button>{category && <button type="button" disabled title="Disable this category instead; product references cannot yet be verified." className={button}>Delete unavailable</button>}</div>
-    </form>
-  </dialog>;
+export function AdminCategories({onNavigate}:{onNavigate:(path:string)=>void}){
+ const {state,retry}=useCategories(true),writable=useAdminWritePermission(),lock=useRef(false);
+ const [editing,setEditing]=useState<Category|'new'|null>(null),[confirm,setConfirm]=useState<Category|null>(null),[search,setSearch]=useState(''),[visibility,setVisibility]=useState('all'),[success,setSuccess]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const items=state.status==='ready'?state.items:[],enabled=items.filter(c=>c.enabled).length,filtered=items.filter(c=>(visibility==='all'||c.enabled===(visibility==='enabled'))&&c.name.normalize('NFKC').toLowerCase().includes(search.normalize('NFKC').toLowerCase().trim()));
+ async function status(category:Category,enabled:boolean){if(lock.current)return;if(!writable)throw new Error('Administrator permission is being checked. Please retry.');lock.current=true;setBusy(true);setSuccess('');setError('');try{await editCategory(category,{name:category.name,slug:category.slug,description:category.description,displayOrder:category.displayOrder,enabled});const uid=getAdminClients().auth.currentUser?.uid;if(uid)signalAdminChange(uid);setConfirm(null);setSuccess('Category '+(enabled?'enabled.':'disabled.'));}catch(failure){const message=categoryError(failure);setError(message);throw Error(message);}finally{lock.current=false;setBusy(false);}}
+ function details(c:Category){return <div className="category-identity"><span className="category-symbol"><Layers size={19}/></span><div><h2>{c.name}</h2>{c.description&&<p>{c.description}</p>}</div></div>;}
+ function badge(c:Category){return <span className="category-badge" data-enabled={c.enabled}>{c.enabled?<span aria-hidden="true">●</span>:<EyeOff size={12}/>} {c.enabled?'Enabled':'Disabled'}</span>;}
+ function link(c:Category){return c.enabled?<a className="category-shop-link" href={'/collections/'+c.slug} target="_blank" rel="noopener noreferrer">View in Shop<ArrowUpRight size={13}/></a>:<span className="category-hidden"><Lock size={13}/>Hidden on Shop</span>;}
+ function actions(c:Category){return <div className="category-row-actions"><button className="category-secondary" aria-label={'Edit '+c.name} disabled={busy} onClick={()=>{setSuccess('');setEditing(c);}}><Pencil size={13}/>Edit</button><button className={c.enabled?'category-secondary category-danger':'category-secondary category-enable'} aria-label={(c.enabled?'Disable ':'Enable ')+c.name} disabled={busy||!writable} onClick={()=>{setError('');setSuccess('');if(c.enabled)setConfirm(c);else void status(c,true).catch(()=>{});}}>{c.enabled?<EyeOff size={14}/>:<Eye size={14}/>} {c.enabled?'Disable':'Enable'}</button></div>;}
+ function reset(){setSearch('');setVisibility('all');}
+ return <section className="categories-workspace" aria-label="Categories management">
+  <header className="categories-heading"><div><div className="categories-title"><h1 tabIndex={-1}>Categories</h1>{state.status==='ready'&&<span>{items.length} Total Categories</span>}</div><p>Organize your sarees and control what appears in the shop.</p></div><button className="category-primary" disabled={state.status!=='ready'||!writable} onClick={()=>{setSuccess('');setEditing('new');}}><Plus size={16}/>Add category</button></header>
+  <div className="category-visibility-note"><Info size={18}/><p><strong>Visibility Note:</strong> Disabling a category hides it and its products from the storefront. Product draft/publish states remain unchanged.</p></div>
+  {success&&<p role="status" className="category-success">{success}</p>}{error&&!confirm&&<p role="alert" className="category-error">{error}</p>}
+  {state.status==='loading'&&<div aria-busy="true" className="category-loading"><p role="status">Loading categories...</p>{[0,1,2].map(n=><div key={n}/>)}</div>}
+  {state.status==='error'&&<div role="alert" className="category-error"><p>{state.message}</p><button className="category-secondary" onClick={retry}>Retry categories</button></div>}
+  {state.status==='ready'&&<><div className="category-list-filters"><label className="category-search"><Search size={17}/><input aria-label="Search categories" maxLength={80} placeholder="Search category name..." value={search} onChange={e=>setSearch(e.target.value)}/></label><label className="category-desktop-filter">Filter:<select aria-label="Filter categories by visibility" value={visibility} onChange={e=>setVisibility(e.target.value)}><option value="all">All ({items.length})</option><option value="enabled">Enabled ({enabled})</option><option value="disabled">Disabled ({items.length-enabled})</option></select></label><span className="category-sort-note"><ArrowUpDown size={14}/>Ordered by Display Order</span>{(search||visibility!=='all')&&<button className="category-text-button" onClick={reset}>Clear Filters</button>}</div><div className="category-mobile-filters">{[['all',`All (${items.length})`],['enabled',`Enabled (${enabled})`],['disabled',`Disabled (${items.length-enabled})`]].map(([value,label])=><button key={value} aria-pressed={visibility===value} onClick={()=>setVisibility(value)}>{label}</button>)}</div>
+  {!filtered.length?<div className="category-empty"><Layers size={28}/><h2>{items.length?'No Categories Found':'No categories yet.'}</h2><p>{items.length?'No categories match your search or visibility filter.':'Create a category to organize your sarees.'}</p>{items.length?<button className="category-secondary" onClick={reset}>Clear Filters</button>:null}</div>:<><div className="category-table-panel"><table className="category-table"><thead><tr><th>Category</th><th>Display Order</th><th>Visibility</th><th>Store Link</th><th>Actions</th></tr></thead><tbody>{filtered.map(c=><tr key={c.id} data-enabled={c.enabled}><td>{details(c)}</td><td><span className="category-order-value">{c.displayOrder}</span></td><td>{badge(c)}</td><td>{link(c)}</td><td>{actions(c)}</td></tr>)}</tbody></table></div><div className="category-mobile-cards">{filtered.map(c=><article key={c.id} data-enabled={c.enabled}><header><div><span className="category-order-tag">Order #{c.displayOrder}</span>{badge(c)}</div>{link(c)}</header>{details(c)}{actions(c)}</article>)}</div></>}
+  <footer className="category-list-footer"><p>Showing {filtered.length} of {items.length} categories</p><div><span>● {enabled} Enabled</span><span>● {items.length-enabled} Hidden</span></div></footer></>}
+  {editing&&<CategoryEditor category={editing==='new'?undefined:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);setSuccess('Category saved.');}}/>}{confirm&&<VisibilityConfirm name={confirm.name} onClose={()=>setConfirm(null)} onConfirm={()=>status(confirm,false)}/>}
+ </section>;
 }

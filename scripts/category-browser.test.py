@@ -1,123 +1,53 @@
-"""Category mutations through the real browser SDK, loopback emulators only."""
-import os
+"""Approved Categories layout and real category writes against loopback emulators."""
+import os,re,subprocess
 from pathlib import Path
-from playwright.sync_api import sync_playwright
-
+from playwright.sync_api import sync_playwright,expect
 assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
 assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
-origin='http://127.0.0.1:3100'
-
+origin='http://127.0.0.1:3100';screens=Path('.cache/categories-stitch');screens.mkdir(parents=True,exist_ok=True)
+def fixture(action):return subprocess.run(['node','--import','tsx','scripts/categories-fixture-control.ts',action],check=True,capture_output=True,text=True).stdout.strip()
 with sync_playwright() as p:
-    browser=p.chromium.launch()
-    context=browser.new_context(viewport={'width':390,'height':844})
-    for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**']:
-        context.route(pattern,lambda route:route.abort())
-    page=context.new_page()
-    errors=[]
-    page.on('pageerror',lambda error:errors.append(str(error)))
-    page.goto(origin+'/admin/products')
-    page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com')
-    page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
-    page.get_by_role('button',name='Sign In',exact=True).click()
-    page.get_by_role('heading',name='Products',exact=True).wait_for()
-    page.goto(origin+'/admin/categories')
-    page.get_by_text('No categories yet.',exact=True).wait_for()
-
-    def create(name,order,enabled):
-        page.get_by_role('button',name='Add category',exact=True).click()
-        dialog=page.get_by_role('dialog')
-        dialog.get_by_label('Name',exact=True).fill(name)
-        dialog.get_by_label('Description (optional)',exact=True).fill('Emulator-only category description')
-        dialog.get_by_label('Display order',exact=True).fill(str(order))
-        if enabled:dialog.get_by_label('Enabled on storefront',exact=True).check()
-        dialog.locator('form').evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}')
-        page.get_by_text('Category saved.',exact=True).wait_for()
-        assert page.get_by_role('dialog').count()==0
-        page.get_by_role('heading',name=name,exact=True).wait_for()
-
-    create('Browser Alpha',20,True)
-    assert page.get_by_role('heading',name='Browser Alpha',exact=True).count()==1
-    page.reload()
-    page.get_by_role('heading',name='Browser Alpha',exact=True).wait_for()
-    create('Browser Beta',10,True)
-    create('Browser Hidden',30,False)
-    assert page.locator('li h2').all_text_contents()==['Browser Beta','Browser Alpha','Browser Hidden']
-
-    # Client validation and server-enforced duplicate slug errors stay in dialog.
-    page.get_by_role('button',name='Add category',exact=True).click()
-    dialog=page.get_by_role('dialog')
-    dialog.get_by_label('Name',exact=True).fill('Different display name')
-    dialog.get_by_label('URL slug',exact=True).fill('Bad-Slug')
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    dialog.get_by_role('alert').filter(has_text='Use a slug').wait_for()
-    dialog.get_by_label('URL slug',exact=True).fill('browser-alpha')
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    dialog.get_by_role('alert').filter(has_text='already in use').wait_for()
-    dialog.get_by_role('button',name='Cancel',exact=True).click()
-    assert page.locator('li h2').count()==3
-
-    page.get_by_role('button',name='Edit Browser Alpha',exact=True).click()
-    dialog=page.get_by_role('dialog')
-    assert dialog.get_by_label('URL slug',exact=True).input_value()=='browser-alpha'
-    assert dialog.get_by_label('URL slug',exact=True).get_attribute('readonly') is not None
-    assert dialog.get_by_role('button',name='Delete unavailable',exact=True).is_disabled()
-    dialog.get_by_label('Name',exact=True).fill('Browser Renamed')
-    dialog.get_by_label('Display order',exact=True).fill('0')
-    Path('.cache/categories').mkdir(parents=True,exist_ok=True)
-    page.screenshot(path='.cache/categories/editor-390.png')
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    page.get_by_text('Category saved.',exact=True).wait_for()
-    page.get_by_role('heading',name='Browser Renamed',exact=True).wait_for()
-    assert page.locator('li h2').all_text_contents()==['Browser Renamed','Browser Beta','Browser Hidden']
-
-    public_context=browser.new_context(viewport={'width':390,'height':844})
-    public_context.route('https://firestore.googleapis.com/**',lambda route:route.abort())
-    public=public_context.new_page()
-    public.goto(origin+'/collections')
-    public.get_by_role('button',name='Browser Renamed',exact=True).wait_for()
-    assert public.get_by_role('button',name='Browser Hidden',exact=True).count()==0
-    names=public.locator('section button').all_text_contents()
-    assert names.index('Browser Renamed')<names.index('Browser Beta')
-    public.get_by_role('button',name='Browser Renamed',exact=True).click()
-    assert public.url==origin+'/collections/browser-alpha'
-    public.get_by_role('heading',name='Browser Renamed',exact=True).wait_for()
-    public.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
-    public.reload()
-    public.get_by_role('heading',name='Browser Renamed',exact=True).wait_for()
-
-    page.get_by_role('button',name='Edit Browser Renamed',exact=True).click()
-    dialog=page.get_by_role('dialog')
-    dialog.get_by_label('Enabled on storefront',exact=True).uncheck()
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    page.get_by_text('Category saved.',exact=True).wait_for()
-    public.get_by_role('heading',name='Category not found.',exact=True).wait_for()
-    public.goto(origin+'/collections/browser-hidden')
-    public.get_by_role('heading',name='Category not found.',exact=True).wait_for()
-    assert public.get_by_text('Browser Hidden',exact=True).count()==0
-
-    # Exercise a real persistence failure/retry without changing emulator rules.
-    page.get_by_role('button',name='Add category',exact=True).click()
-    dialog=page.get_by_role('dialog')
-    dialog.get_by_label('Name',exact=True).fill('Browser Retry')
-    def deny_commit(route):route.fulfill(status=403,content_type='application/json',body='{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Synthetic test denial"}}')
-    page.route('**/documents:commit*',deny_commit)
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    dialog.get_by_role('alert').filter(has_text='Permission denied').wait_for()
-    assert page.get_by_text('Category saved.',exact=True).count()==0
-    page.unroute('**/documents:commit*',deny_commit)
-    dialog.get_by_role('button',name='Save category',exact=True).click()
-    page.get_by_text('Category saved.',exact=True).wait_for()
-    assert page.get_by_role('heading',name='Browser Retry',exact=True).count()==1
-
-    for width in [360,390,430,768,1024,1440]:
-        page.set_viewport_size({'width':width,'height':900})
-        assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1')
-        page.get_by_role('button',name='Edit Browser Beta',exact=True).click()
-        dialog=page.get_by_role('dialog')
-        assert dialog.bounding_box()['width']<=width
-        assert dialog.get_by_label('Name',exact=True).bounding_box()['height']>=(40 if width<768 else 38)
-        if width==1440:page.screenshot(path='.cache/categories/editor-1440.png')
-        dialog.get_by_role('button',name='Cancel',exact=True).click()
-    assert not errors,errors
-    print('Category browser persistence, duplicate submissions/slugs, validation, immutable URLs, ordering, visibility, failure/retry, deletion lock and six widths passed')
-    browser.close()
+ browser=p.chromium.launch();ctx=browser.new_context(viewport={'width':1440,'height':1000});ctx.grant_permissions(['clipboard-read','clipboard-write'],origin=origin)
+ for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**']:ctx.route(pattern,lambda route:route.abort())
+ ctx.route('https://res.cloudinary.com/parinaya-emulator/**',lambda r:r.fulfill(status=200,content_type='image/jpeg',body=Path('public/assets/customer-auth-portrait.jpg').read_bytes()))
+ page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));accept={'value':True};page.on('dialog',lambda d:d.accept() if accept['value'] else d.dismiss())
+ page.goto(origin+'/admin/categories');page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click()
+ listing=page.get_by_role('region',name='Categories management',exact=True);listing.get_by_role('heading',name='No categories yet.',exact=True).wait_for();assert listing.get_by_role('button',name=re.compile('Delete')).count()==0
+ def add(name,order,enabled):
+  listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill(name);d.get_by_label('Description (optional)',exact=True).fill('Owner supplied collection description.');d.get_by_label('Display order',exact=True).fill(str(order))
+  if enabled:d.get_by_label('Enabled on storefront',exact=True).check()
+  d.locator('form').evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}');expect(d).not_to_be_visible();listing.get_by_text('Category saved.',exact=True).wait_for()
+ add('Browser Alpha',20,True);page.reload();listing.get_by_role('heading',name='Browser Alpha',exact=True).wait_for();add('Browser Beta',10,True);add('Browser Hidden',30,False)
+ assert listing.locator('table tbody h2').all_text_contents()==['Browser Beta','Browser Alpha','Browser Hidden']
+ listing.get_by_label('Search categories',exact=True).fill('BETA');expect(listing.locator('table tbody tr')).to_have_count(1);listing.get_by_label('Filter categories by visibility',exact=True).select_option('disabled');listing.get_by_role('heading',name='No Categories Found',exact=True).wait_for();listing.get_by_role('button',name='Clear Filters',exact=True).first.click();expect(listing.locator('table tbody tr')).to_have_count(3)
+ # Duplicate slug: retain values, expose a recovery field, and preserve one allocated create ID.
+ listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill('Browser Alpha');d.get_by_role('button',name='Create Category',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('already in use');expect(d.get_by_label('Name',exact=True)).to_have_value('Browser Alpha');d.get_by_label('URL slug',exact=True).fill('Bad-Slug');d.get_by_role('button',name='Create Category',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('Use a slug');d.get_by_label('URL slug',exact=True).fill('browser-unique');d.get_by_label('Name',exact=True).fill('Browser Unique');d.get_by_role('button',name='Create Category',exact=True).click();expect(d).not_to_be_visible()
+ listing.get_by_role('button',name='Edit Browser Alpha',exact=True).click();d=page.get_by_role('dialog',name='Edit category',exact=True);link=d.get_by_label('Category link',exact=True).input_value();assert link==origin+'/collections/browser-alpha' and d.get_by_label('Category link',exact=True).get_attribute('readonly') is not None
+ d.get_by_role('button',name='Copy Link',exact=True).click();expect(d.get_by_role('status')).to_contain_text('Link copied');assert page.evaluate('navigator.clipboard.readText()')==link
+ d.get_by_label('Name',exact=True).fill('Browser Renamed');d.get_by_label('Display order',exact=True).fill('1');d.get_by_role('button',name='Decrease display order',exact=True).click();expect(d.get_by_label('Display order',exact=True)).to_have_value('0');expect(d.get_by_label('Category link',exact=True)).to_have_value(link)
+ d.get_by_label('Name',exact=True).focus();page.evaluate("window.__category=document.activeElement;for(let i=0;i<6;i++){dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));}");assert page.evaluate('document.activeElement===window.__category && window.__category.isConnected');expect(d.get_by_label('Name',exact=True)).to_have_value('Browser Renamed')
+ for width in [320,390,768,1024,1440,1920]:
+  page.set_viewport_size({'width':width,'height':1000});page.screenshot(path=str(screens/f'editor-{width}.png'));assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width;assert d.bounding_box()['width']<=width
+ page.set_viewport_size({'width':390,'height':480});d.get_by_role('button',name='Copy Link',exact=True).click();assert d.locator('footer').bounding_box()['y']+d.locator('footer').bounding_box()['height']<=480;page.screenshot(path=str(screens/'editor-short-viewport.png'));page.set_viewport_size({'width':1440,'height':1000})
+ d.get_by_role('button',name='Save Changes',exact=True).click();expect(d).not_to_be_visible();listing.get_by_role('heading',name='Browser Renamed',exact=True).wait_for();assert listing.locator('table tbody h2').all_text_contents()==['Browser Renamed','Browser Unique','Browser Beta','Browser Hidden']
+ fixture('attach-products');products=fixture('products-fingerprint')
+ public_ctx=browser.new_context();public_ctx.route('https://res.cloudinary.com/parinaya-emulator/**',lambda r:r.fulfill(status=200,content_type='image/jpeg',body=Path('public/assets/customer-auth-portrait.jpg').read_bytes()));public=public_ctx.new_page();public.goto(origin+'/collections/browser-alpha');public.get_by_role('heading',name='Published category fixture saree',exact=True).wait_for();assert public.get_by_role('heading',name='Draft category fixture saree',exact=True).count()==0
+ listing.get_by_role('button',name='Disable Browser Renamed',exact=True).click();confirm=page.get_by_role('dialog',name='Disable category?',exact=True);expect(confirm).to_contain_text('Customers will no longer see');page.screenshot(path=str(screens/'disable-desktop.png'));confirm.get_by_role('button',name='Keep Enabled',exact=True).click();assert products==fixture('products-fingerprint')
+ listing.get_by_role('button',name='Disable Browser Renamed',exact=True).click();confirm.get_by_role('button',name='Disable Category',exact=True).click();listing.get_by_text('Category disabled.',exact=True).wait_for();public.reload();public.get_by_role('heading',name='Category not found.',exact=True).wait_for();assert products==fixture('products-fingerprint')
+ listing.get_by_role('button',name='Enable Browser Renamed',exact=True).click();listing.get_by_text('Category enabled.',exact=True).wait_for();public.reload();public.get_by_role('heading',name='Published category fixture saree',exact=True).wait_for();assert public.get_by_role('heading',name='Draft category fixture saree',exact=True).count()==0;assert products==fixture('products-fingerprint')
+ # Disabling through the editor stages a confirmation, not an immediate visibility write.
+ listing.get_by_role('button',name='Edit Browser Renamed',exact=True).click();d=page.get_by_role('dialog',name='Edit category',exact=True);d.get_by_label('Disabled on storefront',exact=True).check();d.get_by_role('button',name='Save Changes',exact=True).click();confirm.get_by_role('button',name='Keep Enabled',exact=True).click();expect(d).to_be_visible();d.get_by_label('Enabled on storefront',exact=True).check();d.get_by_role('button',name='Cancel',exact=True).click();expect(d).not_to_be_visible()
+ # A real concurrent category write rejects the stale form without resetting local values.
+ listing.get_by_role('button',name='Edit Browser Renamed',exact=True).click();d=page.get_by_role('dialog',name='Edit category',exact=True);d.get_by_label('Name',exact=True).fill('Kept local name');fixture('conflict');d.get_by_role('button',name='Save Changes',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('changed while you were editing');expect(d.get_by_label('Name',exact=True)).to_have_value('Kept local name');d.get_by_role('button',name='Cancel',exact=True).click()
+ # Failed commits retain input and retry the same creation, never reporting success early.
+ listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill('Browser Retry')
+ def deny(route):route.fulfill(status=403,content_type='application/json',body='{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Synthetic denial"}}')
+ page.route('**/documents:commit*',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('Permission denied');expect(d.get_by_label('Name',exact=True)).to_have_value('Browser Retry');page.unroute('**/documents:commit*',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d).not_to_be_visible();listing.get_by_role('heading',name='Browser Retry',exact=True).wait_for()
+ for width in [320,390,768,1024,1440,1920]:
+  page.set_viewport_size({'width':width,'height':1000});page.screenshot(path=str(screens/f'list-{width}.png'),full_page=True);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
+ page.set_viewport_size({'width':390,'height':900});listing.get_by_role('button',name=re.compile('^Enabled \(')).click();assert listing.locator('.category-mobile-cards article').count()==2;listing.get_by_role('button',name='Clear Filters',exact=True).click()
+ listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).focus();page.keyboard.press('Shift+Tab');expect(d.get_by_role('button',name='Close category editor',exact=True)).to_be_focused();page.keyboard.press('Escape');expect(d).not_to_be_visible();expect(listing.get_by_role('button',name='Add category',exact=True)).to_be_focused();assert page.evaluate('document.body.style.overflow')!='hidden'
+ listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill('Unsaved category');accept['value']=False;page.keyboard.press('Escape');expect(d).to_be_visible();accept['value']=True;page.keyboard.press('Escape');expect(d).not_to_be_visible()
+ assert listing.get_by_role('button',name=re.compile('Delete')).count()==0;assert products==fixture('products-fingerprint');assert not errors,errors
+ print('Categories Stitch browser passed: stable links/copy, ordering/search/filters, create/duplicates/retry, concurrent edits, disable confirmations, unchanged products/drafts, focus/Escape/unsaved/background, six widths and short viewport')
+ browser.close()

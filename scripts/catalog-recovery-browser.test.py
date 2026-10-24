@@ -7,7 +7,7 @@ assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
 origin='http://127.0.0.1:3100'
 labels=['Dashboard','Products','Categories','Orders','Customers','Inventory','Marketing / Sale Campaigns','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Settings']
 routes=['dashboard','products','categories','orders','customers','inventory','marketing','banners','website-content','contact-information','about','enquiries','settings']
-headings=['Dashboard','Products','Manage Categories','Orders','Customers','Inventory','Coupons','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Store Settings']
+headings=['Dashboard','Products','Categories','Orders','Customers','Inventory','Coupons','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Store Settings']
 screens=Path('.cache/catalog-recovery');screens.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
  browser=p.chromium.launch();ctx=browser.new_context(viewport={'width':1440,'height':900});page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))

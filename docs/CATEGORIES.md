@@ -1,3 +1,40 @@
+# Approved Stitch Categories interface - 24 October 2026
+
+The current Categories screen uses the owner-approved desktop table, mobile cards, right-hand editor drawer and mobile bottom sheet. This section supersedes the older list/dialog layout notes below; the existing repository, schema, rules and slug reservations are unchanged.
+
+## Current files and behavior
+
+- `src/admin/AdminCategories.tsx`: real category list, full-list name search, enabled/disabled filters, accurate totals, existing display-order sorting, public links, edit and enable/disable actions, loading/error/empty/no-results states. It re-exports the shared editor so Products imports stay compatible.
+- `src/admin/categories/CategoryEditor.tsx`: shared add/edit drawer/sheet, validated name/description/order, order stepper, staged visibility, generated/permanent link, Copy Link, failed-save retention and duplicate-submit protection. The allocated create ID remains fixed for safe retries. Renaming keeps the original slug and reservation. Existing timestamp conflict checks reject stale edits without replacing the form.
+- `src/admin/categories/VisibilityConfirm.tsx`: reusable confirmation before a live category is disabled, from either the list or editor Save. Cancel leaves live visibility untouched. Enabling never publishes drafts.
+- `src/admin/categories/categories.css`: category-only styling using the existing locally hosted Lora font, maroon/ivory/gold theme and compact baseline. The shared shell, 192px sidebar and existing header behavior are unchanged; no second density reduction, CDN, simulated frame or scaling is added.
+- `scripts/category-browser.test.py`, `categories-fixture-control.ts`: guarded loopback-only functional/visual checks and synthetic linked products/concurrent-edit fixtures. Existing Products quick-create assertions use the shared editor's Create Category action; the recovery browser check expects the new Categories heading.
+
+Successful writes use the same `createCategory` / `editCategory` operations and live category subscriptions. They also emit the existing administrator change signal for affected views. Category saves write no products, stock, assignments, orders or customer records. The editor captures its initial snapshot once, so background category/auth refreshes cannot overwrite dirty fields. Discard prompts occur on actual Cancel/close/navigation, not focus or visibility changes. Native dialogs include focus containment/restoration, Escape handling, scroll locking, independently scrollable content and a persistent footer on small/short viewports.
+
+Both administrator requirements remain enforced by the unchanged Firestore rules: `admin: true` and an enabled server-managed access record. The UI offers no Delete control; deletion remains denied by the existing rules.
+
+## Necessary reference adjustments
+
+- Keep the approved compact shared shell and Lora rather than the prototype's alternate shell/fonts.
+- Omit prototype simulators, unsupported emblem uploads, fictional per-category product counts, certification/heritage labels and unrelated bottom navigation.
+- Preserve existing 0-9999 display-order validation and name/ID tie-breaking, rather than implying that a number grants a special Primary Feature placement.
+- Description remains optional, at most 240 characters on one line; the textarea provides visual wrapping but does not change the schema.
+- Generate links from the actual current site origin and `/collections/{slug}`, not an assumed custom domain. Creation includes an optional Customize generated link control for duplicate or non-Latin-name recovery. Editing exposes only the read-only permanent link.
+- Visibility choices in the editor are staged until Save; an existing enabled category requires confirmation before a disabling write. No product is silently published/unpublished.
+
+## Validation and local acceptance
+
+Completed locally: typecheck, all 96 existing unit tests and production build passed. Two focused emulator suites passed: category persistence/authorization/unique reservations/deletion protection and product CRUD/category visibility/security. The Categories browser suite and full Products browser suite passed together, including Products -> Create Category -> refresh/select without lost inputs/uploads.
+
+Category browser checks cover creation and duplicate submissions, duplicate-link recovery, copy/permanent URLs, renaming, ordering, search/status/clear/no-results, empty state, failed-commit retry, stale concurrent edits, both disable entry points and cancellation, re-enabling without publishing drafts, and unchanged product-record fingerprints. Focus/Escape, actual-discard prompts, background focus/visibility preservation, body scroll-lock cleanup and a 390x480 short viewport passed. Screenshots/overflow checks cover 320, 390, 768, 1024, 1440 and 1920px at normal zoom; desktop/mobile list, drawer/sheet and confirmation were visually compared with the references. Screenshots use only synthetic emulator data under ignored `.cache/categories-stitch/`.
+
+Local acceptance: use the existing emulator harness and open `/admin/categories`. Search/filter/clear, add a category, edit its name/order and copy the unchanged link. Cancel a disable prompt, then confirm it and re-enable; only visibility should change. From a product editor, Create Category, save/assign it and confirm the entered product remains intact. Close a dirty sheet once with discard refused, then accept discard; switching tabs must preserve the form.
+
+Release requires only the normal owner-controlled application release. No new rules/indexes, production preparation or dependencies are required. Hosted acceptance remains separate from local fixtures. Nothing was committed, pushed, deployed, published or changed in production during this task.
+
+---
+
 # Firestore categories — 17 October 2026
 
 Subsequent product milestone: [PRODUCTS.md](PRODUCTS.md) connects real product CRUD, canonical `categoryId`, inventory and verified Cloudinary media. It supersedes this document's statements that products are unconnected. Category management and deletion denial remain intact; disabling a category hides its published products too.
