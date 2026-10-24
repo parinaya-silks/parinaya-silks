@@ -8,6 +8,7 @@ import handler from '../api/catalog.ts';
 import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
 import {doc,getDoc,setDoc,updateDoc,deleteDoc} from 'firebase/firestore';
 import {serverFirebase} from '../server/firebase.ts';
+import {FieldValue} from 'firebase-admin/firestore';
 import {catalogService} from '../server/catalog.ts';
 import {emptyProduct,productInput,quantity,type ProductRecord} from '../src/products/model.ts';
 
@@ -79,6 +80,15 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     response=await fetch(api);publicPage=await response.json();assert.equal(publicPage.items[0].id,id);
     response=await fetch(api+'?slug='+draft.slug);assert.equal(response.status,200);
     const renamed={...productInput(saved),name:'Renamed saree'};saved=await save(renamed,saved.revision);assert.equal(saved.slug,draft.slug);
+    await db.doc(`products/${id}`).update({unrelatedLegacyField:{keep:true},blouseDetails:'Legacy blouse details'});
+    saved=await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord;
+    saved=await save({...productInput(saved),pricePaise:saved.pricePaise+1,originalPricePaise:null},saved.revision);
+    assert.deepEqual((await db.doc(`products/${id}`).get()).get('unrelatedLegacyField'),{keep:true});assert.equal(saved.blouseDetails,'Legacy blouse details');assert.equal(saved.sku,'PS-EMULATOR');
+    const beforeConcurrent=productInput(saved),beforeRevision=saved.revision;
+    await db.doc(`products/${id}`).update({inventory:{mode:'simple',quantity:3},revision:beforeRevision+1});
+    await assert.rejects(save({...beforeConcurrent,description:'Price or photo editing must not restore sold stock'},beforeRevision),{code:'conflict'});
+    assert.equal((await db.doc(`products/${id}`).get()).get('inventory.quantity'),3);
+    saved=await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord;
     const stale=saved.revision;
     const stockRace=await Promise.allSettled([save({...productInput(saved),inventory:{mode:'simple',quantity:5,variants:[]}},stale),save({...productInput(saved),inventory:{mode:'simple',quantity:6,variants:[]}},stale)]);assert.equal(stockRace.filter(item=>item.status==='fulfilled').length,1);assert.equal(stockRace.filter(item=>item.status==='rejected').length,1);
     saved=await service.privileged(tokens.admin,{action:'get',id}) as ProductRecord;
@@ -103,6 +113,8 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     await db.doc(`products/${orphan}`).update({categoryId:missingCategory});
     const retained=await save({...orphanDraft,categoryId:missingCategory},1,operation(),orphan);
     assert.equal(retained.categoryId,missingCategory);assert.equal(retained.status,'Draft');
+    await db.doc(`products/${orphan}`).update({fabric:FieldValue.delete(),weightGrams:FieldValue.delete(),newArrival:FieldValue.delete()});
+    const legacy=await service.privileged(tokens.admin,{action:'get',id:orphan}) as ProductRecord;assert.equal(legacy.fabric,'');assert.equal(legacy.weightGrams,null);assert.equal(legacy.newArrival,false);
     await assert.rejects(save({...orphanDraft,categoryId:missingCategory,status:'Published'},2,operation(),orphan));
   } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await environment.clearFirestore();for(const uid of users)await auth.deleteUser(uid);await environment.cleanup();}
 });

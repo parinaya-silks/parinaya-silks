@@ -29,7 +29,7 @@ export function AdminCategories({ onNavigate }: { onNavigate: (path: string) => 
   </section>;
 }
 
-function CategoryEditor({ category, onClose, onSaved }: { category?: Category; onClose: () => void; onSaved: () => void }) {
+export function CategoryEditor({ category, onClose, onSaved }: { category?: Category; onClose: () => void; onSaved: (id:string) => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const saveLock = useRef(false);
   const id = useRef(category?.id || '');
@@ -51,7 +51,7 @@ function CategoryEditor({ category, onClose, onSaved }: { category?: Category; o
     try {
       if (category) await editCategory(category, valid);
       else { id.current ||= allocateCategoryId(); await createCategory(id.current, valid); }
-      onSaved();
+      onSaved(id.current);
     } catch (failure) { setError(categoryError(failure)); }
     finally { saveLock.current = false; setSaving(false); }
   };

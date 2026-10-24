@@ -1,311 +1,36 @@
-import {AdminIcon} from './AdminIcon.tsx';
-import React, { useState, useMemo } from 'react';
-import { Product } from '../types/index.ts';
-import { formatINR } from '../utils/pricing.ts';
-
-interface AdminProductsProps {
-  unavailable?: boolean;
-  products: Product[];
-  onNavigate: (path: string) => void;
-  onAdjustStock: (product: Product, delta: number) => void;
-  onToggleStatus: (product: Product) => void;
+import React,{useEffect,useRef,useState} from 'react';
+import {Plus,Search,SlidersHorizontal,Download,X,MoreHorizontal,Pencil,Eye,Archive,ChevronLeft,ChevronRight,Package} from 'lucide-react';
+import {quantity,discount,type ProductRecord,type ProductStatus} from '../products/model.ts';
+import {useCategories} from '../categories/useCategories.ts';
+import {filterProducts,blankProducts,productsCsv,type ProductFilters} from './products/model.ts';
+import {trapDialogFocus} from './dialog.ts';
+export const productMoney=(paise:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:0,maximumFractionDigits:2}).format(paise/100);
+type Props={products:ProductRecord[];filters:ProductFilters;onFilters:(f:ProductFilters)=>void;onNavigate:(path:string)=>void;onStatus:(p:ProductRecord,status:ProductStatus)=>void;busy:boolean};
+export function AdminProducts({products,filters:f,onFilters,onNavigate,onStatus,busy}:Props){
+ const {state:categories,retry}=useCategories(true),[sheet,setSheet]=useState(false),[pending,setPending]=useState(f),[selection,setSelection]=useState<string[]>([]),[menu,setMenu]=useState(''),[archive,setArchive]=useState<ProductRecord>(),dialog=useRef<HTMLDialogElement>(null),confirm=useRef<HTMLDialogElement>(null);
+ const filtered=filterProducts(products,f),pages=Math.max(1,Math.ceil(filtered.length/10)),page=Math.min(f.page,pages),visible=filtered.slice((page-1)*10,page*10),categoryMap=new Map(categories.status==='ready'?categories.items.map(c=>[c.id,c]):[]);
+ const update=(change:Partial<ProductFilters>)=>{setSelection([]);onFilters({...f,...change,page:change.page??1});};
+ useEffect(()=>{setSelection([]);},[products]);
+ useEffect(()=>{if(!sheet)return;const previous=document.activeElement as HTMLElement;dialog.current?.showModal();return()=>{dialog.current?.close();previous?.focus();};},[sheet]);
+ useEffect(()=>{if(!archive)return;const previous=document.activeElement as HTMLElement;confirm.current?.showModal();return()=>{confirm.current?.close();previous?.focus();};},[archive]);
+ const count=[f.categories.length>0,f.status!=='All',f.stock!=='all'].filter(Boolean).length;
+ function exportCsv(){const rows=selection.length?filtered.filter(p=>selection.includes(p.id)):filtered,url=URL.createObjectURL(new Blob([productsCsv(rows)],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='parinaya-products.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function controls(){return <><label>Category<select aria-label="Category filter" value={f.categories[0]||''} onChange={e=>update({categories:e.target.value?[e.target.value]:[]})}><option value="">All categories</option>{categories.status==='ready'&&categories.items.map(c=><option key={c.id} value={c.id}>{c.name}{c.enabled?'':' (hidden)'}</option>)}</select></label><label>Status<select aria-label="Status filter" value={f.status} onChange={e=>update({status:e.target.value})}>{['All','Published','Draft','Archived'].map(s=><option key={s}>{s}</option>)}</select></label><label>Stock<select aria-label="Stock filter" value={f.stock} onChange={e=>update({stock:e.target.value})}><option value="all">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option></select></label></>;}
+ function stock(p:ProductRecord){const n=quantity(p);return <span className="product-stock" data-state={n===0?'out':n<=p.lowStockThreshold?'low':'in'}>● {n===0?'Out of stock':n<=p.lowStockThreshold?`${n} left — Low stock`:`${n} in stock`}{p.inventory.mode==='variants'?' · By colour':''}</span>;}
+ function price(p:ProductRecord){return <div className="product-price"><strong>{productMoney(p.pricePaise)}</strong>{p.originalPricePaise!==null&&<small>{p.originalPricePaise>p.pricePaise?<del>MRP {productMoney(p.originalPricePaise)}</del>:<>MRP {productMoney(p.originalPricePaise)}</>}{discount(p)>0&&<em>{discount(p)}% off</em>}</small>}</div>;}
+ function info(p:ProductRecord){const cover=p.images.find(i=>i.mediaId===p.coverMediaId)||p.images[0];return <div className="product-identity">{cover?<img src={cover.url} alt={cover.alt||p.name} loading="lazy"/>:<span className="product-no-photo"><Package size={22}/></span>}<div><h2>{p.name||'Untitled draft'}</h2><small>{p.sku||'Code not recorded'}{p.inventory.mode==='variants'&&` · ${p.inventory.variants?.length||0} colours`}</small></div></div>;}
+ function category(p:ProductRecord){const hidden=p.categoryId&&categories.status==='ready'&&categoryMap.get(p.categoryId)?.enabled!==true;return <div className="product-category"><span>{categoryMap.get(p.categoryId)?.name||p.categoryName||'Unassigned'}</span>{hidden&&<small>Category hidden on storefront</small>}</div>;}
+ function actions(p:ProductRecord){const hidden=categories.status!=='ready'||categoryMap.get(p.categoryId)?.enabled!==true;return <div className="product-actions"><button className="product-secondary" onClick={()=>onNavigate('/admin/products/edit/'+p.id)}><Pencil size={14}/><span>Edit Details</span></button><div className="product-menu-wrap"><button className="product-icon-button" aria-label={'Actions for '+(p.name||p.sku)} aria-expanded={menu===p.id} onClick={()=>setMenu(menu===p.id?'':p.id)}><MoreHorizontal size={18}/></button>{menu===p.id&&<div className="product-menu" onKeyDown={e=>{if(e.key==='Escape')setMenu('');}}><button disabled={p.status!=='Published'||hidden} onClick={()=>{window.open('/product/'+p.slug,'_blank','noopener,noreferrer');setMenu('');}}><Eye size={14}/>View on Website</button><button disabled={busy||(p.status!=='Published'&&hidden)} onClick={()=>{onStatus(p,p.status==='Published'?'Draft':'Published');setMenu('');}}>{p.status==='Published'?'Unpublish':'Publish Product'}</button>{p.status!=='Archived'&&<button disabled={busy} onClick={()=>{setArchive(p);setMenu('');}}><Archive size={14}/>Archive</button>}<button onClick={()=>setMenu('')}>Close menu</button></div>}</div></div>;}
+ return <section className="products-workspace" aria-label="Products catalogue">
+  <header className="products-heading"><div><div className="products-title"><h1>Products</h1><span>{products.length} sarees total</span></div><p>Manage your sarees, prices and availability.</p></div><div className="product-heading-actions"><button className="product-secondary" onClick={exportCsv} disabled={!filtered.length}><Download size={15}/>Export {selection.length?'Selected':'CSV'}</button><button className="product-primary" onClick={()=>onNavigate('/admin/products/new')}><Plus size={16}/>Add Product</button></div></header>
+  <div className="product-filter-panel"><div className="product-filter-row"><label className="product-search"><Search size={16}/><input aria-label="Search products" placeholder="Search product name or code" maxLength={160} value={f.search} onChange={e=>update({search:e.target.value})}/></label><div className="product-desktop-filters">{controls()}</div><label className="product-sort">Sort<select aria-label="Sort products" value={f.sort} onChange={e=>update({sort:e.target.value})}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name">Name A–Z</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select></label><button className="product-secondary product-filter-trigger" onClick={()=>{setPending(f);setSheet(true);}}><SlidersHorizontal size={16}/>Filters {count>0&&<b>{count}</b>}</button></div>
+  <div className="product-filter-summary"><div className="product-chips">{f.categories.map(id=><button key={id} onClick={()=>update({categories:f.categories.filter(c=>c!==id)})}>{categoryMap.get(id)?.name||'Category'}<X size={12}/></button>)}{f.status!=='All'&&<button onClick={()=>update({status:'All'})}>{f.status}<X size={12}/></button>}{f.stock!=='all'&&<button onClick={()=>update({stock:'all'})}>{f.stock==='in'?'In stock':f.stock==='low'?'Low stock':'Out of stock'}<X size={12}/></button>}{(count>0||f.search)&&<button className="product-clear" onClick={()=>update(blankProducts())}>Clear filters</button>}</div><p role="status">{filtered.length} sarees found</p></div>{categories.status==='error'&&<p role="alert">Category visibility unavailable. <button onClick={retry}>Retry categories</button></p>}</div>
+  {selection.length>0&&<div className="product-selection">{selection.length} selected <button onClick={exportCsv}>Export selected</button><button onClick={()=>setSelection([])}>Clear selection</button></div>}
+  {!filtered.length?<div className="product-empty"><Package size={30}/><h2>{products.length?'No products match these filters':'No products yet'}</h2><p>{products.length?'Try another search or clear filters.':'Add your first saree or save a draft.'}</p><button className="product-secondary" onClick={()=>products.length?update(blankProducts()):onNavigate('/admin/products/new')}>{products.length?'Clear filters':'Add Product'}</button></div>:<>
+  <div className="product-table-panel"><table className="product-table"><thead><tr><th className="product-select-cell"><input aria-label="Select this product page" type="checkbox" checked={visible.length>0&&visible.every(p=>selection.includes(p.id))} onChange={e=>setSelection(e.target.checked?visible.map(p=>p.id):[])}/></th><th>Product details</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody>{visible.map(p=><tr key={p.id}><td><input aria-label={'Select '+(p.name||p.sku)} type="checkbox" checked={selection.includes(p.id)} onChange={e=>setSelection(e.target.checked?[...selection,p.id]:selection.filter(id=>id!==p.id))}/></td><td>{info(p)}</td><td>{category(p)}</td><td>{price(p)}</td><td>{stock(p)}</td><td><span className="product-status" data-status={p.status}>{p.status}</span></td><td>{actions(p)}</td></tr>)}</tbody></table></div>
+  <div className="product-mobile-cards">{visible.map(p=><article key={p.id} className="product-mobile-card"><header>{category(p)}<span className="product-status" data-status={p.status}>{p.status}</span></header>{info(p)}{price(p)}<div className="product-mobile-stock">{stock(p)}<small>{p.inventory.mode==='variants'?`${p.inventory.variants?.length||0} colours`:'One stock count'}</small></div>{actions(p)}</article>)}</div>
+  <footer className="product-pagination"><span>Showing {(page-1)*10+1}–{Math.min(page*10,filtered.length)} of {filtered.length} sarees</span><div><button className="product-secondary" disabled={page===1} onClick={()=>update({page:page-1})}><ChevronLeft size={14}/>Previous</button><span>Page {page} of {pages}</span><button className="product-secondary" disabled={page===pages} onClick={()=>update({page:page+1})}>Next<ChevronRight size={14}/></button></div></footer></>}
+  {sheet&&<dialog ref={dialog} className="product-filter-sheet" aria-label="Filter Products" onKeyDown={trapDialogFocus} onCancel={e=>{e.preventDefault();setSheet(false);}}><header><div><h2>Filter Products</h2><p>Refine catalogue by category, status and stock</p></div><button autoFocus aria-label="Close product filters" onClick={()=>setSheet(false)}><X size={20}/></button></header><div className="product-sheet-body"><fieldset><legend>Saree category</legend><div className="product-category-options">{categories.status==='ready'&&categories.items.map(c=><label key={c.id}><input type="checkbox" checked={pending.categories.includes(c.id)} onChange={e=>setPending({...pending,categories:e.target.checked?[...pending.categories,c.id]:pending.categories.filter(id=>id!==c.id)})}/>{c.name}</label>)}</div></fieldset><fieldset><legend>Stock status</legend>{[['all','All stock'],['in','In Stock (Available Now)'],['low','Low stock (product threshold)'],['out','Out of stock']].map(([key,label])=><label key={key} className="product-radio"><input aria-label={label} type="radio" name="stock-filter" checked={pending.stock===key} onChange={()=>setPending({...pending,stock:key})}/>{label}<span>{filterProducts(products,{...pending,stock:key}).length}</span></label>)}</fieldset><fieldset><legend>Storefront status</legend><div className="product-segments">{['All','Published','Draft','Archived'].map(s=><button key={s} aria-pressed={pending.status===s} onClick={()=>setPending({...pending,status:s})}>{s}</button>)}</div></fieldset></div><footer><button className="product-secondary" onClick={()=>setPending(blankProducts())}>Reset</button><button className="product-primary" onClick={()=>{update(pending);setSheet(false);}}>Apply Filters ({filterProducts(products,pending).length} Results)</button></footer></dialog>}
+  {archive&&<dialog ref={confirm} className="product-confirm" aria-label="Archive product" onKeyDown={trapDialogFocus} onCancel={e=>{e.preventDefault();setArchive(undefined);}}><h2>Archive this saree?</h2><p>{archive.name||archive.sku}</p><p>It will be removed from the storefront. The product, photographs and historical orders will be kept.</p><footer><button autoFocus className="product-secondary" onClick={()=>setArchive(undefined)}>Cancel</button><button className="product-primary" disabled={busy} onClick={()=>{onStatus(archive,'Archived');setArchive(undefined);}}>Confirm Archive</button></footer></dialog>}
+ </section>;
 }
-
-export const AdminProducts: React.FC<AdminProductsProps> = ({
-  unavailable = true,
-  products,
-  onNavigate,
-  onAdjustStock,
-  onToggleStatus,
-}) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
-
-  const categories = [{id:'All',name:'All'},...new Map(products.map(p=>[p.categoryId||'',{id:p.categoryId||'',name:p.categoryLabel||'Unassigned'}])).values()];
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesCategory =
-        selectedCategory === 'All' ||
-        p.categoryId === selectedCategory;
-
-      const matchesStatus =
-        selectedStatus === 'All' || p.status === selectedStatus;
-
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        (p.slug || '').toLowerCase().includes(q) ||
-        p.weaveType.toLowerCase().includes(q) ||
-        p.colorName.toLowerCase().includes(q);
-
-      return matchesCategory && matchesStatus && matchesSearch;
-    });
-  }, [products, selectedCategory, selectedStatus, searchQuery]);
-
-  const totalValue = useMemo(() => {
-    return products.reduce((acc, p) => acc + p.price * p.stockCount, 0);
-  }, [products]);
-
-  const lowStockCount = useMemo(() => {
-    return products.filter((p) => p.stockCount <= p.lowStockThreshold && p.status === 'Published').length;
-  }, [products]);
-
-  return (
-    <div className="space-y-6 font-sans">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8DDD6]">
-        <div>
-          <span className="text-[11px] font-bold text-[#780D24] uppercase tracking-wider block">
-            Atelier Inventory &amp; Catalog
-          </span>
-          <h1 className="font-serif text-[24px] sm:text-[28px] font-semibold text-[#231919]">
-            Products &amp; Stock
-          </h1>
-          <p className="text-[13px] text-[#5F5552] mt-0.5">
-            Manage handloom silk catalog, zari specifications, pricing, and loom availability.
-          </p>
-        </div>
-
-        <button
-          onClick={() => onNavigate('/admin/products/new')}
-          className="h-10 px-4 bg-[#780D24] hover:bg-[#5E091B] text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
-        >
-          <AdminIcon name="add" className="text-[18px]"/>
-          <span>+ Add New Saree</span>
-        </button>
-      </div>
-
-      {/* 4 Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
-          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Total Catalog</span>
-          <div className="mt-1 text-[22px] font-bold text-[#231919]">{unavailable ? '—' : products.length} {unavailable ? '' : 'Sarees'}</div>
-          <span className="text-[11px] text-[#817567]">{unavailable?'Not connected':'Loaded products'}</span>
-        </div>
-
-        <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
-          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Inventory Value</span>
-          <div className="mt-1 text-[22px] font-bold text-[#780D24]">{unavailable ? '—' : formatINR(totalValue)}</div>
-          <span className="text-[11px] text-[#817567]">{unavailable?'Not connected':'Loaded inventory at selling price'}</span>
-        </div>
-
-        <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
-          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Low Stock Alerts</span>
-          <div className="mt-1 text-[22px] font-bold text-amber-700">{unavailable ? '—' : lowStockCount} {unavailable ? '' : 'Sarees'}</div>
-          <span className="text-[11px] text-amber-800 font-medium">{unavailable?'Not connected':'Loaded published products'}</span>
-        </div>
-
-        <div className="bg-white border border-[#E8DDD6] p-4 rounded-xl shadow-xs">
-          <span className="text-[11px] font-bold text-[#5F5552] uppercase">Published Active</span>
-          <div className="mt-1 text-[22px] font-bold text-emerald-700">
-            {unavailable ? '—' : products.filter((p) => p.status === 'Published').length} {unavailable ? '' : 'Sarees'}
-          </div>
-          <span className="text-[11px] text-emerald-800 font-medium">{unavailable?'Not connected':'Loaded published products'}</span>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white border border-[#E8DDD6] rounded-xl p-4 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <AdminIcon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#817567] text-[18px]"/>
-            <input
-              type="text"
-              placeholder="Search by saree title, SKU (e.g. PS-KJ), weave, color..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-9 pr-8 text-[13px] bg-[#FBF7F0] border border-[#E8DDD6] rounded-lg focus:outline-none focus:border-[#780D24] text-[#231919]"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#817567] hover:text-[#231919]"
-              >
-                <AdminIcon name="close" className="text-[16px]"/>
-              </button>
-            )}
-          </div>
-
-          {/* Status selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#5F5552] font-medium">Status:</span>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-9 px-3 border border-[#E8DDD6] rounded-lg text-xs bg-[#FBF7F0] text-[#231919] focus:outline-none focus:border-[#780D24]"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Published">Published</option>
-              <option value="Draft">Draft</option>
-              <option value="Archived">Archived</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-t border-[#F4EEE5] pt-3 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
-                selectedCategory === cat.id
-                  ? 'bg-[#780D24] text-white shadow-xs'
-                  : 'bg-[#F4EEE5] text-[#5F5552] hover:text-[#231919] hover:bg-[#E8DDD6]'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Products Table */}
-      <div className="bg-white border border-[#E8DDD6] rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-[13px]">
-            <thead>
-              <tr className="bg-[#F4EEE5] border-b border-[#E8DDD6] text-[11px] font-bold text-[#5F5552] uppercase tracking-wider">
-                <th className="py-3 px-4">Saree &amp; Weave</th>
-                <th className="py-3 px-4">SKU</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-4">Stock Level</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F4EEE5]">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#5F5552]">
-                    <span className="material-symbols-outlined text-[36px] text-[#B88A44] mb-2 block">
-                      inventory_2
-                    </span>
-                    <p className="font-serif text-[16px] text-[#231919]">{unavailable ? 'Products are not connected.' : products.length ? 'No products found.' : 'No products yet.'}</p>
-                    <p className="text-xs text-[#817567] mt-1">{unavailable ? 'This module is unavailable.' : products.length ? 'Try another search or filter.' : 'Add your first product or save a draft.'}</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((p) => {
-                  const isLow = p.stockCount <= p.lowStockThreshold;
-                  return (
-                    <tr key={p.id} className="hover:bg-[#FBF7F0] transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          {p.images.full ? <img
-                            src={p.images.full}
-                            alt={p.name}
-                            className="w-12 h-16 object-contain rounded border border-[#E8DDD6] bg-[#F4EEE5] shrink-0"
-                          /> : <span className="w-12 h-16 bg-[#F4EEE5] shrink-0 rounded flex items-center justify-center text-xs">No image</span>}
-                          <div className="min-w-0">
-                            <h3 className="font-serif text-[14px] font-semibold text-[#231919] leading-snug truncate max-w-xs">
-                              {p.name || 'Untitled draft'}
-                            </h3>
-                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#5F5552]">
-                              <span>{p.weaveType}</span>
-                              <span>•</span>
-                              <span>{p.colorName}</span>
-                              {p.silkMarkCertified && (
-                                <span className="bg-amber-100 text-amber-900 px-1 py-0.2 rounded text-[9px] font-bold">
-                                  Silk Mark
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#780D24] text-xs">
-                        {p.sku || 'SKU not set'}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-[#231919]">{formatINR(p.price)}</div>
-                        {p.originalPrice && (
-                          <div className="text-[11px] text-[#817567] line-through">
-                            {formatINR(p.originalPrice)}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onAdjustStock(p, -1)}
-                            disabled={p.stockCount <= 0}
-                            className="w-6 h-6 rounded border border-[#E8DDD6] bg-white hover:bg-[#F4EEE5] text-[#231919] flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed font-bold"
-                          >
-                            -
-                          </button>
-                          <span
-                            className={`font-bold font-mono px-2 py-0.5 rounded text-xs ${
-                              p.stockCount === 0
-                                ? 'bg-red-100 text-red-900'
-                                : isLow
-                                ? 'bg-amber-100 text-amber-900'
-                                : 'bg-emerald-50 text-emerald-900'
-                            }`}
-                          >
-                            {p.stockCount}
-                          </span>
-                          <button
-                            onClick={() => onAdjustStock(p, 1)}
-                            className="w-6 h-6 rounded border border-[#E8DDD6] bg-white hover:bg-[#F4EEE5] text-[#231919] flex items-center justify-center font-bold"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => onToggleStatus(p)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
-                            p.status === 'Published'
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                              : 'bg-stone-100 text-stone-700 border border-stone-300'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              p.status === 'Published' ? 'bg-emerald-600' : 'bg-stone-400'
-                            }`}
-                          />
-                          <span>{p.status}</span>
-                        </button>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => onNavigate(`/admin/products/edit/${p.id}`)}
-                            className="p-1.5 rounded border border-[#E8DDD6] hover:border-[#780D24] text-[#780D24] hover:bg-[#F4EEE5] transition-colors"
-                            title="Edit Saree Details"
-                          >
-                            <AdminIcon name="edit" className="text-[16px]"/>
-                          </button>
-                          <button
-                            onClick={() => window.open(`/product/${p.slug || p.id}`, '_blank', 'noopener,noreferrer')}
-                            className="p-1.5 rounded border border-[#E8DDD6] hover:border-[#B88A44] text-[#5F5552] hover:bg-[#F4EEE5] transition-colors"
-                            title="View on Storefront"
-                          >
-                            <AdminIcon name="visibility" className="text-[16px]"/>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};

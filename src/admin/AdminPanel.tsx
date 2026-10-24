@@ -27,7 +27,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
     const next = destination === '/' ? '/' : safeAdminDestination(destination);
-    window.history.pushState({customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
+    window.history.pushState({productsContext:window.history.state?.productsContext,customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
     window.dispatchEvent(new PopStateEvent('popstate', { state: { skipUnsaved: true } }));
     window.scrollTo(0, 0);
   };

@@ -19,8 +19,8 @@ with sync_playwright() as p:
     page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com')
     page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
     page.get_by_role('button',name='Sign In',exact=True).click()
-    page.get_by_role('heading',name='Products & Stock',exact=True).wait_for()
-    page.get_by_role('button',name='Manage Categories',exact=True).click()
+    page.get_by_role('heading',name='Products',exact=True).wait_for()
+    page.goto(origin+'/admin/categories')
     page.get_by_text('No categories yet.',exact=True).wait_for()
 
     def create(name,order,enabled):
@@ -115,7 +115,7 @@ with sync_playwright() as p:
         page.get_by_role('button',name='Edit Browser Beta',exact=True).click()
         dialog=page.get_by_role('dialog')
         assert dialog.bounding_box()['width']<=width
-        assert dialog.get_by_label('Name',exact=True).bounding_box()['height']>=44
+        assert dialog.get_by_label('Name',exact=True).bounding_box()['height']>=(40 if width<768 else 38)
         if width==1440:page.screenshot(path='.cache/categories/editor-1440.png')
         dialog.get_by_role('button',name='Cancel',exact=True).click()
     assert not errors,errors

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { FieldPath, FieldValue, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
-import { MAX_IMAGE_BYTES, ProductError, productFields, validateProduct, type ProductRecord, type ProductImage } from '../src/products/model.ts';
+import { MAX_IMAGE_BYTES, ProductError, productFields, emptyProduct, validateProduct, type ProductRecord, type ProductImage } from '../src/products/model.ts';
 import type { CloudinaryMedia, UploadTicket } from './cloudinary.ts';
 import { CatalogConfigurationError } from './errors.ts';
 import {loginAppearanceService} from './loginAppearance.ts';
@@ -51,7 +51,9 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
     const data=document.data()!;
     if(data.schemaVersion!==1) throw new ProductError('schema','This product needs an owner-reviewed schema migration.');
-    const input=Object.fromEntries(productFields.map(key=>[key,data[key]]));
+    const optionalDefaults=emptyProduct();
+    const optional=new Set(['originalPricePaise','fabric','weaveType','zariType','colorName','colorHex','sareeLength','blouseIncluded','blouseDetails','careInstructions','weightGrams','featured','newArrival']);
+    const input=Object.fromEntries(productFields.map(key=>[key,data[key]===undefined&&optional.has(key)?optionalDefaults[key]:data[key]]));
     input.images=(data.images||[]).map(({mediaId,alt}:ProductImage)=>({mediaId,alt}));
     const clean=validateProduct(input);
     const images:ProductImage[]=data.images.map((item:ProductImage)=>Object.fromEntries((['mediaId','alt','assetId','publicId','url','width','height','bytes','format','version'] as const).map(key=>[key,item[key]])));

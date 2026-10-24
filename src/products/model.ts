@@ -45,7 +45,7 @@ export function validateProduct(value: unknown): ProductInput {
   if(!/^#[0-9a-fA-F]{6}$/.test(result.colorHex)) errors.colorHex='Choose a valid colour.';
   result.pricePaise=integer('pricePaise',100000000);
   result.originalPricePaise=value.originalPricePaise===null?null:integer('originalPricePaise',100000000);
-  if(result.originalPricePaise!==null && result.originalPricePaise<=result.pricePaise) errors.originalPricePaise='Original price must exceed the selling price; otherwise leave it empty.';
+  if(result.originalPricePaise!==null && result.originalPricePaise<result.pricePaise) errors.originalPricePaise='Original price cannot be below the selling price; otherwise leave it empty.';
   result.lowStockThreshold=integer('lowStockThreshold',1000000);
   result.weightGrams=value.weightGrams===null?null:integer('weightGrams',100000);
   for(const key of ['blouseIncluded','featured','newArrival'] as const) { if(typeof value[key]!=='boolean') errors[key]='Choose Yes or No.'; else result[key]=value[key]; }

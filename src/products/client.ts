@@ -21,18 +21,21 @@ export function publicCatalog(cursor?:string,options:Record<string,string>={}):P
 export async function publicProduct(slug:string):Promise<PublicProductRecord> {return response(await fetch(`/api/catalog?slug=${encodeURIComponent(slug)}`,{cache:'no-store',signal:AbortSignal.timeout(15000)}));}
 export const newOperation=()=>crypto.randomUUID().replaceAll('-','');
 export const saveProduct=(id:string,expectedRevision:number,operationId:string,product:ProductInput)=>catalogAction<ProductRecord>({action:'save',id,expectedRevision,operationId,product});
-export async function uploadImage(file:File,productId:string,mediaId:string,onProgress:(progress:number)=>void) {
-  const params=await catalogAction<Record<string,string>>({action:'sign',productId,mediaId,type:file.type,size:file.size});
-  await uploadSignedImage(file,params,onProgress);
-  return catalogAction<ProductImage>({action:'verify',productId,mediaId});
+export async function uploadImage(file:File,productId:string,mediaId:string,onProgress:(progress:number)=>void,signal?:AbortSignal) {
+  const params=await catalogAction<Record<string,string>>({action:'sign',productId,mediaId,type:file.type,size:file.size},signal);
+  await uploadSignedImage(file,params,onProgress,signal);
+  return catalogAction<ProductImage>({action:'verify',productId,mediaId},signal);
 }
 
-export async function uploadSignedImage(file:File,params:Record<string,string>,onProgress:(progress:number)=>void){
+export async function uploadSignedImage(file:File,params:Record<string,string>,onProgress:(progress:number)=>void,signal?:AbortSignal){
   const form=new FormData();
   for(const [key,value]of Object.entries(params))if(!['uploadUrl','mediaId'].includes(key))form.append(key,String(value));
   form.append('file',file);
   await new Promise<void>((resolve,reject)=>{
     const xhr=new XMLHttpRequest();xhr.open('POST',params.uploadUrl);xhr.timeout=120000;
+    const abort=()=>{xhr.abort();reject(new ProductError('upload','Upload cancelled.'));};
+    if(signal?.aborted){abort();return;}signal?.addEventListener('abort',abort,{once:true});
+    xhr.onloadend=()=>signal?.removeEventListener('abort',abort);
     xhr.upload.onprogress=event=>{if(event.lengthComputable)onProgress(Math.round(event.loaded*100/event.total));};
     xhr.onerror=xhr.ontimeout=()=>reject(new ProductError('upload','Image upload was not confirmed. Retry to verify or upload again.'));
     xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new ProductError('upload','Image upload failed. Check the file or retry.'));

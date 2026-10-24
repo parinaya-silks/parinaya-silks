@@ -42,7 +42,7 @@ with sync_playwright() as p:
     page.get_by_role('heading', name='Add Product', exact=True).wait_for()
     print('Signed-out nested route, forged local role rejection, wrong credentials, approved login and session restoration passed')
 
-    for route, heading in [('/admin','Dashboard'),('/admin/orders','Orders'),('/admin/orders/test-order','Order details'),('/admin/products','Products & Stock'),('/admin/products/new','Add Product'),('/admin/products/edit/test-product','Edit Product'),('/admin/customers','Customers'),('/admin/coupons','Coupons'),('/admin/settings','Store Settings')]:
+    for route, heading in [('/admin','Dashboard'),('/admin/orders','Orders'),('/admin/orders/test-order','Order details'),('/admin/products','Products'),('/admin/products/new','Add Product'),('/admin/products/edit/test-product','Edit Product'),('/admin/customers','Customers'),('/admin/coupons','Coupons'),('/admin/settings','Store Settings')]:
         page.goto(origin+route)
         try:
             page.get_by_role('heading', name=heading, exact=True).wait_for(timeout=15000)

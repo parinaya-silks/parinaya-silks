@@ -1,3 +1,7 @@
+# Latest Products interface
+
+The owner-approved Products List and Add/Edit implementation is documented in [PRODUCTS_STITCH.md](PRODUCTS_STITCH.md). It supersedes the older form layout and loaded-page-only list behavior below.
+
 # Product workflow repair — 20 October 2026
 
 Local preparation only. No live product/category, media, permissions, rules or indexes were changed; no commit, push or deployment was made. The owner's product named **Test** is retained.
