@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {FieldValue,FieldPath,Timestamp,AggregateField,type Firestore,type Transaction,type Query} from 'firebase-admin/firestore';
-import {ProductError,validateProduct,productFields,type ProductInput} from '../src/products/model.ts';
+import {ProductError,validateProduct,emptyProduct,productFields,type ProductInput} from '../src/products/model.ts';
 import {couponInput,exact,referenceId,text,noteText,changeStock,lowStock,newlyLowStock} from '../src/orders/model.ts';
 import {normalizeMobile,mobileCountry} from '../src/customer/mobile.ts';
 import {ReportingQueryError,type ReportingQuery} from './errors.ts';
@@ -26,8 +26,25 @@ export function businessService(db:Firestore,access:(tx:Transaction,uid:string)=
   return db.runTransaction(async tx=>{await access(tx,uid);if(body.action==='notifications:read'){const id=text(body.id,150,true);if(!/^[a-zA-Z0-9_-]+$/.test(id))throw new ProductError('invalid','Invalid notification.');const event=await tx.get(db.doc('adminNotifications/'+id));if(!event.exists)throw new ProductError('not-found','Notification not found.');tx.set(pref.collection('items').doc(id),{readAt:stamp(),eventCreatedAt:event.data()!.createdAt});}else if(body.action==='notifications:readAll')tx.set(pref,{readAt:stamp()});else throw new ProductError('invalid','Unsupported notification action.');return {saved:true};});
  }
  async function inventory(uid:string,body:Record<string,unknown>){
-  exact(body,['action','productId','variantId','delta','expectedRevision','operationId','reason']);const id=text(body.productId,20,true),op=referenceId(body.operationId),reason=noteText(body.reason,500,true),delta=body.delta;if(!/^[A-Za-z0-9]{20}$/.test(id)||!Number.isSafeInteger(delta)||!delta||Math.abs(delta as number)>1000000||!Number.isSafeInteger(body.expectedRevision))throw new ProductError('invalid','Invalid stock adjustment.');const digest=hash(body),receipt=db.doc('inventoryAudit/'+op);
-  return db.runTransaction(async tx=>{await access(tx,uid);const [doc,recorded]=await Promise.all([tx.get(db.doc('products/'+id)),tx.get(receipt)]);if(recorded.exists){if(recorded.data()?.hash!==digest||recorded.data()?.actor!==uid)throw new ProductError('conflict','Operation already used.');return {saved:true};}if(!doc.exists)throw new ProductError('not-found','Product not found.');const old=doc.data()!;if(old.revision!==body.expectedRevision)throw new ProductError('conflict','Stock changed. Reload the product before adjusting.');if(body.variantId!==null&&(typeof body.variantId!=='string'||!/^[A-Za-z0-9_-]{1,40}$/.test(body.variantId)))throw new ProductError('invalid','Invalid colour.');const after=changeStock(old.inventory,body.variantId as string|null,delta as number);tx.update(doc.ref,{inventory:after,revision:old.revision+1,updatedAt:stamp()});tx.create(receipt,{hash:digest,actor:uid,productId:id,reason,before:old.inventory,after,createdAt:stamp()});if(newlyLowStock(old.inventory,after,old.lowStockThreshold))tx.create(db.doc('adminNotifications/adjust_'+op),{kind:'stock',target:'/admin/products/edit/'+id,label:'Stock is low or unavailable',createdAt:stamp()});return {saved:true};});
+  exact(body,['action','productId','variantId','delta','expectedRevision','operationId','reason'],['threshold','note']);
+  const id=text(body.productId,20,true),op=referenceId(body.operationId),reason=noteText(body.reason,500,true),note=body.note===undefined?'':noteText(body.note,500),delta=body.delta;
+  if(!/^[A-Za-z0-9]{20}$/.test(id)||!Number.isSafeInteger(delta)||Math.abs(delta as number)>1000000||!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<1||(body.threshold!==undefined&&(!Number.isSafeInteger(body.threshold)||(body.threshold as number)<0||(body.threshold as number)>1000000)))throw new ProductError('invalid','Invalid stock adjustment.');
+  if(body.variantId!==null&&(typeof body.variantId!=='string'||!/^[A-Za-z0-9_-]{1,40}$/.test(body.variantId)))throw new ProductError('invalid','Invalid colour.');
+  const digest=hash(body),receipt=db.doc('inventoryAudit/'+op);
+  return db.runTransaction(async tx=>{
+   await access(tx,uid);const [doc,recorded]=await Promise.all([tx.get(db.doc('products/'+id)),tx.get(receipt)]);
+   if(recorded.exists){if(recorded.data()?.hash!==digest||recorded.data()?.actor!==uid)throw new ProductError('conflict','Operation already used.');return {saved:true};}
+   if(!doc.exists)throw new ProductError('not-found','Product not found.');const old=doc.data()!;
+   if(old.revision!==body.expectedRevision)throw new ProductError('conflict','Stock changed. Load latest stock and review your adjustment again.');
+   // Validate the active inventory source before arithmetic, without rewriting other product fields.
+   let raw;try{if(old.schemaVersion!==1)throw Error();raw=validateProduct({...emptyProduct(),slug:'inventory-validation',inventory:old.inventory,lowStockThreshold:old.lowStockThreshold}).inventory;}catch{throw new ProductError('schema','Inventory requires owner review.');}
+   const threshold=body.threshold===undefined?old.lowStockThreshold:body.threshold;
+   if(delta===0&&threshold===old.lowStockThreshold)throw new ProductError('invalid','Change the quantity or product-wide threshold before saving.');
+   const after=changeStock(raw,body.variantId as string|null,delta as number);
+   tx.update(doc.ref,{...(delta!==0?{inventory:after}:{}),lowStockThreshold:threshold,revision:old.revision+1,updatedAt:stamp()});
+   tx.create(receipt,{hash:digest,actor:uid,productId:id,variantId:body.variantId,source:delta===0?'threshold':'manual',delta,reason,note,before:raw,after,thresholdBefore:old.lowStockThreshold,thresholdAfter:threshold,createdAt:stamp()});
+   if(newlyLowStock(raw,after,threshold as number,old.lowStockThreshold))tx.create(db.doc('adminNotifications/adjust_'+op),{kind:'stock',target:'/admin/products/edit/'+id,label:'Stock is low or unavailable',createdAt:stamp()});return {saved:true};
+  });
  }
  async function reports(body:Record<string,unknown>){exact(body,['action'],['from','to']);if(typeof body.from==='number'&&typeof body.to==='number'&&body.from>body.to)throw new ProductError('invalid','From must be before Through.');let query:Query=db.collection('orders');for(const [key,operator]of [['from','>='],['to','<=']] as const)if(body[key]!==undefined){if(!Number.isSafeInteger(body[key])||(body[key] as number)<0||(body[key] as number)>253402300799999)throw new ProductError('invalid','Invalid date range.');query=query.where('createdAt',operator,Timestamp.fromMillis(body[key] as number));}
   return db.runTransaction(async tx=>{

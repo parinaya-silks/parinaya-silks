@@ -10,7 +10,8 @@ import {DashboardDates} from './dashboard/Dates.tsx';
 import {periodRange} from './dashboard/model.ts';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
-import {AdminCoupons,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
+import {AdminCoupons,AdminReports} from '../orders/AdminBusiness.tsx';
+import {InventoryOverview} from './inventory/InventoryOverview.tsx';
 import {OrderDetails} from './orders/OrderDetails.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
@@ -48,7 +49,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     let uid='';try{uid=customerUid(decodeURIComponent(path.slice('/admin/customers/'.length)));}catch{}
     content=uid?<CustomerDetails uid={uid} onNavigate={navigate}/>:<section><h1>Customer not found</h1><button onClick={()=>navigate('/admin/customers')}>Back to Customers</button></section>;
   } else if(path==='/admin/coupons'||path==='/admin/marketing'){content=<AdminCoupons/>;
-  } else if(path==='/admin/inventory'){content=<AdminInventory/>;
+  } else if(path==='/admin/inventory'){content=<InventoryOverview onNavigate={navigate}/>;
   } else if(path==='/admin/banners'){content=<AdminContent section="banners"/>;
   } else if(path==='/admin/website-content'){content=<AdminContent section="website"/>;
   } else if(path==='/admin/contact-information'){content=<AdminContent section="contact"/>;

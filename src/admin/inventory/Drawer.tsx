@@ -1,0 +1,9 @@
+import React,{useEffect,useRef} from 'react';
+import {X} from 'lucide-react';
+import {trapDialogFocus} from '../dialog.ts';
+export function InventoryDrawer({title,children,footer,onClose,dirty=false,busy=false}:{title:string;children:React.ReactNode;footer?:React.ReactNode;onClose:()=>void;dirty?:boolean;busy?:boolean}){
+ const ref=useRef<HTMLDialogElement>(null),state=useRef({dirty,busy,onClose});state.current={dirty,busy,onClose};
+ function close(){const s=state.current;if(s.busy)return;if(!s.dirty||window.confirm('Discard unsaved stock changes?'))s.onClose();}
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.showModal();const unload=(e:BeforeUnloadEvent)=>{if(state.current.dirty||state.current.busy){e.preventDefault();e.returnValue='';}},navigate=(e:Event)=>{if(state.current.busy||(state.current.dirty&&!window.confirm('Discard unsaved stock changes?')))e.preventDefault();};window.addEventListener('beforeunload',unload);window.addEventListener('parinaya:before-admin-navigation',navigate);return()=>{ref.current?.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus();else document.querySelector<HTMLElement>('.inventory-heading h1')?.focus();window.removeEventListener('beforeunload',unload);window.removeEventListener('parinaya:before-admin-navigation',navigate);};},[]);
+ return <dialog ref={ref} className="inventory-drawer" aria-label={title} onKeyDown={trapDialogFocus} onCancel={e=>{e.preventDefault();close();}}><header><div><h2>{title}</h2><small>PARINAYA SILKS · Inventory</small></div><button type="button" aria-label={'Close '+title} disabled={busy} onClick={close}><X size={20}/></button></header><div className="inventory-drawer-body">{children}</div><footer>{footer||<button className="inv-secondary" onClick={close}>Close History</button>}</footer></dialog>;
+}
