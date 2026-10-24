@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {FieldValue,FieldPath,Timestamp,AggregateField,type Firestore,type Transaction,type Query} from 'firebase-admin/firestore';
 import {ProductError,validateProduct,emptyProduct,productFields,type ProductInput} from '../src/products/model.ts';
-import {couponInput,exact,referenceId,text,noteText,changeStock,lowStock,newlyLowStock} from '../src/orders/model.ts';
+import {couponInput,storedCoupon,couponUses,exact,referenceId,text,noteText,changeStock,lowStock,newlyLowStock} from '../src/orders/model.ts';
 import {normalizeMobile,mobileCountry} from '../src/customer/mobile.ts';
 import {ReportingQueryError,type ReportingQuery} from './errors.ts';
 import {directoryProfileUpdate} from './customerDirectory.ts';
@@ -11,10 +11,15 @@ const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).d
 const clean=(value:unknown):any=>value instanceof Timestamp?value.toMillis():Array.isArray(value)?value.map(clean):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,item])=>[key,clean(item)])):value;
 
 export function businessService(db:Firestore,access:(tx:Transaction,uid:string)=>Promise<void>){
+ function couponView(id:string,raw:Record<string,unknown>){
+  try{const input=storedCoupon(raw);if(input.code!==id||!Number.isSafeInteger(raw.revision)||(raw.revision as number)<1)throw Error();return {...input,uses:couponUses(raw.uses),revision:raw.revision as number,createdAt:clean(raw.createdAt)??null,updatedAt:clean(raw.updatedAt)??null};}catch{throw new ProductError('schema','Coupon settings require owner review.');}
+ }
  async function coupons(uid:string,body:Record<string,unknown>){
-  if(body.action==='coupons:list'){exact(body,['action'],['cursor']);let query:Query=db.collection('coupons').orderBy(FieldPath.documentId());if(body.cursor)query=query.startAfter(text(body.cursor,32,true));const page=await query.limit(25).get();return {items:page.docs.map(doc=>({id:doc.id,...clean(doc.data())})),nextCursor:page.size===25?page.docs.at(-1)!.id:null};}
+  if(body.action==='coupons:list'){exact(body,['action'],['cursor']);let query:Query=db.collection('coupons').orderBy(FieldPath.documentId());if(body.cursor){const code=text(body.cursor,32,true);if(!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(code))throw new ProductError('invalid','Invalid coupon cursor.');query=query.startAfter(code);}const page=await query.limit(25).get();return {items:page.docs.map(doc=>couponView(doc.id,doc.data())),nextCursor:page.size===25?page.docs.at(-1)!.id:null};}
+  if(body.action==='coupons:get'){exact(body,['action','code']);const code=text(body.code,32,true);if(!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(code))throw new ProductError('invalid','Invalid coupon code.');const doc=await db.doc('coupons/'+code).get();if(!doc.exists)throw new ProductError('not-found','Coupon not found.');return couponView(doc.id,doc.data()!);}
+  if(body.action!=='coupons:save')throw new ProductError('invalid','Unsupported coupon action.');
   exact(body,['action','coupon','expectedRevision','operationId']);const input=couponInput(body.coupon),op=referenceId(body.operationId),digest=hash(body);if(!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<0)throw new ProductError('invalid','Invalid coupon revision.');
-  return db.runTransaction(async tx=>{await access(tx,uid);const ref=db.doc('coupons/'+input.code),doc=await tx.get(ref),old=doc.data();if(old?.operationId===op){if(old.operationHash!==digest)throw new ProductError('conflict','Operation already used.');return {revision:old.revision};}if((old?.revision||0)!==body.expectedRevision)throw new ProductError('conflict','Coupon changed. Reload before saving.');const revision=(old?.revision||0)+1;tx.set(ref,{...input,uses:old?.uses||0,revision,operationId:op,operationHash:digest,updatedAt:stamp(),updatedBy:uid,createdAt:old?.createdAt||stamp()});return {revision};});
+  return db.runTransaction(async tx=>{await access(tx,uid);const ref=db.doc('coupons/'+input.code),doc=await tx.get(ref),old=doc.data();if(old?.operationId===op){if(old.operationHash!==digest||old.updatedBy!==uid)throw new ProductError('conflict','Operation already used.');return {revision:old.revision};}if(doc.exists&&body.expectedRevision===0)throw new ProductError('conflict','This coupon code already exists. Choose a different code.');if((old?.revision||0)!==body.expectedRevision)throw new ProductError('conflict','Coupon changed. Load latest settings and review before saving.');if(old)couponView(doc.id,old);const revision=(old?.revision||0)+1;tx.set(ref,{...input,uses:couponUses(old?.uses),revision,operationId:op,operationHash:digest,updatedAt:stamp(),updatedBy:uid,createdAt:old?.createdAt||stamp()},{merge:true});return {revision};});
  }
  async function notifications(uid:string,body:Record<string,unknown>){
   const pref=db.doc(`adminNotificationReads/${uid}`);

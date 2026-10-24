@@ -5,7 +5,7 @@ import {checkoutSource,type CheckoutSource} from '../src/checkout/source.ts';
 import {createHash} from 'node:crypto';
 import {FieldValue,Timestamp,FieldPath,type Firestore,type Transaction,type DocumentSnapshot,type Query} from 'firebase-admin/firestore';
 import {ProductError,type ProductInput} from '../src/products/model.ts';
-import {referenceId,exact,text,noteText,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,couponInput,couponDiscount,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
+import {referenceId,exact,text,noteText,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,storedCoupon,couponUses,couponDiscount,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
 import type {CheckoutReview} from '../src/delivery/model.ts';
 
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -21,8 +21,9 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     const normalized=text(code,32,true).toUpperCase();if(!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(normalized))throw new ProductError('invalid','Invalid coupon code.');
     const [saved,usage]=await Promise.all([tx.get(db.doc('coupons/'+normalized)),tx.get(db.doc(`coupons/${normalized}/customers/${uid}`))]);
     if(!saved.exists)throw new ProductError('conflict','This coupon is not available. Remove it or use another code.');
-    const data=saved.data()!,input=couponInput(Object.fromEntries(['code','kind','value','enabled','startsAt','endsAt','minimumPaise','capPaise','globalLimit','perCustomerLimit'].map(key=>[key,data[key]])));
-    return {code:normalized,discountPaise:String(couponDiscount(input,BigInt(subtotal),data.uses||0,usage.data()?.uses||0)),revision:data.revision,input,uses:data.uses||0,customerUses:usage.data()?.uses||0};
+    const data=saved.data()!,input=storedCoupon(data);
+    if(input.code!==normalized)throw new ProductError('schema','Coupon identity requires owner review.');
+    return {code:normalized,discountPaise:String(couponDiscount(input,BigInt(subtotal),couponUses(data.uses),couponUses(usage.data()?.uses))),revision:data.revision,input,uses:couponUses(data.uses),customerUses:couponUses(usage.data()?.uses)};
   }
   async function review(tx:Transaction,uid:string,addressId:string|null,code:unknown,source:CheckoutSource={kind:'bag'}){
     const current=await reviewInTransaction(tx,uid,addressId,source),discount=await coupon(tx,uid,code,current.subtotalPaise);

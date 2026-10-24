@@ -5,11 +5,11 @@ import {AdminIcon} from './AdminIcon.tsx';
 import {AdminDataProvider} from './dashboard/resource.tsx';
 import './admin.css';
 import {trapDialogFocus} from './dialog.ts';
-const items=[['dashboard','Dashboard'],['products','Products'],['categories','Categories'],['orders','Orders'],['customers','Customers'],['inventory','Inventory'],['marketing','Marketing / Sale Campaigns'],['banners','Banners'],['website-content','Website Content'],['contact-information','Contact Information'],['about','About Us'],['enquiries','Customer Enquiries'],['settings','Settings']];
+const items=[['dashboard','Dashboard'],['products','Products'],['categories','Categories'],['orders','Orders'],['customers','Customers'],['inventory','Inventory'],['marketing','Marketing / Sale Campaigns'],['coupons','Coupons'],['banners','Banners'],['website-content','Website Content'],['contact-information','Contact Information'],['about','About Us'],['enquiries','Customer Enquiries'],['settings','Settings']];
 export const dashboardPath=(path:string)=>['/admin','/admin/dashboard','/admin/login'].includes(path);
 export function AdminLayout({currentPath,onNavigate,children,email,onSignOut,headerActions}:{currentPath:string;onNavigate:(path:string)=>void;children:React.ReactNode;email:string;onSignOut:()=>void;headerActions?:React.ReactNode}){
  const [open,setOpen]=useState(false),drawer=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),close=useRef<HTMLButtonElement>(null);
- const active=(route:string)=>route==='dashboard'?dashboardPath(currentPath):route==='marketing'?['/admin/marketing','/admin/coupons'].includes(currentPath):currentPath==='/admin/'+route||['products','orders','customers'].includes(route)&&currentPath.startsWith('/admin/'+route+'/');
+ const active=(route:string)=>route==='dashboard'?dashboardPath(currentPath):currentPath==='/admin/'+route||['products','orders','customers'].includes(route)&&currentPath.startsWith('/admin/'+route+'/');
  const title=items.find(([route])=>active(route))?.[1]||'Administration',isDashboard=dashboardPath(currentPath),initials=email.split('@')[0].split(/[._\s-]+/).filter(Boolean).map(part=>part[0]).join('').slice(0,2).toUpperCase();
  useEffect(()=>{if(!open)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';drawer.current?.showModal();close.current?.focus();const media=window.matchMedia('(min-width: 1024px)'),resize=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',resize);return()=>{drawer.current?.close();document.body.style.overflow=previous;media.removeEventListener('change',resize);trigger.current?.focus();};},[open]);
  const navigate=(path:string)=>{onNavigate(path);setOpen(false);};

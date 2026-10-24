@@ -23,6 +23,9 @@ export function newlyLowStock(before:ProductInput['inventory'],after:ProductInpu
 export const csvCell=(value:unknown)=>'"'+String(value??'').replace(/^[\s]*([=+@-])/,'\'$1').replaceAll('"','""')+'"';
 
 export interface CouponInput {code:string;kind:'percent'|'fixed';value:number;enabled:boolean;startsAt:number|null;endsAt:number|null;minimumPaise:number;capPaise:number|null;globalLimit:number|null;perCustomerLimit:number|null}
+// Missing optional legacy fields mean no restriction; required identity/value/state never default.
+export function storedCoupon(raw:Record<string,unknown>):CouponInput{return couponInput({code:raw.code,kind:raw.kind,value:raw.value,enabled:raw.enabled,minimumPaise:raw.minimumPaise===undefined?0:raw.minimumPaise,...Object.fromEntries(['startsAt','endsAt','capPaise','globalLimit','perCustomerLimit'].map(key=>[key,raw[key]===undefined?null:raw[key]]))});}
+export function couponUses(value:unknown):number{if(value===undefined)return 0;if(!Number.isSafeInteger(value)||(value as number)<0)throw new ProductError('schema','Coupon usage requires owner review.');return value as number;}
 export function couponInput(value:unknown):CouponInput{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new ProductError('invalid','Invalid coupon.');const raw=value as Record<string,unknown>;
   exact(raw,['code','kind','value','enabled','startsAt','endsAt','minimumPaise','capPaise','globalLimit','perCustomerLimit']);

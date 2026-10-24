@@ -1,0 +1,9 @@
+import React,{useEffect,useRef} from 'react';
+import {X} from 'lucide-react';
+import {trapDialogFocus} from '../dialog.ts';
+export function CouponDialog({title,subtitle,children,footer,onClose,dirty=false,busy=false,confirm=false}:{title:string;subtitle?:string;children:React.ReactNode;footer:React.ReactNode;onClose:()=>void;dirty?:boolean;busy?:boolean;confirm?:boolean}){
+ const ref=useRef<HTMLDialogElement>(null),state=useRef({dirty,busy,onClose});state.current={dirty,busy,onClose};
+ function close(){if(state.current.busy)return;if(!state.current.dirty||window.confirm('Discard unsaved coupon changes?'))state.current.onClose();}
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.showModal();const unload=(e:BeforeUnloadEvent)=>{if(state.current.dirty||state.current.busy){e.preventDefault();e.returnValue='';}},navigate=(e:Event)=>{if(state.current.busy||state.current.dirty&&!window.confirm('Discard unsaved coupon changes?'))e.preventDefault();};window.addEventListener('beforeunload',unload);window.addEventListener('parinaya:before-admin-navigation',navigate);return()=>{ref.current?.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus();else document.querySelector<HTMLElement>('.coupons-heading h1')?.focus();window.removeEventListener('beforeunload',unload);window.removeEventListener('parinaya:before-admin-navigation',navigate);};},[]);
+ return <dialog ref={ref} className={'coupon-dialog'+(confirm?' coupon-confirm':'')} aria-label={title} onKeyDown={trapDialogFocus} onCancel={e=>{e.preventDefault();close();}}><header><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button aria-label={'Close '+title} disabled={busy} onClick={close}><X size={20}/></button></header><div className="coupon-dialog-body">{children}</div><footer>{footer}</footer></dialog>;
+}
