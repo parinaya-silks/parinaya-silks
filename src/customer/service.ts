@@ -3,6 +3,7 @@ import {getAuthClients} from '../services/firebase/auth.ts';
 import {CustomerError,passwordPolicyMessage,validateCustomerFields} from './policy.ts';
 import {normalizeMobile,type CountryCode} from './mobile.ts';
 import {rememberPendingProfile} from './pendingProfile.ts';
+import {customerAction} from '../orders/client.ts';
 import {ensureCustomerProfile} from './profile.ts';
 
 function actionSettings(path:string){return {url:new URL(path,window.location.origin).href,handleCodeInApp:false};}
@@ -30,6 +31,7 @@ export async function customerRegister(name:string,email:string,password:string,
   let nameSaved=true,profileSaved=true;
   try{await updateProfile(user,{displayName:name.trim()});}catch{nameSaved=false;}
   try{await ensureCustomerProfile(database,user,name,mobile);}catch{profileSaved=false;}
+  if(profileSaved)void customerAction(user.uid,{action:'profile:syncDirectory'}).catch(()=>{});
   return {user,nameSaved,profileSaved};
 }
 export async function customerPasswordReset(email:string) {

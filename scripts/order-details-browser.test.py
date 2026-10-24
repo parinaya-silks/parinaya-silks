@@ -20,7 +20,7 @@ try:
    if width==390:page.screenshot(path=str(screens/'mobile-viewport.png'))
   page.set_viewport_size({'width':1440,'height':1000})
   detail.get_by_role('button',name='Copy email',exact=True).click();expect(detail.get_by_role('status').filter(has_text='Email copied.')).to_be_visible();expect(detail.get_by_role('link',name='Call customer',exact=True)).to_have_attribute('href','tel:+919840123456')
-  detail.get_by_role('button',name='View Customer',exact=True).click();page.get_by_role('heading',name='Customers',exact=True).wait_for();page.get_by_role('heading',name='Customer orders',exact=True).wait_for();page.goto(origin+path(6001));detail.wait_for();page.reload();detail.wait_for()
+  detail.get_by_role('button',name='View Customer',exact=True).click();page.get_by_role('region',name='Customer details',exact=True).wait_for();page.get_by_role('heading',name='Order History',exact=True).wait_for();page.goto(origin+path(6001));detail.wait_for();page.reload();detail.wait_for()
   # Cancel before mutation; the browser must not report success or change state.
   detail.get_by_role('button',name='Start processing',exact=True).click();expect(detail.get_by_label('Action',exact=True)).to_have_value('Processing');detail.get_by_role('button',name='Save action',exact=True).click();modal=page.get_by_role('dialog',name='Confirm order action',exact=True);modal.get_by_role('button',name='Cancel',exact=True).focus();page.keyboard.press('Shift+Tab');expect(modal.get_by_role('button',name='Confirm action',exact=True)).to_be_focused();page.keyboard.press('Escape');expect(modal).not_to_be_visible();expect(detail.get_by_role('button',name='Save action',exact=True)).to_be_focused()
   # A real server conflict leaves form values intact. Reload and review again.

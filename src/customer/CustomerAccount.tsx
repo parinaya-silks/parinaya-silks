@@ -24,6 +24,7 @@ export function CustomerAccount({onNavigate}:{onNavigate:(path:string)=>void}) {
       const phone=recover?normalizeMobile(mobile,country):undefined;setMobileError('');
       if(recover&&!user.displayName&&name.trim())await updateProfile(user,{displayName:name.trim()});
       const value=await ensureCustomerProfile(getAuthClients().database,user,name,phone);
+      void customerAction(user.uid,{action:'profile:syncDirectory'}).catch(()=>{});
       if(mounted.current&&current===generation.current&&getAuthClients().auth.currentUser?.uid===uid){setProfile(value);setProfileError(false);}
     }catch(failure){if(mounted.current&&current===generation.current){setProfileError(true);if(recover)setMobileError(failure instanceof CustomerError?failure.fields.mobileNumber||'':'');}}
     finally{if(mounted.current&&current===generation.current)setLoading(false);}

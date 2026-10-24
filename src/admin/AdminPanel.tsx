@@ -1,3 +1,7 @@
+import {CustomersList} from './customers/CustomersList.tsx';
+import {CustomerDetails} from './customers/CustomerDetails.tsx';
+import {restoreCustomers,customerPath,customerUid} from './customers/model.ts';
+import {getAdminClients} from '../services/firebase/adminAuth.ts';
 import {OrdersList} from './orders/OrdersList.tsx';
 import {initialOrderList} from './orders/model.ts';
 import React,{useState} from 'react';
@@ -6,7 +10,7 @@ import {DashboardDates} from './dashboard/Dates.tsx';
 import {periodRange} from './dashboard/model.ts';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
-import {AdminCoupons,AdminCustomerDirectory,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
+import {AdminCoupons,AdminReports,AdminInventory} from '../orders/AdminBusiness.tsx';
 import {OrderDetails} from './orders/OrderDetails.tsx';
 import { ProductManager } from './ProductManager.tsx';
 import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
@@ -17,13 +21,13 @@ import { safeAdminDestination } from './accessPolicy.ts';
 function unavailableWrite(): never { throw new Error('This module is not connected. No live changes were saved.'); }
 
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
-  const [customerUid,setCustomerUid]=useState('');
+  const [customersState,setCustomersState]=useState(()=>restoreCustomers(window.history.state,getAdminClients().auth.currentUser?.uid||''));
   const [ordersState,setOrdersState]=useState(initialOrderList);
   const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
     const next = destination === '/' ? '/' : safeAdminDestination(destination);
-    window.history.pushState(null, '', next);
+    window.history.pushState({customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
     window.dispatchEvent(new PopStateEvent('popstate', { state: { skipUnsaved: true } }));
     window.scrollTo(0, 0);
   };
@@ -33,13 +37,16 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path === '/admin/categories') {
     content = <AdminCategories onNavigate={navigate} />;
   } else if (path === '/admin/orders'||path.startsWith('/admin/orders/')) {
-    content = path==='/admin/orders'?<OrdersList state={ordersState} onState={setOrdersState} onNavigate={navigate}/>:<OrderDetails id={path.split('/')[3]} onNavigate={navigate} onCustomer={uid=>{setCustomerUid(uid);navigate('/admin/customers');}}/>;
+    content = path==='/admin/orders'?<OrdersList state={ordersState} onState={setOrdersState} onNavigate={navigate}/>:<OrderDetails id={path.split('/')[3]} onNavigate={navigate} onCustomer={uid=>navigate(customerPath(uid))}/>;
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
     content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
   } else if (path === '/admin/customers') {
-    content = <AdminCustomerDirectory onNavigate={navigate} initialCustomerUid={customerUid}/>;
+    content = <CustomersList state={customersState} onState={setCustomersState} onNavigate={navigate}/>;
+  } else if (path.startsWith('/admin/customers/')) {
+    let uid='';try{uid=customerUid(decodeURIComponent(path.slice('/admin/customers/'.length)));}catch{}
+    content=uid?<CustomerDetails uid={uid} onNavigate={navigate}/>:<section><h1>Customer not found</h1><button onClick={()=>navigate('/admin/customers')}>Back to Customers</button></section>;
   } else if(path==='/admin/coupons'||path==='/admin/marketing'){content=<AdminCoupons/>;
   } else if(path==='/admin/inventory'){content=<AdminInventory/>;
   } else if(path==='/admin/banners'){content=<AdminContent section="banners"/>;

@@ -13,10 +13,12 @@ import {sitemap} from './seo.ts';
 import {browseService} from './browse.ts';
 import {contentService} from './content.ts';
 import {businessService} from './business.ts';
+import {customerUid} from '../src/admin/customers/model.ts';
+import {customerDirectoryService} from './customerDirectory.ts';
 import {ordersService} from './orders.ts';
 import {shippingService} from './shipping.ts';
 
-type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>;media:CloudinaryMedia};
+type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>&Partial<Pick<Auth,'getUser'>>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
 function id(value:unknown):string {if(typeof value!=='string'||!idPattern.test(value)) throw new ProductError('invalid','Invalid product ID.');return value;}
 function keys(value:Record<string,unknown>,allowed:string[]) {if(Object.keys(value).some(key=>!allowed.includes(key))) throw new ProductError('invalid','Unsupported request fields.');}
@@ -43,6 +45,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)));
   const homeMedia=loginAppearanceService(db,media,transactionAccess,'home');
   const business=businessService(db,transactionAccess);
+  const customers=customerDirectoryService(db,auth);
   const shipping=shippingService(db,transactionAccess);
   const appearance=loginAppearanceService(db,media,transactionAccess);
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
@@ -158,12 +161,15 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     publicAppearance:appearance.publicGet,publicContent:content.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(body.action==='profile:syncDirectory'){keys(body,['action']);return customers.sync((await authenticate(token)).uid);}
       if(body.action==='profile:update')return business.profile((await authenticate(token)).uid,body);
-      if(typeof body.action==='string'&&body.action.startsWith('orders:')){const user=await authenticate(token);return orders.customer(user.uid,user.email||'',body);}
+      if(typeof body.action==='string'&&body.action.startsWith('orders:')){const user=await authenticate(token);if(body.action==='orders:place'&&!(await db.doc('customerDirectory/'+user.uid).get()).exists&&(await db.doc('customerProfiles/'+user.uid).get()).exists)await customers.sync(user.uid);return orders.customer(user.uid,user.email||'',body);}
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
       if(body.action==='dashboard:orders')return orders.admin(uid,body);
+      if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
+      if(typeof body.action==='string'&&body.action.startsWith('customers:'))return customers.admin(body);
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {

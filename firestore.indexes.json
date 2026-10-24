@@ -959,6 +959,182 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sortName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "searchPrefixes",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "searchPrefixes",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "customerDirectory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "searchPrefixes",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "hasOrders",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "missingMobile",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "schemaVersion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sortName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "joinedAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

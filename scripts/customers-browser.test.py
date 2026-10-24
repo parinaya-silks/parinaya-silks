@@ -1,0 +1,65 @@
+"""Real customer list/details/filter/export workflow against loopback fixtures only."""
+import os,subprocess,csv,re
+from pathlib import Path
+from playwright.sync_api import sync_playwright,expect
+assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
+assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
+origin='http://127.0.0.1:3100';screens=Path('.cache/customers-browser');screens.mkdir(parents=True,exist_ok=True)
+def fixture(action):subprocess.run(['node','--import','tsx','scripts/customers-fixture-control.ts',action],capture_output=True,check=True)
+fixture('seed')
+try:
+ with sync_playwright() as p:
+  browser=p.chromium.launch();ctx=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True);ctx.grant_permissions(['clipboard-write','clipboard-read'],origin=origin)
+  for pattern in ['https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**','https://firestore.googleapis.com/**']:ctx.route(pattern,lambda route:route.abort())
+  page=ctx.new_page();errors=[];page.on('pageerror',lambda error:errors.append(str(error)));page.goto(origin+'/admin/customers');page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();listing=page.get_by_role('region',name='Customers directory',exact=True);expect(listing.locator('table tbody tr')).to_have_count(10)
+  for width in [320,390,768,1024,1440,1920]:
+   page.set_viewport_size({'width':width,'height':1000});page.screenshot(path=str(screens/f'list-{width}.png'),full_page=True);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
+  page.set_viewport_size({'width':390,'height':900});filter_trigger=listing.get_by_role('button',name=re.compile('^Filters'));filter_trigger.click();mobile_sheet=page.get_by_role('dialog',name='Filter customers',exact=True);page.screenshot(path=str(screens/'filter-mobile.png'));mobile_sheet.get_by_role('button',name='Close customer filters',exact=True).focus();page.keyboard.press('Shift+Tab');expect(mobile_sheet.get_by_role('button',name='Apply filters',exact=True)).to_be_focused();page.keyboard.press('Escape');expect(mobile_sheet).not_to_be_visible();expect(filter_trigger).to_be_focused()
+  page.set_viewport_size({'width':1440,'height':1000})
+  listing.get_by_label('Sort customers',exact=True).select_option('name');expect(listing.locator('table tbody tr').first).to_contain_text('=Spreadsheet Formula');listing.get_by_label('Sort customers',exact=True).select_option('newest')
+  def search(value):listing.get_by_label('Search customers',exact=True).fill(value);listing.get_by_role('button',name='Search',exact=True).click()
+  search('no customer has this prefix');expect(listing.get_by_role('heading',name='No customers match these filters',exact=True)).to_be_visible();listing.get_by_role('button',name='Clear filters',exact=True).first.click()
+  list_failure={'enabled':True}
+  def fail_list(route):
+   body=route.request.post_data_json if route.request.method=='POST' else {}
+   if body.get('action')=='customers:list' and list_failure['enabled']:route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Private fixture"}')
+   else:route.continue_()
+  page.route('**/api/catalog',fail_list);search('meera');expect(listing.get_by_role('alert')).to_contain_text('Unable to load customers.');expect(listing.get_by_role('heading',name='No customers match these filters',exact=True)).to_have_count(0);list_failure['enabled']=False;listing.get_by_role('button',name='Retry customers',exact=True).click();expect(listing.locator('table tbody tr')).to_have_count(1);page.unroute('**/api/catalog',fail_list)
+  search('directory');expect(listing.locator('table tbody tr')).to_have_count(10);listing.get_by_role('button',name='Next',exact=True).click();expect(listing.locator('.customer-pagination')).to_contain_text('Page 2');listing.locator('table').get_by_role('button',name='View Customer',exact=True).first.click();detail=page.get_by_role('region',name='Customer details',exact=True);detail.get_by_role('heading',name='Order History',exact=True).wait_for();page.reload();detail.get_by_role('heading',name='Order History',exact=True).wait_for();page.go_back();# Reload preserves the history entry; navigate explicitly to check parent list context.
+  page.goto(origin+'/admin/customers');listing.wait_for();search('directory');listing.get_by_role('button',name='Next',exact=True).click();expect(listing.locator('.customer-pagination')).to_contain_text('Page 2');listing.locator('table').get_by_role('button',name='View Customer',exact=True).first.click();detail.get_by_role('heading',name='Order History',exact=True).wait_for();detail.get_by_role('button',name='Back to Customers',exact=True).click();expect(listing.locator('.customer-pagination')).to_contain_text('Page 2');expect(listing.get_by_label('Search customers',exact=True)).to_have_value('directory')
+  listing.get_by_role('button',name='Clear filters',exact=True).click();listing.get_by_role('button',name=re.compile('^Filters')).click();sheet=page.get_by_role('dialog',name='Filter customers',exact=True);sheet.get_by_label('Orders',exact=True).select_option('without');sheet.get_by_label('Missing mobile',exact=True).check();sheet.get_by_role('button',name='Apply filters',exact=True).click();expect(listing.locator('table tbody tr')).to_have_count(2);# legacy customer also has no mobile
+  listing.get_by_role('button',name='Clear filters',exact=True).click();search('meera');expect(listing.locator('table tbody tr')).to_have_count(1);listing.locator('table').get_by_role('checkbox').check();expect(listing.get_by_role('complementary',name='Customer selection')).to_contain_text('1 selected')
+  def dialog_export(button):button.click();return page.get_by_role('dialog',name='Export Customers',exact=True)
+  export=dialog_export(listing.get_by_role('button',name='Export Selected',exact=True));export.get_by_role('button',name='Close export',exact=True).focus();page.keyboard.press('Shift+Tab');expect(export.get_by_role('button',name='Export CSV',exact=True)).to_be_focused();page.keyboard.press('Escape');expect(export).not_to_be_visible();expect(listing.get_by_role('button',name='Export Selected',exact=True)).to_be_focused();export=dialog_export(listing.get_by_role('button',name='Export Selected',exact=True));page.screenshot(path=str(screens/'export-desktop.png'));page.set_viewport_size({'width':390,'height':900});page.screenshot(path=str(screens/'export-mobile.png'));assert not export.evaluate('(el)=>el.scrollWidth>el.clientWidth+1');page.set_viewport_size({'width':1440,'height':1000});export.get_by_label('Current default delivery address',exact=True).check()
+  with page.expect_download() as pending:export.get_by_role('button',name='Export CSV',exact=True).click()
+  pending.value.save_as(screens/'selected.csv');rows=list(csv.reader((screens/'selected.csv').read_text(encoding='utf-8-sig').splitlines()));assert len(rows)==2;assert 'Current saved address' in rows[1][-1];assert 'Historical order address' not in str(rows);export.get_by_role('button',name='Cancel',exact=True).click()
+  listing.get_by_role('button',name=re.compile('^Select all .* matching$')).click();expect(listing.get_by_role('complementary',name='Customer selection')).to_contain_text('All 1 matching selected');listing.get_by_role('button',name='Clear selection',exact=True).click()
+  # All-directory scope must cross chunks, ignore active search, and recover from a failed second chunk.
+  export=dialog_export(listing.get_by_role('button',name='Export Customers',exact=True));export.get_by_label(re.compile('^All customers — entire directory')).check();failure={'once':True};calls=[]
+  def fail_second(route):
+   body=route.request.post_data_json if route.request.method=='POST' else {}
+   if body.get('action')=='customers:export':
+    calls.append(body)
+    if body.get('cursor') and failure['once']:failure['once']=False;route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Private fixture"}');return
+   route.continue_()
+  page.route('**/api/catalog',fail_second);downloads=[];page.on('download',lambda download:downloads.append(download));export.get_by_role('button',name='Export CSV',exact=True).click();expect(export.get_by_role('alert')).to_contain_text('No partial file was downloaded');assert not downloads
+  with page.expect_download() as pending:export.get_by_role('button',name='Retry preparation',exact=True).click()
+  pending.value.save_as(screens/'all.csv');all_rows=list(csv.reader((screens/'all.csv').read_text(encoding='utf-8-sig').splitlines()));assert len(all_rows)>=58;assert len(all_rows[1:])==len({tuple(row) for row in all_rows[1:]});assert any(row[0]=="'=Spreadsheet Formula" for row in all_rows[1:]);assert calls[1]['cursor']==calls[2]['cursor'];export.get_by_role('button',name='Cancel',exact=True).click();page.unroute('**/api/catalog',fail_second)
+  listing.locator('table').get_by_role('button',name='View Customer',exact=True).click();detail.get_by_role('heading',name='Order History',exact=True).wait_for();expect(detail.locator('.customer-metrics')).to_contain_text('27');expect(detail.locator('.customer-metrics')).to_contain_text('135');expect(detail.locator('.customer-addresses')).to_contain_text('Current saved address');assert 'Historical order address' not in detail.locator('.customer-addresses').inner_text()
+  for width in [320,390,768,1024,1440,1920]:
+   page.set_viewport_size({'width':width,'height':1000});page.screenshot(path=str(screens/f'details-{width}.png'),full_page=True);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
+  page.set_viewport_size({'width':1440,'height':1000});detail.locator('.customer-history').get_by_role('button',name='Next',exact=True).click();expect(detail.locator('.customer-history .customer-pagination')).to_contain_text(re.compile('Showing 6.10'));expect(detail.locator('.customer-metrics')).to_contain_text('135');detail.locator('.customer-history').get_by_role('button',name='Previous',exact=True).click()
+  detail.get_by_role('button',name='Copy email',exact=True).click();expect(detail.get_by_role('status').filter(has_text='email copied.')).to_be_visible();expect(detail.get_by_role('link',name='Call customer',exact=True)).to_have_attribute('href','tel:+919840123456')
+  independent={'action':'customers:stats'}
+  def fail_section(route):
+   body=route.request.post_data_json if route.request.method=='POST' else {}
+   if body.get('action')==independent['action']:route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Private fixture"}')
+   else:route.continue_()
+  page.route('**/api/catalog',fail_section);page.evaluate("window.dispatchEvent(new CustomEvent('parinaya:admin-data-changed',{detail:'test-approved-admin'}))");expect(detail.get_by_role('alert').filter(has_text='Customer statistics are unavailable.')).to_be_visible();expect(detail.locator('.customer-metrics')).to_contain_text('135');independent['action']='';detail.get_by_role('button',name='Retry statistics',exact=True).click();expect(detail.get_by_role('alert').filter(has_text='Customer statistics are unavailable.')).to_have_count(0);page.unroute('**/api/catalog',fail_section)
+  fixture('missing-default');page.evaluate("window.dispatchEvent(new CustomEvent('parinaya:admin-data-changed',{detail:'test-approved-admin'}))");expect(detail.locator('.customer-addresses')).to_contain_text('No replacement default has been assumed.');fixture('restore-default')
+  detail.get_by_role('button',name='Export This Customer',exact=True).click();one=page.get_by_role('dialog',name='Export This Customer',exact=True)
+  with page.expect_download() as pending:one.get_by_role('button',name='Export CSV',exact=True).click()
+  pending.value.save_as(screens/'one.csv');assert len(list(csv.reader((screens/'one.csv').read_text(encoding='utf-8-sig').splitlines())))==2;one.get_by_role('button',name='Cancel',exact=True).click()
+  detail.locator('.customer-history table').get_by_role('button',name='View Order',exact=True).first.click();page.get_by_role('heading',name='Order details',exact=True).wait_for();page.go_back();detail.get_by_role('heading',name='Order History',exact=True).wait_for();page.reload();detail.get_by_role('heading',name='Order History',exact=True).wait_for();assert '/admin/customers/customers-browser-000' in page.url
+  page.get_by_role('button',name='Sign Out',exact=True).click();page.get_by_role('heading',name='Administrator Sign In',exact=True).wait_for();expect(detail).to_have_count(0);assert not errors,errors;browser.close();print('Customers browser passed: directory-wide filters, sorting/pages/context, selection scopes, all/selected/individual chunked CSV with recovery, details statistics/history/addresses, direct routes/order links, cleanup and six widths.')
+finally:fixture('cleanup')
