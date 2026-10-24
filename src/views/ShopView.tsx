@@ -12,6 +12,8 @@ interface ShopViewProps {
   initialSearch?: string;
   categorySlug?: string;
   saleOnly?: boolean;
+  campaignSlug?:string;
+  campaignTitle?:string;
   onNavigate: (path: string) => void;
   onAddToCart: (product: Product) => void;
   onToggleWishlist: (product: Product) => void;
@@ -24,6 +26,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
   initialSearch = '',
   categorySlug: requestedSlug,
   saleOnly = false,
+  campaignSlug,
+  campaignTitle,
   onNavigate,
   onAddToCart,
   onToggleWishlist,
@@ -42,10 +46,12 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
   const { state: categoryState, retry: retryCategories } = useCategories();
   const publicCategories = categoryState.status === 'ready' ? categoryState.items : [];
-  const selectedPublic = requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
+  const [campaignCategory,setCampaignCategory]=useState('all');
+  const navigateCategory=(path:string)=>{if(campaignSlug){setCampaignCategory(path==='/shop'?'all':publicCategories.find(c=>path==='/collections/'+c.slug)?.id||'all');}else onNavigate(path);};
+  const selectedPublic = campaignSlug?publicCategories.find(c=>c.id===campaignCategory):requestedSlug ? publicCategories.find(category => category.slug === requestedSlug) : initialCategory ? publicCategories.find(category => category.id === initialCategory || category.slug === initialCategory) : undefined;
   const selectedCategory = selectedPublic?.id || 'all';
   const categories = [{ id: 'all', label: 'All Sarees' }, ...publicCategories.map(category => ({ id: category.id, label: category.name }))];
-  const page=usePublicCatalog({browse:'1',sort:sortOption,...(selectedPublic?{category:selectedPublic.slug}:{}),...(searchQuery.trim()?{q:searchQuery.trim()}:{}),...(selectedColors.length?{colors:selectedColors.join('|')}:{}),...(inStockOnly?{inStock:'true'}:{}),...(saleOnly?{sale:'true'}:{}),...(Number.isFinite(maxPrice)?{maxPrice:String(Math.round(maxPrice*100))}:{})},!(requestedSlug||initialCategory)||(categoryState.status==='ready'&&Boolean(selectedPublic)));
+  const page=usePublicCatalog({browse:'1',sort:sortOption,...(campaignSlug?{campaign:campaignSlug}:{}),...(selectedPublic?{category:campaignSlug?selectedPublic.id:selectedPublic.slug}:{}),...(searchQuery.trim()?{q:searchQuery.trim()}:{}),...(selectedColors.length?{colors:selectedColors.join('|')}:{}),...(inStockOnly?{inStock:'true'}:{}),...(saleOnly?{sale:'true'}:{}),...(Number.isFinite(maxPrice)?{maxPrice:String(Math.round(maxPrice*100))}:{})},!(requestedSlug||initialCategory)||(categoryState.status==='ready'&&Boolean(selectedPublic)));
   const products=page.items.map(storefrontProduct);
   knownPriceCeiling.current=Math.max(knownPriceCeiling.current,...initialProducts.map(product=>Math.ceil(product.price)),...products.map(product=>Math.ceil(product.price)));
   const priceCeiling=knownPriceCeiling.current;
@@ -65,7 +71,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
     setInStockOnly(false);
     setMaxPrice(Infinity);
     setSearchQuery('');
-    if (requestedSlug || initialCategory) onNavigate('/shop');
+    if (requestedSlug || initialCategory||campaignSlug) navigateCategory('/shop');
   };
 
   const getSortLabel = () => {
@@ -88,7 +94,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
         <div className="max-w-7xl mx-auto flex items-baseline justify-between">
           <div className="flex items-baseline gap-2.5">
             <h1 className="font-serif text-[20px] sm:text-[24px] text-[#231919] font-semibold tracking-tight">
-              {selectedPublic ? selectedPublic.name : searchQuery ? `Search: "${searchQuery}"` : 'Shop All Sarees'}
+              {campaignTitle || (selectedPublic ? selectedPublic.name : searchQuery ? `Search: "${searchQuery}"` : 'Shop All Sarees')}
             </h1>
             <span className="font-sans text-[11px] sm:text-[12px] text-[#5F5552] uppercase tracking-wider">
               {page.state==='ready'?`${filteredProducts.length}${page.hasMore?' +':''} Sarees`:page.state==='loading'?'Loading sarees...':'Count unavailable'}
@@ -115,7 +121,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
             return (
               <button
                 key={cat.id}
-                onClick={() => { if (cat.id === 'all') onNavigate('/shop'); else { const category = publicCategories.find(item => item.id === cat.id); if (category) onNavigate(`/collections/${category.slug}`); } }}
+                onClick={() => { if (cat.id === 'all') navigateCategory('/shop'); else { const category = publicCategories.find(item => item.id === cat.id); if (category) navigateCategory(`/collections/${category.slug}`); } }}
                 className={`px-4 py-1.5 rounded-full font-sans text-[12px] tracking-wider uppercase flex-shrink-0 transition-all font-semibold ${
                   (selectedPublic?.id === cat.id || (!selectedPublic && isActive))
                     ? 'bg-[#780D24] text-white shadow-xs'
@@ -238,7 +244,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
               {selectedCategory !== 'all' && (
                 <div className="inline-flex items-center bg-[#F4EEE5] border border-[#B88A44]/30 rounded px-2.5 py-0.5 gap-1 shrink-0 text-[11px] font-sans">
                   <span>Category: {selectedPublic?.name}</span>
-                  <button aria-label="Clear category" onClick={() => onNavigate('/shop')}>
+                  <button aria-label="Clear category" onClick={() => navigateCategory('/shop')}>
                     <span className="material-symbols-outlined text-[14px]">close</span>
                   </button>
                 </div>
@@ -279,7 +285,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
       <main className="max-w-7xl mx-auto px-4 py-2">
         {(requestedSlug || initialCategory) && (categoryState.status !== 'ready' || !selectedPublic) ? <section className="py-8 text-center space-y-3">
           <h2 className="font-serif text-xl">{categoryState.status === 'ready' ? 'Category not found.' : categoryState.status === 'error' ? 'Category unavailable' : 'Loading category…'}</h2>
-          {categoryState.status === 'ready' && <button className="min-h-11 px-5 text-[#780D24] underline" onClick={() => onNavigate('/shop')}>Continue Shopping</button>}
+          {categoryState.status === 'ready' && <button className="min-h-11 px-5 text-[#780D24] underline" onClick={() => navigateCategory('/shop')}>Continue Shopping</button>}
         </section> : page.state==='ready' && filteredProducts.length === 0 ? (
           <div className="max-w-xl mx-auto bg-white rounded-xl border border-[#E8DDD6] p-6 text-center my-6 space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EEE5] border border-[#B88A44] flex items-center justify-center text-[#780D24]">
@@ -483,7 +489,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => { const category = publicCategories.find(item => item.id === cat.id); onNavigate(category ? `/collections/${category.slug}` : '/shop'); }}
+                      onClick={() => { const category = publicCategories.find(item => item.id === cat.id); navigateCategory(category ? `/collections/${category.slug}` : '/shop'); }}
                       className={`px-3 py-1.5 rounded-lg text-[12px] font-sans tracking-wide transition-all ${
                         selectedCategory === cat.id
                           ? 'bg-[#780D24] text-white font-semibold shadow-xs'

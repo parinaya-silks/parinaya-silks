@@ -1,0 +1,7 @@
+import React,{useEffect,useState} from 'react';
+import type {PublicCampaign} from './model.ts';
+export function CampaignBanner({campaign}:{campaign:PublicCampaign}){
+ const [failed,setFailed]=useState<string[]>([]),[mobile,setMobile]=useState(()=>matchMedia('(max-width:767px)').matches);useEffect(()=>{const q=matchMedia('(max-width:767px)'),change=()=>setMobile(q.matches);q.addEventListener('change',change);return()=>q.removeEventListener('change',change);},[]);
+ const large=campaign.banners.desktop&&!failed.includes(campaign.banners.desktop.url)?campaign.banners.desktop:null,small=campaign.banners.mobile&&!failed.includes(campaign.banners.mobile.url)?campaign.banners.mobile:large,selected=mobile?small:(large||small);
+ return <div className="campaign-public-hero" data-square={!!campaign.banners.mobile} style={{'--campaign-desktop-position':`${large?.focalX??50}% ${large?.focalY??50}%`,'--campaign-mobile-position':`${small?.focalX??50}% ${small?.focalY??50}%`} as React.CSSProperties}>{(large||small)&&<picture><source media="(min-width:768px)" srcSet={large?.url||small?.url}/><img src={small?.url||large?.url} alt={selected?.alt||campaign.name} width={1600} height={500} onError={e=>{const url=e.currentTarget.currentSrc;if(url&&!failed.includes(url))setFailed(old=>[...old,url]);}}/></picture>}<div><h1>{campaign.name}</h1>{campaign.description&&<p>{campaign.description}</p>}{campaign.ctaLabel&&<a href="#campaign-products">{campaign.ctaLabel} ↓</a>}</div></div>;
+}

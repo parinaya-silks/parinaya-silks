@@ -1,3 +1,4 @@
+import {CampaignStorefront} from './campaigns/CampaignStorefront.tsx';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -175,6 +176,8 @@ function StorefrontContent() {
         onRetry={catalog.retry}
       />
     );
+  } else if (currentPath==='/sale'||currentPath.startsWith('/sale/')) {
+    customerView=<CampaignStorefront key={currentPath} slug={currentPath.startsWith('/sale/')?currentPath.slice(6).split('?')[0]:undefined} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted}/>;
   } else if (currentPath === '/shop' || currentPath.startsWith('/shop?') || currentPath === '/collections' || currentPath.startsWith('/collections/') || currentPath === '/sale' || currentPath === '/search' || currentPath.startsWith('/search?')) {
     const urlParams = new URLSearchParams(currentPath.includes('?') ? currentPath.split('?')[1] : '');
     const categoryParam = urlParams.get('category') || undefined;

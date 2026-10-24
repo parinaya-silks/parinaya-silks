@@ -5,8 +5,8 @@ from playwright.sync_api import sync_playwright,expect
 assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
 assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
 origin='http://127.0.0.1:3100'
-labels=['Dashboard','Products','Categories','Orders','Customers','Inventory','Marketing / Sale Campaigns','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Settings']
-routes=['dashboard','products','categories','orders','customers','inventory','marketing','banners','website-content','contact-information','about','enquiries','settings']
+labels=['Dashboard','Products','Categories','Orders','Customers','Inventory','Marketing / Sale Campaigns','Coupons','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Settings']
+routes=['dashboard','products','categories','orders','customers','inventory','marketing','coupons','banners','website-content','contact-information','about','enquiries','settings']
 headings=['Dashboard','Products','Categories','Orders','Customers','Inventory','Coupons','Banners','Website Content','Contact Information','About Us','Customer Enquiries','Store Settings']
 screens=Path('.cache/catalog-recovery');screens.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
@@ -44,7 +44,7 @@ with sync_playwright() as p:
  nav=page.get_by_role('navigation',name='Admin Navigation',exact=True);assert nav.locator('button > span:last-child').all_text_contents()==labels
  for route,heading in zip(routes,headings):
   page.goto(origin+'/admin/'+route);page.get_by_role('heading',name=heading,exact=True).first.wait_for();page.reload();page.get_by_role('heading',name=heading,exact=True).first.wait_for();expect(page.get_by_role('navigation',name='Admin Navigation',exact=True).locator('[aria-current="page"]')).to_contain_text(labels[routes.index(route)])
- page.goto(origin+'/admin/coupons');page.get_by_role('heading',name='Coupons',exact=True).wait_for();expect(page.get_by_role('navigation',name='Admin Navigation',exact=True).locator('[aria-current="page"]')).to_contain_text('Marketing / Sale Campaigns')
+ page.goto(origin+'/admin/coupons');page.get_by_role('heading',name='Coupons',exact=True).wait_for();expect(page.get_by_role('navigation',name='Admin Navigation',exact=True).locator('[aria-current="page"]')).to_contain_text('Coupons')
  page.goto(origin+'/admin/banners');page.get_by_role('navigation',name='Admin Navigation',exact=True).get_by_role('button',name=re.compile('Website Content')).click();page.get_by_role('heading',name='Website Content',exact=True).wait_for();page.go_back();page.get_by_role('heading',name='Banners',exact=True).wait_for()
  for width in [320,390,768,1440]:
   page.set_viewport_size({'width':width,'height':760});page.goto(origin+'/admin/dashboard');page.get_by_role('heading',name='COD to Collect',exact=True).wait_for();assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1')

@@ -1,3 +1,4 @@
+import {CampaignManager} from './campaigns/CampaignManager.tsx';
 import {CustomersList} from './customers/CustomersList.tsx';
 import {CustomerDetails} from './customers/CustomerDetails.tsx';
 import {restoreCustomers,customerPath,customerUid} from './customers/model.ts';
@@ -50,7 +51,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     let uid='';try{uid=customerUid(decodeURIComponent(path.slice('/admin/customers/'.length)));}catch{}
     content=uid?<CustomerDetails uid={uid} onNavigate={navigate}/>:<section><h1>Customer not found</h1><button onClick={()=>navigate('/admin/customers')}>Back to Customers</button></section>;
   } else if(path==='/admin/coupons'){content=<CouponsPage/>;
-  } else if(path==='/admin/marketing'){content=<ModuleUnavailable title="Marketing / Sale Campaigns"/>;
+  } else if(path==='/admin/marketing'||path.startsWith('/admin/marketing/')){content=<CampaignManager key={path} path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/inventory'){content=<InventoryOverview onNavigate={navigate}/>;
   } else if(path==='/admin/banners'){content=<AdminContent section="banners"/>;
   } else if(path==='/admin/website-content'){content=<AdminContent section="website"/>;

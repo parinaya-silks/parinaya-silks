@@ -15,7 +15,7 @@ export function safeCustomerReturn(value:string|null|undefined):string {
   if(/^\/(?:account\/orders|order-tracking\/[a-f0-9]{32}|order-confirmed\/[a-f0-9]{32})$/.test(path))return new URLSearchParams(value.split('?')[1]||'').has('returnTo')?'/account':value;
   if(/^\/checkout\/(?:delivery|summary|payment)$/.test(path))return new URLSearchParams(value.split('?')[1]||'').has('returnTo')?'/account':value;
   if(path==='/account/addresses')return new URLSearchParams(value.split('?')[1]||'').has('returnTo')?'/account':value;
-  if(!/^(?:\/|\/(?:account|checkout|shop|collections|sale|search|wishlist|bag|about|contact|shipping-policy|returns-policy|privacy-policy|terms-conditions)|\/(?:product|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(path))return '/account';
+  if(!/^(?:\/|\/(?:account|checkout|shop|collections|sale|search|wishlist|bag|about|contact|shipping-policy|returns-policy|privacy-policy|terms-conditions)|\/(?:product|collections|sale)\/[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(path))return '/account';
   if(new URLSearchParams(value.split('?')[1]||'').has('returnTo'))return '/account';
   return value;
 }

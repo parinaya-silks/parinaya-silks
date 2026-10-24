@@ -1,3 +1,4 @@
+import {campaignService} from './campaigns.ts';
 import { createHash } from 'node:crypto';
 import { FieldPath, FieldValue, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
@@ -42,9 +43,10 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return user.uid;
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
-  const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)));
+  const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)),async slug=>{try{await campaigns.publicGet(slug);return true;}catch(e){if((e as {code?:string}).code==='not-found')return false;throw e;}});
   const homeMedia=loginAppearanceService(db,media,transactionAccess,'home');
   const business=businessService(db,transactionAccess);
+  const campaigns=campaignService(db,media,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)));
   const customers=customerDirectoryService(db,auth);
   const shipping=shippingService(db,transactionAccess);
   const appearance=loginAppearanceService(db,media,transactionAccess);
@@ -159,6 +161,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
     sitemap:()=>sitemap(db),
+    publicCampaignList:campaigns.publicList,publicCampaignGet:campaigns.publicGet,publicCampaignBrowse:campaigns.browse,
     publicBrowse:browseService(db,async(doc,name)=>publicProduct(await present(doc,name))),
     publicAppearance:appearance.publicGet,publicContent:content.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
@@ -169,6 +172,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
+      if(typeof body.action==='string'&&body.action.startsWith('campaigns:'))return campaigns.admin(uid,body);
       if(body.action==='dashboard:orders')return orders.admin(uid,body);
       if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
       if(typeof body.action==='string'&&body.action.startsWith('customers:'))return customers.admin(body);
