@@ -4,9 +4,9 @@ import {LoginPortrait} from '../appearance/LoginPortrait.tsx';
 import {ArrowLeft} from 'lucide-react';
 import './customer-auth.css';
 
-export function AuthFrame({title,subtitle,children,onNavigate}:{title:string;subtitle:string;children:React.ReactNode;onNavigate:(path:string)=>void}) {
+export function AuthFrame({title,subtitle,children,onNavigate,portrait}:{title:string;subtitle:string;children:React.ReactNode;onNavigate:(path:string)=>void;portrait?:React.ReactNode}) {
   return <div className="customer-auth-layout">
-    <LoginPortrait/>
+    {portrait??<LoginPortrait/>}
     <section className="customer-auth-panel" aria-labelledby="customer-auth-title"><div className="customer-auth-content">
       <BrandLogo className="customer-auth-logo"/>
       <h1 id="customer-auth-title">{title}</h1><p className="customer-auth-subtitle">{subtitle}</p>

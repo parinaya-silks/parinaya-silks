@@ -1,3 +1,4 @@
+import {StoreSettingsPage} from './settings/StoreSettingsPage.tsx';
 import {AboutEditor} from './about/AboutEditor.tsx';
 import {CampaignManager} from './campaigns/CampaignManager.tsx';
 import {CustomersList} from './customers/CustomersList.tsx';
@@ -19,8 +20,6 @@ import {CouponsPage} from './coupons/CouponsPage.tsx';
 import {InventoryOverview} from './inventory/InventoryOverview.tsx';
 import {OrderDetails} from './orders/OrderDetails.tsx';
 import { ProductManager } from './ProductManager.tsx';
-import {AdminShippingSettings} from '../shipping/AdminShippingSettings.tsx';
-import {AdminLoginAppearance} from '../appearance/AdminLoginAppearance.tsx';
 import { AdminCategories } from './AdminCategories.tsx';
 import { safeAdminDestination } from './accessPolicy.ts';
 
@@ -47,7 +46,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if (path.startsWith('/admin/products')) {
     content = <ProductManager key={path} path={path} onNavigate={navigate} />;
   } else if (path === '/admin/settings') {
-    content = <div className="space-y-8"><AdminLoginAppearance/><AdminShippingSettings/></div>;
+    content = <StoreSettingsPage/>;
   } else if (path === '/admin/customers') {
     content = <CustomersList state={customersState} onState={setCustomersState} onNavigate={navigate}/>;
   } else if (path.startsWith('/admin/customers/')) {

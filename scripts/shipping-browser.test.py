@@ -28,23 +28,23 @@ try:
     customer.get_by_label('State / Union Territory',exact=True).select_option('Telangana');customer.get_by_role('button',name='Save address',exact=True).click();customer.get_by_role('dialog').wait_for(state='hidden')
     customer.goto(origin+'/product/shopping-simple');customer.get_by_role('button',name='Add to Bag',exact=True).click();customer.get_by_role('status').filter(has_text='Added to your bag.').wait_for();customer.goto(origin+'/checkout');shipping=customer.locator('[data-shipping-state]');expect(shipping).to_have_attribute('data-shipping-state','missing');assert 'To be confirmed' in shipping.inner_text()
     a=context();admin=a.new_page();admin.on('pageerror',lambda error:errors.append(str(error)));admin.goto(origin+'/admin/settings');login(admin,True)
-    section=admin.get_by_role('region',name='Shipping Settings',exact=True);section.get_by_text('No shipping configuration is saved.',exact=False).wait_for()
-    fee=section.get_by_label('Flat shipping charge (₹)',exact=True);threshold=section.get_by_label('Free-shipping threshold (₹)',exact=True);free=section.get_by_label('Enable free shipping',exact=True);save=section.get_by_role('button',name='Save shipping settings',exact=True);cancel=section.get_by_role('button',name='Cancel shipping changes',exact=True)
-    expect(fee).to_have_value('99.00');expect(threshold).to_have_value('10000.00');assert '₹10,098.00' in section.inner_text() and '₹10,099.00' in section.inner_text()
-    fee.fill('125.50');threshold.fill('9000');assert shipping.get_attribute('data-shipping-state')=='missing';cancel.click();expect(fee).to_have_value('99.00');expect(threshold).to_have_value('10000.00')
+    section=admin.get_by_role('region',name='Store Settings',exact=True);section.get_by_text('No shipping configuration is saved.',exact=False).wait_for()
+    fee=section.get_by_label('Standard Shipping Charge',exact=True);threshold=section.get_by_label('Free shipping threshold',exact=True);free=section.get_by_label('Enable free shipping',exact=True);save=section.get_by_role('button',name='Save Changes',exact=True).filter(visible=True).first;cancel=section.get_by_role('button',name='Cancel',exact=True).filter(visible=True).first
+    expect(fee).to_have_value('');expect(threshold).to_have_value('');assert not free.is_checked()
+    fee.fill('125.50');free.check();threshold.fill('9000');assert shipping.get_attribute('data-shipping-state')=='missing';cancel.click();admin.get_by_role('button',name='Discard Changes',exact=True).click();expect(fee).to_have_value('');expect(threshold).to_have_value('');fee.fill('99');free.check();threshold.fill('10000')
     # Uncertain save failure keeps draft; Retry Save reuses the operation ID.
     failed={'once':True};ops=[]
     def fail_first(route):
-        if route.request.method=='POST' and route.request.post_data_json.get('action')=='shipping:save':
+        if route.request.method=='POST' and route.request.post_data_json.get('action')=='settings:save':
             ops.append(route.request.post_data_json['operationId'])
             if failed['once']:failed['once']=False;route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}');return
         route.continue_()
-    admin.route('**/api/catalog',fail_first);save.click();section.get_by_role('alert').wait_for();expect(fee).to_have_value('99.00');save.click();section.get_by_role('status').filter(has_text='Shipping settings saved.').wait_for();assert ops[0]==ops[1];admin.unroute('**/api/catalog',fail_first)
+    admin.route('**/api/catalog',fail_first);save.click();section.get_by_role('alert').wait_for();expect(fee).to_have_value('99');save.click();section.get_by_role('status').filter(has_text='Store settings updated.').wait_for();assert ops[0]==ops[1];admin.unroute('**/api/catalog',fail_first)
     expect(shipping).to_have_attribute('data-shipping-state','ready');expect(shipping).to_have_attribute('data-shipping-revision','1');assert '₹99.00' in shipping.inner_text() and '₹10,098.00' in shipping.inner_text()
     for mode,total,free_expected in [('at','₹10,099.00',False),('above','₹10,000.01',True)]:
         fixture(mode);customer.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(shipping).to_contain_text(total);expect(shipping).to_have_attribute('data-shipping-state','ready');assert shipping.get_by_text('Free',exact=True).count()==(1 if free_expected else 0)
-    fee.fill('123.45');free.uncheck();save.click();section.get_by_role('status').filter(has_text='Shipping settings saved.').wait_for();expect(shipping).to_have_attribute('data-shipping-revision','2');expect(shipping).to_contain_text('₹123.45');expect(shipping).to_contain_text('₹10,123.46')
-    fee.fill('1.001');expect(save).to_be_disabled();fee.fill('-1');expect(save).to_be_disabled();fee.fill('');expect(save).to_be_disabled();cancel.click();expect(fee).to_have_value('123.45')
+    fee.fill('123.45');free.uncheck();save.click();section.get_by_role('status').filter(has_text='Store settings updated.').wait_for();expect(shipping).to_have_attribute('data-shipping-revision','2');expect(shipping).to_contain_text('₹123.45');expect(shipping).to_contain_text('₹10,123.46')
+    fee.fill('1.001');save.click();section.get_by_role('alert').wait_for();fee.fill('-1');save.click();section.get_by_role('alert').wait_for();fee.fill('');save.click();section.get_by_role('alert').wait_for();cancel.click();admin.get_by_role('button',name='Discard Changes',exact=True).click();expect(fee).to_have_value('123.45')
     held=[]
     def hold_old_review(route):
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review' and not held:
@@ -55,11 +55,11 @@ try:
         if held:break
         customer.wait_for_timeout(100)
     assert held
-    fee.fill('0');save.click();section.get_by_role('status').filter(has_text='Shipping settings saved.').wait_for();expect(shipping).to_have_attribute('data-shipping-revision','3');expect(shipping).to_contain_text('₹0.00');assert shipping.get_by_text('Free',exact=True).count()==0
+    fee.fill('0');save.click();section.get_by_role('status').filter(has_text='Store settings updated.').wait_for();expect(shipping).to_have_attribute('data-shipping-revision','3');expect(shipping).to_contain_text('₹0.00');assert shipping.get_by_text('Free',exact=True).count()==0
     try:held[0][0].fulfill(response=held[0][1])
     except Error:pass
     expect(shipping).to_have_attribute('data-shipping-revision','3');expect(shipping).to_contain_text('₹0.00');customer.unroute('**/api/catalog',hold_old_review)
-    fixture('invalid');expect(shipping).to_have_attribute('data-shipping-state','invalid');assert 'To be confirmed' in shipping.inner_text();assert 'Total including shipping' not in shipping.inner_text();cancel.click();section.get_by_text('Saved shipping configuration is invalid.',exact=False).wait_for();save.click();section.get_by_role('status').filter(has_text='Shipping settings saved.').wait_for();expect(shipping).to_have_attribute('data-shipping-state','ready');expect(shipping).to_have_attribute('data-shipping-revision','5')
+    fixture('invalid');expect(shipping).to_have_attribute('data-shipping-state','invalid');assert 'To be confirmed' in shipping.inner_text();assert 'Total including shipping' not in shipping.inner_text();admin.reload();section.get_by_text('The saved shipping configuration is invalid',exact=False).wait_for();fee.fill('99');free.check();threshold.fill('10000');save.click();section.get_by_role('status').filter(has_text='Store settings updated.').wait_for();expect(shipping).to_have_attribute('data-shipping-state','ready');expect(shipping).to_have_attribute('data-shipping-revision','5')
     for width in [320,375,390,768,1024,1440]:
         admin.set_viewport_size({'width':width,'height':900});customer.set_viewport_size({'width':width,'height':900});assert not admin.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width;assert not customer.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
         section.scroll_into_view_if_needed();admin.screenshot(path=str(screens/f'admin-shipping-{width}.png'),full_page=True);customer.screenshot(path=str(screens/f'checkout-shipping-{width}.png'),full_page=True)

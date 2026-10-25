@@ -25,9 +25,9 @@ with sync_playwright() as p:
     def api(route):
         if route.request.method=='POST':
             action=route.request.post_data_json.get('action')
-            if action=='appearance:get' and failures['load']:
+            if action=='settings:get' and failures['load']:
                 failures['load']=False;route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable"}');return
-            if action=='appearance:save' and failures['save']:
+            if action=='settings:save' and failures['save']:
                 failures['save']=False;route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable"}');return
         route.continue_()
     context.route('**/api/catalog',api)
@@ -38,15 +38,14 @@ with sync_playwright() as p:
     page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com')
     page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
     page.get_by_role('button',name='Sign In',exact=True).click()
-    page.get_by_role('heading',name='Login Page Appearance',exact=True).wait_for()
-    page.get_by_role('alert').filter(has_text='Unable to load login appearance').wait_for()
-    page.get_by_role('button',name='Retry loading saved appearance',exact=True).click()
+    page.get_by_role('alert').filter(has_text='Unable to load store settings').wait_for()
+    page.get_by_role('button',name='Retry store settings',exact=True).click()
     page.get_by_role('alert').wait_for(state='hidden')
     desktop=page.get_by_role('region',name='Desktop login image',exact=True)
     mobile=page.get_by_role('region',name='Mobile login image',exact=True)
     def select(region,name):region.locator('input[type=file]').set_input_files({'name':name,'mimeType':'image/png','buffer':png})
     select(desktop,'synthetic-desktop.png')
-    desktop.get_by_role('button',name='Upload selected image',exact=True).click()
+    desktop.get_by_role('button',name='Upload selected desktop image',exact=True).click()
     try:desktop.get_by_role('alert').wait_for(timeout=45000)
     except Exception:
         print('Appearance action/status diagnostics:',calls)
@@ -55,27 +54,27 @@ with sync_playwright() as p:
         print('Appearance buttons:',desktop.get_by_role('button').all_text_contents())
         raise
     desktop.get_by_role('button',name='Upload again',exact=True).click()
-    desktop.get_by_label('Alt text (optional)',exact=True).wait_for(timeout=45000)
+    desktop.get_by_label('desktop login alt text',exact=True).wait_for(timeout=45000)
     assert context.request.get(origin+'/api/catalog?appearance=login').json()=={'desktop':None,'mobile':None},'Upload must not publish'
-    desktop.get_by_label('Alt text (optional)',exact=True).fill('Desktop test portrait')
+    desktop.get_by_label('desktop login alt text',exact=True).fill('Desktop test portrait')
     desktop.locator('input[type=range]').nth(0).fill('35')
     desktop.locator('input[type=range]').nth(1).fill('25')
     select(mobile,'synthetic-mobile.png')
-    mobile.get_by_role('button',name='Upload selected image',exact=True).click()
-    mobile.get_by_label('Alt text (optional)',exact=True).wait_for()
-    mobile.get_by_label('Alt text (optional)',exact=True).fill('Mobile test portrait')
+    mobile.get_by_role('button',name='Upload selected mobile image',exact=True).click()
+    mobile.get_by_label('mobile login alt text',exact=True).wait_for()
+    mobile.get_by_label('mobile login alt text',exact=True).fill('Mobile test portrait')
     mobile.locator('input[type=range]').nth(1).fill('15')
-    save=page.get_by_role('button',name='Save login appearance',exact=True)
-    save.click();page.get_by_role('alert').filter(has_text='Appearance was not confirmed saved').wait_for()
-    assert desktop.get_by_label('Alt text (optional)',exact=True).input_value()=='Desktop test portrait'
-    save.click();page.get_by_role('status').filter(has_text='Login page appearance saved').wait_for()
+    save=page.get_by_role('button',name='Save Changes',exact=True).filter(visible=True).first
+    save.click();page.get_by_role('alert').filter(has_text='Unable to save store settings').wait_for()
+    assert desktop.get_by_label('desktop login alt text',exact=True).input_value()=='Desktop test portrait'
+    save.click();page.get_by_role('status').filter(has_text='Store settings updated.').wait_for()
     published=context.request.get(origin+'/api/catalog?appearance=login').json()
     assert '/login/desktop/' in published['desktop']['url'] and '/login/mobile/' in published['mobile']['url']
-    desktop.get_by_label('Alt text (optional)',exact=True).fill('Unsaved change')
-    page.get_by_role('button',name='Cancel',exact=True).click()
+    desktop.get_by_label('desktop login alt text',exact=True).fill('Unsaved change')
+    page.get_by_role('button',name='Cancel',exact=True).filter(visible=True).first.click();page.get_by_role('button',name='Discard Changes',exact=True).click()
     page.get_by_role('heading',name='Login Page Appearance',exact=True).wait_for()
-    expect(desktop.get_by_label('Alt text (optional)',exact=True)).to_have_value('Desktop test portrait')
-    page.reload();expect(desktop.get_by_label('Alt text (optional)',exact=True)).to_have_value('Desktop test portrait')
+    expect(desktop.get_by_label('desktop login alt text',exact=True)).to_have_value('Desktop test portrait')
+    page.reload();expect(desktop.get_by_label('desktop login alt text',exact=True)).to_have_value('Desktop test portrait')
     # Fresh mobile context must request the mobile asset, never the desktop one.
     visitor=browser.new_context(viewport={'width':390,'height':844},reduced_motion='reduce')
     downloads=[]
@@ -103,8 +102,8 @@ with sync_playwright() as p:
     customer.reload();customer.get_by_role('heading',name='Welcome back',exact=True).wait_for()
     assert customer.locator('.customer-auth-portrait img').evaluate('(el)=>el.currentSrc.includes("customer-auth-portrait.jpg")')
     # Restore defaults, keeping all uploaded emulator records; no asset deletion.
-    for region in [desktop,mobile]:region.get_by_role('button',name='Use approved fallback',exact=True).click()
-    save.click();page.get_by_role('status').filter(has_text='Login page appearance saved').wait_for()
+    for region,device in [(desktop,'desktop'),(mobile,'mobile')]:region.get_by_role('button',name='Remove '+device+' image',exact=True).click()
+    save.click();page.get_by_role('status').filter(has_text='Store settings updated.').wait_for()
     assert context.request.get(origin+'/api/catalog?appearance=login').json()=={'desktop':None,'mobile':None}
     assert not errors,errors
     print('Appearance browser: administrator load/upload/save retry, separate images, unpublished previews, cancel/persistence, responsive loading/focal points, fallback and six widths passed (Cloudinary fixtures only)')
