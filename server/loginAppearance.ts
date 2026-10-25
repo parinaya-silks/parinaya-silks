@@ -4,9 +4,9 @@ import {ProductError,MAX_IMAGE_BYTES} from '../src/products/model.ts';
 import {emptyAppearance,loginImage,validateAppearance,type Appearance,type Device} from '../src/appearance/model.ts';
 import type {CloudinaryMedia,MediaUploadTicket} from './cloudinary.ts';
 
-interface LoginTicket extends MediaUploadTicket {purpose:'login-appearance'|'home-banner';device:Device}
-export function loginAppearanceService(db:Firestore,media:CloudinaryMedia,access:(tx:Transaction,uid:string)=>Promise<void>,scope:'login'|'home'='login'){
-  const purpose=scope==='login'?'login-appearance':'home-banner',registry=scope==='login'?'loginAppearanceMedia':'homeBannerMedia';
+interface LoginTicket extends MediaUploadTicket {purpose:'login-appearance'|'home-banner'|'about-founder';device:Device}
+export function loginAppearanceService(db:Firestore,media:CloudinaryMedia,access:(tx:Transaction,uid:string)=>Promise<void>,scope:'login'|'home'|'about'='login'){
+  const purpose=scope==='login'?'login-appearance':scope==='home'?'home-banner':'about-founder',registry=scope==='login'?'loginAppearanceMedia':scope==='home'?'homeBannerMedia':'aboutFounderMedia';
   const settings=db.doc(scope==='login'?'siteSettings/loginAppearance':'siteSettings/homeAppearance');
   const allowed=(body:Record<string,unknown>,fields:string[])=>{if(Object.keys(body).some(key=>!['action',...fields].includes(key)))throw new ProductError('invalid','Unsupported appearance fields.');};
   function identity(body:Record<string,unknown>){if(!['desktop','mobile'].includes(body.device as string)||typeof body.mediaId!=='string'||!/^[a-f0-9]{32}$/.test(body.mediaId))throw new ProductError('invalid','Choose a device and valid image upload.');return {device:body.device as Device,imageId:body.mediaId};}

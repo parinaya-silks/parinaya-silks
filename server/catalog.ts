@@ -1,3 +1,4 @@
+import {aboutService} from './about.ts';
 import {contactService} from './contact.ts';
 import {websiteTextService} from './websiteText.ts';
 import {campaignService} from './campaigns.ts';
@@ -47,6 +48,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
   const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)),async slug=>{try{await campaigns.publicGet(slug);return true;}catch(e){if((e as {code?:string}).code==='not-found')return false;throw e;}});
   const contacts=contactService(db,transactionAccess);
+  const about=aboutService(db,transactionAccess),aboutMedia=loginAppearanceService(db,media,transactionAccess,'about');
   const websiteText=websiteTextService(db,transactionAccess);
   const homeMedia=loginAppearanceService(db,media,transactionAccess,'home');
   const business=businessService(db,transactionAccess);
@@ -183,6 +185,9 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
+        case 'about:get':keys(body,['action']);return about.get();
+        case 'about:save':return about.save(uid,body);
+        case 'about:sign':case 'about:verify':if(body.device!=='desktop')throw new ProductError('invalid','Choose the founder portrait.');return body.action==='about:sign'?aboutMedia.sign(uid,body):aboutMedia.verify(uid,body);
         case 'contact:get':keys(body,['action']);return contacts.get();
         case 'contact:save':return contacts.save(uid,body);
         case 'website:list':keys(body,['action']);return websiteText.list();

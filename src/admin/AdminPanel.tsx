@@ -1,3 +1,4 @@
+import {AboutEditor} from './about/AboutEditor.tsx';
 import {CampaignManager} from './campaigns/CampaignManager.tsx';
 import {CustomersList} from './customers/CustomersList.tsx';
 import {CustomerDetails} from './customers/CustomerDetails.tsx';
@@ -58,7 +59,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if(path==='/admin/banners'){content=<BannersPage/>;
   } else if(path==='/admin/website-content'||path.startsWith('/admin/website-content/')){content=<WebsiteContent path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/contact-information'){content=<ContactInformation/>;
-  } else if(path==='/admin/about'){content=<ModuleUnavailable title="About Us"/>;
+  } else if(path==='/admin/about'){content=<AboutEditor/>;
   } else if(path==='/admin/enquiries'){content=<ModuleUnavailable title="Customer Enquiries"/>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';

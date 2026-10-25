@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {initializeTestEnvironment,assertFails} from '@firebase/rules-unit-testing';
+import {doc,getDoc,setDoc,setLogLevel} from 'firebase/firestore';
+import {serverFirebase} from '../server/firebase.ts';
+import {catalogService} from '../server/catalog.ts';
+import {catalogHandler} from '../server/handler.ts';
+import {blankContent} from '../src/content/model.ts';
+import {fallbackAbout,aboutInput,type AboutSettings} from '../src/about/model.ts';
+import type {DecodedIdToken} from 'firebase-admin/auth';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw Error('Loopback emulators required');process.env.PARINAYA_SERVER_EMULATORS='true';setLogLevel('silent');
+test('About Us save, media purpose/ownership, public visibility and shared-document consistency',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database,ref=db.doc('siteSettings/storeContent'),op=()=>randomUUID().replaceAll('-','');let failMedia=false;
+ const service=catalogService({database:db,auth:{verifyIdToken:async role=>({uid:role,aud:'parinaya-silks',admin:['owner','other','claim'].includes(role)}) as unknown as DecodedIdToken},media:{sign:ticket=>({public_id:ticket.publicId,uploadUrl:'https://fixture.invalid/upload'}),verify:async ticket=>{if(failMedia)throw Error('synthetic verification failure');return {url:'https://res.cloudinary.com/parinaya-emulator/image/upload/founder.jpg',publicId:ticket.publicId,assetId:'fixture',width:600,height:750,bytes:1000,format:'jpg',version:1};}}}),call=(body:Record<string,unknown>,role='owner')=>service.privileged(role,body),server=createServer(catalogHandler(()=>service,()=>{})).listen(0,'127.0.0.1');await once(server,'listening');const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/catalog`;
+ try{await env.clearFirestore();for(const uid of ['owner','other','record'])await db.doc('adminAccess/'+uid).set({enabled:true});for(const role of ['customer','record','claim'])for(const action of ['about:get','about:save','about:sign','about:verify'])await assert.rejects(call({action},role),{code:'permission'});assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:'{"action":"about:get"}'})).status,401);
+ const empty=await call({action:'about:get'}) as {saved:boolean};assert.equal(empty.saved,false);assert.equal((await ref.get()).exists,false);
+ const save=(value:AboutSettings,revision:number,operationId=op(),role='owner')=>call({action:'about:save',about:aboutInput(value),expectedRevision:revision,operationId},role);
+ await save(fallbackAbout(),0);assert.equal((await ref.get()).data()!.revision,1);
+ const base={...blankContent(),schemaVersion:1,revision:10,contact:{...blankContent().contact,email:'preserved@example.test',privateNote:'KEEP'},about:{...fallbackAbout(),privateEditorial:'KEEP'},textSections:{'footer-brand':{text:'Keep brand'}},textSectionMeta:{keep:true},policies:{...blankContent().policies,shipping:{text:'Keep policy',approved:true}},bannerMeta:{keep:true},other:{keep:true}};await ref.set(base);const returns={enabled:true,revision:5};await db.doc('siteSettings/returns').set(returns);const login={desktop:null,private:'Keep login source'};await db.doc('siteSettings/loginAppearance').set(login);
+ const mid=op();await call({action:'about:sign',device:'desktop',mediaId:mid,type:'image/jpeg',size:1000});failMedia=true;await assert.rejects(call({action:'about:verify',device:'desktop',mediaId:mid}));assert.equal((await ref.get()).data()!.revision,10);failMedia=false;const image=await call({action:'about:verify',device:'desktop',mediaId:mid}) as AboutSettings['photo'];assert.deepEqual(await call({action:'about:verify',device:'desktop',mediaId:mid}),image);
+ const value={...fallbackAbout(),heading:'Saved heading',story:'తెలుగు\n\n<script>literal</script>',showFounder:true,founderName:'Fixture Owner',founderRole:'Fixture role',founderBio:'Fixture bio',photo:{...image!,alt:'Saved owner portrait',focalX:30,focalY:25}};const operation=op();await save(value,10,operation);await save(value,10,operation);assert.equal((await ref.get()).data()!.revision,11);const publicValue=(await service.publicContent()).about;assert.equal(publicValue.heading,value.heading);assert.equal(publicValue.story,value.story);assert.equal(publicValue.founder!.photo!.alt,'Saved owner portrait');assert.ok(!JSON.stringify(publicValue).includes('mediaId'));assert.ok(!JSON.stringify(await call({action:'about:get'})).includes('privateEditorial'));
+ const stored=(await ref.get()).data()!;for(const k of ['contact','policies','textSections','textSectionMeta','bannerMeta','other','banners','featuredProductIds'])assert.deepEqual(stored[k],(base as any)[k]);assert.equal(stored.about.privateEditorial,'KEEP');assert.deepEqual((await db.doc('siteSettings/returns').get()).data(),returns);assert.deepEqual((await db.doc('siteSettings/loginAppearance').get()).data(),login);
+ await save({...value,showFounder:false},11);const hidden=(await service.publicContent()).about;assert.equal(hidden.founder,null);assert.ok(!JSON.stringify(hidden).includes('Fixture Owner'));assert.equal(((await call({action:'about:get'})) as {about:AboutSettings}).about.photo!.mediaId,mid);
+ await save({...value,photo:null},12);assert.ok((await db.doc('aboutFounderMedia/'+mid).get()).exists);assert.equal((await service.publicContent()).about.founder!.photo,null);
+ await assert.rejects(save(value,10),{code:'conflict'});await assert.rejects(save(value,13,op(),'other'),{code:'media'});
+ await db.doc('aboutFounderMedia/'+mid).update({purpose:'home-banner'});await assert.rejects(save(value,13),{code:'media'});await db.doc('aboutFounderMedia/'+mid).update({purpose:'about-founder'});
+ const race=await Promise.allSettled([save({...value,photo:null,heading:'One'},13),save({...value,photo:null,heading:'Two'},13)]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);
+ for(const patch of [{heading:''},{showFounder:true,founderName:''},{admin:true},{photo:{url:'https://evil.test/x'}}])await assert.rejects(call({action:'about:save',about:{...aboutInput(value),...patch},expectedRevision:14,operationId:op()}),{code:'invalid'});
+ await assert.rejects(call({action:'about:sign',device:'mobile',mediaId:op(),type:'image/jpeg',size:100}),{code:'invalid'});await assert.rejects(call({action:'about:sign',device:'desktop',mediaId:op(),type:'image/svg+xml',size:100}),{code:'invalid'});
+ const customer=env.authenticatedContext('customer').firestore();for(const path of ['siteSettings/storeContent','aboutFounderMedia/'+mid]){await assertFails(getDoc(doc(customer,path)));await assertFails(setDoc(doc(customer,path),{hacked:true}));}assert.equal((await fetch(url+'?content=store&preview=1')).status,400);await db.doc('adminAccess/owner').update({enabled:false});await assert.rejects(call({action:'about:get'}),{code:'permission'});
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));await env.cleanup();}
+});

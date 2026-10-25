@@ -1,3 +1,4 @@
+import type {PublicAbout} from '../about/model.ts';
 import React,{createContext,useContext,useEffect,useState} from 'react';
 import {publicContact,type PublicContact} from '../contact/model.ts';
 import type {PublicProductRecord} from '../products/model.ts';
@@ -7,7 +8,7 @@ import type {PublicWebsiteText} from './sections.ts';
 import type {PublicBanner} from './model.ts';
 import {safeLink} from '../orders/model.ts';
 import {catalogResponse} from '../products/response.ts';
-type PublicContent=Omit<StoreContent,'revision'|'banners'|'contact'>&{contact:PublicContact;banners:PublicBanner[];textSections?:PublicWebsiteText}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string}[]};
+type PublicContent=Omit<StoreContent,'revision'|'banners'|'contact'>&{about?:PublicAbout;aboutSaved?:boolean;contact:PublicContact;banners:PublicBanner[];textSections?:PublicWebsiteText}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string}[]};
 const emptyPublicContent=()=>({...blankContent(),contact:publicContact()});
 const Context=createContext<{content:PublicContent;status:'loading'|'ready'|'error';retry:()=>void}>({content:emptyPublicContent(),status:'loading',retry:()=>{}});
 export const useStoreContent=()=>useContext(Context);
