@@ -179,6 +179,9 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
+        case 'banners:get':keys(body,['action']);return content.bannersAdmin();
+        case 'banners:save':return content.saveBanners(uid,body);
+        case 'banners:preview':return content.preview(uid,body);
         case 'content:get':keys(body,['action']);return content.get();
         case 'content:save':return content.save(uid,body);
         case 'content:sign':return homeMedia.sign(uid,body);

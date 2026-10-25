@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {initializeTestEnvironment,assertFails} from '@firebase/rules-unit-testing';
+import {doc,getDoc,setDoc,setLogLevel} from 'firebase/firestore';
+import {serverFirebase} from '../server/firebase.ts';
+import {catalogService} from '../server/catalog.ts';
+import {contentService} from '../server/content.ts';
+import {blankContent,bannerInput,type Banner} from '../src/content/model.ts';
+import type {DecodedIdToken} from 'firebase-admin/auth';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw Error('Loopback emulators required');process.env.PARINAYA_SERVER_EMULATORS='true';setLogLevel('silent');
+test('homepage banners: shared revision, retries, order, destinations, trusted media and public schedules',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database,op=()=>randomUUID().replaceAll('-','');
+ const service=catalogService({database:db,auth:{verifyIdToken:async role=>({uid:role,aud:'parinaya-silks',admin:['owner','claim'].includes(role)}) as unknown as DecodedIdToken},media:{sign:()=>({uploadUrl:'https://example.test'}),verify:async t=>({assetId:'fixture',publicId:t.publicId,url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/'+t.publicId+'.png',width:1920,height:720,bytes:100,format:'png',version:1})}}),call=(body:Record<string,unknown>,role='owner')=>service.privileged(role,body);
+ try{await env.clearFirestore();for(const uid of ['owner','record'])await db.doc('adminAccess/'+uid).set({enabled:true});for(const role of ['customer','claim','record'])for(const action of ['banners:get','banners:save','banners:preview','content:sign','content:verify'])await assert.rejects(call({action},role),{code:'permission'});
+ const original={...blankContent(),revision:4,contact:{...blankContent().contact,address:'Retained owner content'},privateSetting:{keep:true},schemaVersion:1};await db.doc('siteSettings/storeContent').set(original);
+ const imageId=op();await call({action:'content:sign',device:'desktop',mediaId:imageId,type:'image/png',size:100});const image=await call({action:'content:verify',device:'desktop',mediaId:imageId}) as Banner['images']['desktop'];
+ const banner:Banner={id:op(),name:'Internal only',title:'Public headline',supportingText:'Optional caption',showButton:true,buttonLabel:'Browse',placement:'left',link:'/shop',enabled:true,startsAt:null,endsAt:null,images:{desktop:{...image!,alt:'Approved fixture'},mobile:null,revision:0}};
+ const body={action:'banners:save',banners:[bannerInput(banner)],expectedRevision:4,operationId:op()};await call(body);await call(body);let saved=(await call({action:'banners:get'})) as {revision:number;banners:Banner[]};assert.equal(saved.revision,5);assert.equal(saved.banners.length,1);const raw=(await db.doc('siteSettings/storeContent').get()).data()!;assert.deepEqual(raw.contact,original.contact);assert.deepEqual(raw.privateSetting,original.privateSetting);assert.deepEqual(raw.policies,original.policies);assert.equal((await db.doc('siteSettings/returns').get()).exists,false);
+ await assert.rejects(call({...body,operationId:op()}),{code:'conflict'});const visible=await service.publicContent();assert.equal(visible.banners.length,1);assert.equal('name' in visible.banners[0],false);assert.equal('mediaId' in visible.banners[0].images.desktop!,false);
+ const second={...banner,id:op(),name:'Second',enabled:false};const save=(banners:Banner[],revision:number)=>call({action:'banners:save',banners:banners.map(bannerInput),expectedRevision:revision,operationId:op()});await save([banner,second],5);await save([second,banner],6);saved=await call({action:'banners:get'}) as typeof saved;assert.deepEqual(saved.banners.map(b=>b.id),[second.id,banner.id]);await assert.rejects(save([banner],6),{code:'conflict'});
+ const preview=await call({action:'banners:preview',banners:[bannerInput(second)]}) as {banners:unknown[]};assert.equal(preview.banners.length,1);assert.equal((await service.publicContent()).banners.length,1);
+ const forged={...banner,images:{desktop:{...image!,mediaId:op()},mobile:null,revision:0}};await assert.rejects(save([forged],7),{code:'media'});
+ const wrongId=op();await db.doc('homeBannerMedia/'+wrongId).set({verified:true,purpose:'campaign-banner',device:'desktop',metadata:image});await assert.rejects(save([{...forged,images:{...forged.images,desktop:{...image!,mediaId:wrongId}}}],7),{code:'media'});
+ const cat='c'.repeat(20),product='p'.repeat(20);await db.doc('categories/'+cat).set({slug:'silk',enabled:true});await db.doc('products/'+product).set({slug:'silk-product',status:'Published',categoryId:cat});await save([{...banner,link:'/product/silk-product'}],7);await db.doc('categories/'+cat).update({enabled:false});assert.equal((await service.publicContent()).banners.length,0);assert.match((await call({action:'banners:get'}) as any).issues[banner.id],/not publicly available/);await assert.rejects(save([{...banner,link:'/collections/silk'}],8),{code:'invalid'});
+ await assert.rejects(save([{...banner,link:'https://external.example/new'}],8),{code:'invalid'});
+ const campaignId=op(),now=100000;await db.doc('campaignSlugs/future-silk').set({campaignId});await db.doc('campaigns/'+campaignId).set({schemaVersion:1,slug:'future-silk',intent:'published',startsAt:now+100,endsAt:now+200});
+ let clock=now;const timed=contentService(db,async(tx,uid)=>{assert.equal((await tx.get(db.doc('adminAccess/'+uid))).data()?.enabled,true);},async()=>{throw Error('unused');},undefined,()=>clock);
+ const scheduled={...banner,link:'/sale/future-silk',startsAt:now+100,endsAt:now+200};await timed.saveBanners('owner',{action:'banners:save',banners:[bannerInput(scheduled)],expectedRevision:8,operationId:op()});assert.equal((await timed.publicGet()).banners.length,0);clock=now+100;assert.equal((await timed.publicGet()).banners.length,1);clock=now+200;assert.equal((await timed.publicGet()).banners.length,0);
+ await assert.rejects(timed.saveBanners('owner',{action:'banners:save',banners:[bannerInput({...scheduled,endsAt:null})],expectedRevision:9,operationId:op()}),{code:'invalid'});
+ const customer=env.authenticatedContext('customer').firestore();await assertFails(getDoc(doc(customer,'siteSettings/storeContent')));await assertFails(setDoc(doc(customer,'siteSettings/storeContent'),{}));await assertFails(getDoc(doc(customer,'homeBannerMedia/'+imageId)));
+ // Contact/policy saves retain an unchanged banner even after its campaign has ended.
+ const current=await timed.get(),{revision,...shared}=current;await timed.save('owner',{action:'content:save',content:{...shared,contact:{...shared.contact,address:'Updated contact only'},banners:shared.banners.map(bannerInput)},expectedRevision:revision,operationId:op()});assert.equal((await timed.get()).banners[0].id,scheduled.id);assert.deepEqual((await db.doc('siteSettings/storeContent').get()).data()!.privateSetting,original.privateSetting);
+ assert.equal((await db.doc('homeBannerMedia/'+imageId).get()).exists,true);await save([],10);assert.equal((await service.publicContent()).banners.length,0);assert.equal((await db.doc('homeBannerMedia/'+imageId).get()).exists,true);
+ const race=await Promise.allSettled([save([banner],11),save([second],11)]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);assert.equal(race.filter(r=>r.status==='rejected').length,1);
+ }finally{await env.cleanup();}
+});
