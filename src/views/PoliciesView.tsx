@@ -1,5 +1,5 @@
+import {ContactSupportLinks} from '../contact/ContactLinks.tsx';
 import {PolicyCopy} from '../content/TextCopy.tsx';
-import {usePublicContact} from '../content/public.tsx';
 import React, { useState, useEffect } from 'react';
 import {useStoreContent} from '../content/public.tsx';
 
@@ -11,7 +11,6 @@ interface PoliciesViewProps {
 }
 
 export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shipping', onNavigate }) => {
-  const contact=usePublicContact();
   const {content}=useStoreContent();
   const [activeKey, setActiveKey] = useState<PolicyKey>(initialTab);
   const [tocOpen, setTocOpen] = useState(false);
@@ -92,41 +91,7 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
 
         </div>
 
-        {/* Compact Support Row */}
-        <div className="p-5 bg-white border border-[#E8DDD6] rounded-xl shadow-xs text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 font-sans">
-          <div>
-            <p className="text-[15px] font-semibold text-[#231919]">
-              Need help with our policies?
-            </p>
-            <p className="text-[13px] text-[#5F5552] mt-0.5">
-              WhatsApp:{' '}
-              <a
-                className="text-[#780D24] font-medium hover:underline"
-                href={'https://wa.me/'+contact.mobile.replace('+','')}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {contact.mobile}
-              </a>{' '}
-              &nbsp;|&nbsp; Email:{' '}
-              <a
-                className="text-[#780D24] font-medium hover:underline"
-                href={'mailto:'+contact.email}
-              >
-                {contact.email}
-              </a>
-            </p>
-          </div>
-          <a
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#780D24] text-white text-[13px] font-semibold rounded-lg hover:bg-[#5E091B] transition-colors shrink-0"
-            href={'https://wa.me/'+contact.mobile.replace('+','')}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className="material-symbols-outlined text-[16px]">chat</span>
-            <span>WhatsApp Support</span>
-          </a>
-        </div>
+        <div className="p-5 bg-white border border-[#E8DDD6] rounded-xl"><p className="mb-3 text-sm">Need help with our policies?</p><ContactSupportLinks/></div>
 
         {/* Related Policies (Excludes current active) */}
         <div className="pt-6 border-t border-[#E8DDD6] space-y-3 font-sans">

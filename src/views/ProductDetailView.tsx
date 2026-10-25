@@ -1,3 +1,4 @@
+import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -330,17 +331,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
           {/* WhatsApp Direct Atelier Inquiry */}
           <div>
-            <a
-              href={`https://wa.me/918367383073?text=${encodeURIComponent(
-                `Namaste Parinaya Silks, I would like to inquire about ${product.name} (${product.sku}).`
-              )}`}
+            <BusinessWhatsAppLink message={`I would like to inquire about ${product.name} (${product.sku}).`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full h-11 bg-white border border-[#780D24]/50 hover:border-[#780D24] text-[#780D24] flex items-center justify-center gap-2 rounded-lg transition-colors shadow-xs"
             >
               <span className="material-symbols-outlined text-[#25D366] text-[20px]">chat</span>
               <span className="font-sans text-[13px] font-semibold">Ask about this saree on WhatsApp</span>
-            </a>
+            </BusinessWhatsAppLink>
           </div>
 
           {/* 5 Product Accordions */}

@@ -1,3 +1,4 @@
+import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
 import { Order } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -295,15 +296,14 @@ export const OrderResultView: React.FC<OrderResultViewProps> = ({ order, onNavig
 
             {/* Need help row */}
             <div className="pt-2 text-center">
-              <a
-                href="https://wa.me/918367383073"
+              <BusinessWhatsAppLink
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#231919] hover:text-[#780D24]"
               >
                 <span className="material-symbols-outlined text-[#25D366] text-[18px]">chat</span>
                 <span>Need help? Chat on WhatsApp</span>
-              </a>
+              </BusinessWhatsAppLink>
             </div>
           </div>
         )}

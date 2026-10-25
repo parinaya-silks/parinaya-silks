@@ -20,7 +20,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, products, catalo
     <div className="absolute inset-0 bg-gradient-to-t from-[#231919] via-[#231919]/60 to-transparent" />
     <div className="absolute inset-0 p-4 sm:p-8 flex flex-col justify-end text-white max-w-4xl mx-auto">
       <h1 className="font-serif text-[24px] sm:text-[34px] md:text-[40px] leading-tight font-medium">PARINAYA SILKS</h1>
-      <p className="font-sans text-[13px] sm:text-[15px] text-[#E7DFD5] mt-2">Hyderabad, India</p>
+      <>{content.contact.address&&<p className="font-sans text-[13px] sm:text-[15px] text-[#E7DFD5] mt-2 break-words line-clamp-2">{content.contact.address}</p>}</>
       <div className="mt-4 flex flex-wrap gap-3">
         <button onClick={() => onNavigate('/shop')} className="min-h-11 px-5 bg-[#780D24] text-white border border-[#B88A44] rounded-lg text-sm font-semibold hover:bg-[#5E091B] transition-colors">Shop Sarees</button>
         <button onClick={() => onNavigate('/contact')} className="min-h-11 px-5 border border-[#B88A44] rounded-lg text-sm hover:bg-white/10 transition-colors">Contact Us</button>

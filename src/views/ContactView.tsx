@@ -1,3 +1,4 @@
+import {ContactChannels} from '../contact/ContactPresentation.tsx';
 import {usePublicContact} from '../content/public.tsx';
 import React, { useState } from 'react';
 
@@ -7,22 +8,7 @@ interface ContactViewProps {
 
 export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
   const contact=usePublicContact();
-  const [orderRef, setOrderRef] = useState('');
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-
-  const getWhatsAppUrl = () => {
-    const base = 'https://wa.me/'+contact.mobile.replace('+','');
-    if (orderRef.trim()) {
-      const msg = encodeURIComponent(
-        `Namaste Parinaya Silks, I am inquiring regarding my Order ${orderRef.trim()}. Could you please assist me?`
-      );
-      return `${base}?text=${msg}`;
-    }
-    const defaultMsg = encodeURIComponent(
-      'Namaste Parinaya Silks, I would like to inquire about your saree collections and services.'
-    );
-    return `${base}?text=${defaultMsg}`;
-  };
 
   const toggleFaq = (index: number) => {
     setFaqOpen(faqOpen === index ? null : index);
@@ -49,124 +35,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* Contact Cards */}
-      <section aria-label="Contact Channels" className="space-y-4">
-        {/* 1. WhatsApp Card with Order Ref Field */}
-        <div className="bg-white border border-[#E8DDD6] rounded-xl p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F3F8F3] text-[#1E7E34] border border-[#CDE5D2] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px]">chat</span>
-            </div>
-            <div>
-              <span className="block text-[11px] uppercase tracking-wider font-bold text-[#5F5552] font-sans">
-                WhatsApp
-              </span>
-              <span className="font-sans text-[18px] font-bold text-[#231919]">
-                {contact.mobile}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="order-ref-input"
-              className="block text-[13px] font-sans text-[#5F5552] mb-1.5 font-medium"
-            >
-              Add your order number to your enquiry <span className="text-stone-400">(optional)</span>
-            </label>
-            <div className="relative">
-              <input
-                id="order-ref-input"
-                type="text"
-                value={orderRef}
-                onChange={(e) => setOrderRef(e.target.value)}
-                placeholder="Your order number"
-                className="w-full h-11 bg-[#FBF7F0] px-3.5 pr-10 text-[#231919] text-[15px] font-sans border border-[#E8DDD6] rounded-lg focus:outline-none focus:border-[#780D24]"
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#B88A44] material-symbols-outlined text-[18px] pointer-events-none">
-                tag
-              </span>
-            </div>
-          </div>
-
-          <a
-            href={getWhatsAppUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full h-11 bg-[#780D24] hover:bg-[#5E091B] text-white text-[14px] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">forum</span>
-            <span>Chat on WhatsApp</span>
-          </a>
-        </div>
-
-        {/* 2. Email Card */}
-        <div className="bg-white border border-[#E8DDD6] rounded-xl p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F4EEE5] text-[#780D24] border border-[#E8DDD6] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px]">mail</span>
-            </div>
-            <div className="min-w-0">
-              <span className="block text-[11px] uppercase tracking-wider font-bold text-[#5F5552] font-sans">
-                Email
-              </span>
-              <span className="font-sans text-[15px] sm:text-[16px] font-bold text-[#231919] break-all">
-                {contact.email}
-              </span>
-            </div>
-          </div>
-
-          <a
-            href={'mailto:'+contact.email}
-            className="w-full h-11 bg-white border border-[#780D24] hover:bg-[#F4EEE5] text-[#780D24] text-[14px] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">send</span>
-            <span>Send Email</span>
-          </a>
-        </div>
-
-        {/* 3. Instagram Card */}
-        <div className="bg-white border border-[#E8DDD6] rounded-xl p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F4EEE5] text-[#B88A44] border border-[#E8DDD6] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px]">photo_camera</span>
-            </div>
-            <div>
-              <span className="block text-[11px] uppercase tracking-wider font-bold text-[#5F5552] font-sans">
-                Instagram
-              </span>
-              <span className="font-sans text-[16px] font-bold text-[#231919]">
-                {new URL(contact.instagram).pathname.replaceAll('/','')}
-              </span>
-            </div>
-          </div>
-
-          <a
-            href={contact.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full h-11 bg-white border border-[#E8DDD6] hover:border-[#780D24] text-[#231919] text-[14px] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-            <span>Visit Instagram</span>
-          </a>
-        </div>
-
-        {/* 4. Location Card */}
-        <div className="bg-white border border-[#E8DDD6] rounded-xl p-5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#F4EEE5] text-[#780D24] border border-[#E8DDD6] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">location_on</span>
-          </div>
-          <div>
-            <span className="block text-[11px] uppercase tracking-wider font-bold text-[#5F5552] font-sans">
-              Location
-            </span>
-            <span className="font-serif text-[18px] text-[#231919] font-medium">
-              {contact.address}
-            </span>
-          </div>
-        </div>
-      </section>
+      <ContactChannels contact={contact}/>
 
       {/* Frequently Asked Questions (Quick Help) */}
       <section aria-labelledby="faq-section-heading" className="space-y-4 pt-2">

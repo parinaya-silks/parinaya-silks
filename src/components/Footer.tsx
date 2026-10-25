@@ -1,3 +1,4 @@
+import {FooterContactBlock} from '../contact/ContactPresentation.tsx';
 import {BrandLogo} from './BrandLogo.tsx';
 import {FooterTextCopy} from '../content/TextCopy.tsx';
 import {useStoreContent,usePublicContact} from '../content/public.tsx';
@@ -21,42 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 PARINAYA SILKS
               </span>
             </div>
-            <FooterTextCopy value={content.textSections?.['footer-brand']}/><p className="text-[13px] text-[#C4B7AC] leading-relaxed">
-              {contact.address}
-            </p>
-            <div className="pt-2 text-[13px] space-y-1.5 text-[#C4B7AC]">
-              <p>
-                WhatsApp:{' '}
-                <a
-                  className="text-[#F2BE72] hover:underline"
-                  href={'https://wa.me/'+contact.mobile.replace('+','')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {contact.mobile}
-                </a>
-              </p>
-              <p>
-                Email:{' '}
-                <a
-                  className="text-[#F2BE72] hover:underline"
-                  href={'mailto:'+contact.email}
-                >
-                  {contact.email}
-                </a>
-              </p>
-              <p>
-                Instagram:{' '}
-                <a
-                  className="text-[#F2BE72] hover:underline"
-                  href={contact.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {new URL(contact.instagram).pathname.replaceAll('/','')}
-                </a>
-              </p>
-            </div>
+            <FooterTextCopy value={content.textSections?.['footer-brand']}/><FooterContactBlock contact={contact}/>
           </div>
 
           {/* Col 2: Explore Link Group */}
@@ -143,12 +109,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
           {/* Col 4: Location Notice & 100% Online Payments */}
           <div className="space-y-3">
-            <div>
+            {!!content.textSections?.['footer-support']?.text&&<div>
               <h4 className="text-[12px] font-semibold uppercase tracking-widest text-[#F2BE72] mb-2">
                 Location
               </h4>
-              <FooterTextCopy value={content.textSections?.['footer-support']} fallback="Hyderabad, India. For order verifications, dispatch status, or assistance, contact our team directly via WhatsApp or email."/>
-            </div>
+              <FooterTextCopy value={content.textSections?.['footer-support']}/>
+            </div>}
             <div className="p-3 bg-black/40 rounded border border-[#B88A44]/30 text-[11px] text-[#C4B7AC] space-y-1">
               <span className="font-semibold text-[#F2BE72] uppercase tracking-wider block">
                 Shopping assistance

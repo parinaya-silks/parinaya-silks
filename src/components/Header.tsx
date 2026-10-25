@@ -1,3 +1,4 @@
+import {usePublicContact} from '../content/public.tsx';
 import {BrandLogo} from './BrandLogo.tsx';
 import React, { useEffect,useRef,useState } from 'react';
 import { CartItem, WishlistItem } from '../types/index.ts';
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   wishlistCount,
   authLayout=false,
 }) => {
+  const contact=usePublicContact();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -362,9 +364,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         </nav>
 
-        <div className="pt-4 border-t border-[#E8DDD6] text-center text-[12px] text-[#5F5552]">
-          Hyderabad, India
-        </div>
+        {contact.address&&<div className="pt-4 border-t border-[#E8DDD6] text-center text-[12px] text-[#5F5552] break-words">{contact.address}</div>}
       </aside>
     </>
   );

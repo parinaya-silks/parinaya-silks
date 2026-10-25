@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {once} from 'node:events';
+import {publicContact} from '../src/contact/model.ts';
 import {blankContent} from '../src/content/model.ts';
 import {catalogHandler} from '../server/handler.ts';
 import {CatalogConfigurationError,ReportingQueryError} from '../server/errors.ts';
@@ -15,7 +16,7 @@ test('handler distinguishes request, permission, configuration and internal fail
   const handler=catalogHandler(()=>{
     calls++;
     if(failure)throw failure;
-    return {publicCampaignList:async()=>({items:[],serverNow:0}),publicCampaignBrowse:async()=>({items:[],nextCursor:null}),publicCampaignGet:async()=>{throw new ProductError('not-found','Unavailable');},sitemap:async()=>'<urlset/>',publicBrowse:async()=>({items:[],nextCursor:null}),publicContent:async()=>({...blankContent(),serverNow:0,nextBoundary:null,textSections:{},banners:[],featuredProducts:[],featuredCategories:[]}),publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
+    return {publicCampaignList:async()=>({items:[],serverNow:0}),publicCampaignBrowse:async()=>({items:[],nextCursor:null}),publicCampaignGet:async()=>{throw new ProductError('not-found','Unavailable');},sitemap:async()=>'<urlset/>',publicBrowse:async()=>({items:[],nextCursor:null}),publicContent:async()=>({...blankContent(),serverNow:0,nextBoundary:null,textSections:{},contact:publicContact(),banners:[],featuredProducts:[],featuredCategories:[]}),publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
   },diagnostic=>diagnostics.push(diagnostic));
   const server=createServer(handler).listen(0,'127.0.0.1');
   await once(server,'listening');

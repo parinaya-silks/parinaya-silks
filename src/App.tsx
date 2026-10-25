@@ -23,6 +23,7 @@ import {
 import {Seo} from './content/Seo.tsx';
 import {StoreContentProvider} from './content/public.tsx';
 import { Header } from './components/Header.tsx';
+import {FloatingContact} from './contact/ContactLinks.tsx';
 import { Footer } from './components/Footer.tsx';
 import { MobileBottomNav } from './components/MobileBottomNav.tsx';
 
@@ -302,7 +303,7 @@ function StorefrontContent() {
       </main>
 
       {/* Storefront Footer */}
-      {!authExperience&&<Footer onNavigate={navigate} />}
+      {!authExperience&&<Footer onNavigate={navigate} />}{!authExperience&&<FloatingContact path={currentPath}/>}
 
       {/* Approved 5-Tab Mobile Bottom Navigation (Home · Shop · Wishlist · Bag · Account) */}
       <MobileBottomNav

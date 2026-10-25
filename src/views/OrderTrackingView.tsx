@@ -1,3 +1,4 @@
+import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
 import { Order, FulfilmentStatus } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
@@ -517,17 +518,14 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({ order, onN
           <p className="font-serif text-[16px] text-[#231919] font-medium">
             Need help with this order?
           </p>
-          <a
-            href={`https://wa.me/918367383073?text=${encodeURIComponent(
-              `Hi Parinaya Silks, I need assistance with Order ${displayOrder.referenceId}.`
-            )}`}
+          <BusinessWhatsAppLink message={`I need assistance with Order ${displayOrder.referenceId}.`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full h-11 border border-[#780D24] text-[#780D24] hover:bg-[#780D24] hover:text-white font-sans text-[13px] font-semibold rounded-lg flex items-center justify-center gap-2 transition-all"
           >
             <span className="material-symbols-outlined text-[#25D366] text-[20px]">chat</span>
             <span>Chat on WhatsApp</span>
-          </a>
+          </BusinessWhatsAppLink>
           <div>
             <button
               onClick={() => onNavigate('/policies')}
