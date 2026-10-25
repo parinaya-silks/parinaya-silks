@@ -10,6 +10,7 @@ import {AdminDashboard} from './AdminDashboard.tsx';
 import {DashboardDates} from './dashboard/Dates.tsx';
 import {periodRange} from './dashboard/model.ts';
 import {BannersPage} from './banners/BannersPage.tsx';
+import {WebsiteContent} from './website/WebsiteContent.tsx';
 import {AdminContent} from '../content/AdminContent.tsx';
 import { AdminLayout } from './AdminLayout.tsx';
 import {AdminReports} from '../orders/AdminBusiness.tsx';
@@ -55,7 +56,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if(path==='/admin/marketing'||path.startsWith('/admin/marketing/')){content=<CampaignManager key={path} path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/inventory'){content=<InventoryOverview onNavigate={navigate}/>;
   } else if(path==='/admin/banners'){content=<BannersPage/>;
-  } else if(path==='/admin/website-content'){content=<AdminContent section="website"/>;
+  } else if(path==='/admin/website-content'||path.startsWith('/admin/website-content/')){content=<WebsiteContent path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/contact-information'){content=<AdminContent section="contact"/>;
   } else if(path==='/admin/about'){content=<ModuleUnavailable title="About Us"/>;
   } else if(path==='/admin/enquiries'){content=<ModuleUnavailable title="Customer Enquiries"/>;

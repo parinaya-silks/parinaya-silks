@@ -2,10 +2,11 @@ import React,{createContext,useContext,useEffect,useState} from 'react';
 import type {PublicProductRecord} from '../products/model.ts';
 import {blankContent,type StoreContent} from './model.ts';
 import {BannerCarousel} from './BannerSlide.tsx';
+import type {PublicWebsiteText} from './sections.ts';
 import type {PublicBanner} from './model.ts';
 import {safeLink} from '../orders/model.ts';
 import {catalogResponse} from '../products/response.ts';
-type PublicContent=Omit<StoreContent,'revision'|'banners'>&{banners:PublicBanner[]}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string}[]};
+type PublicContent=Omit<StoreContent,'revision'|'banners'>&{banners:PublicBanner[];textSections?:PublicWebsiteText}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string}[]};
 const Context=createContext<{content:PublicContent;status:'loading'|'ready'|'error';retry:()=>void}>({content:blankContent(),status:'loading',retry:()=>{}});
 export const useStoreContent=()=>useContext(Context);
 export function usePublicContact(){const {content}=useStoreContent();return {email:content.contact.email||'parinayasilks.in@gmail.com',mobile:content.contact.mobile||'+918367383073',address:content.contact.address||'Hyderabad, India',instagram:content.contact.instagram||'https://instagram.com/parinaya_3999'};}

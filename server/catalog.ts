@@ -1,3 +1,4 @@
+import {websiteTextService} from './websiteText.ts';
 import {campaignService} from './campaigns.ts';
 import { createHash } from 'node:crypto';
 import { FieldPath, FieldValue, type Firestore, type Transaction } from 'firebase-admin/firestore';
@@ -44,6 +45,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   }
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
   const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)),async slug=>{try{await campaigns.publicGet(slug);return true;}catch(e){if((e as {code?:string}).code==='not-found')return false;throw e;}});
+  const websiteText=websiteTextService(db,transactionAccess);
   const homeMedia=loginAppearanceService(db,media,transactionAccess,'home');
   const business=businessService(db,transactionAccess);
   const campaigns=campaignService(db,media,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)));
@@ -179,6 +181,9 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
+        case 'website:list':keys(body,['action']);return websiteText.list();
+        case 'website:get':return websiteText.get(body);
+        case 'website:save':return websiteText.save(uid,body);
         case 'banners:get':keys(body,['action']);return content.bannersAdmin();
         case 'banners:save':return content.saveBanners(uid,body);
         case 'banners:preview':return content.preview(uid,body);

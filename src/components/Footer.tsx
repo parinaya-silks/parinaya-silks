@@ -1,5 +1,6 @@
 import {BrandLogo} from './BrandLogo.tsx';
-import {usePublicContact} from '../content/public.tsx';
+import {FooterTextCopy} from '../content/TextCopy.tsx';
+import {useStoreContent,usePublicContact} from '../content/public.tsx';
 import React from 'react';
 
 interface FooterProps {
@@ -7,7 +8,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const contact=usePublicContact();
+  const contact=usePublicContact(),{content}=useStoreContent();
   return (
     <footer className="bg-[#231919] text-[#E7DFD5] mt-16 pt-12 pb-28 border-t border-[#3A2D2D]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 PARINAYA SILKS
               </span>
             </div>
-            <p className="text-[13px] text-[#C4B7AC] leading-relaxed">
+            <FooterTextCopy value={content.textSections?.['footer-brand']}/><p className="text-[13px] text-[#C4B7AC] leading-relaxed">
               {contact.address}
             </p>
             <div className="pt-2 text-[13px] space-y-1.5 text-[#C4B7AC]">
@@ -146,9 +147,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <h4 className="text-[12px] font-semibold uppercase tracking-widest text-[#F2BE72] mb-2">
                 Location
               </h4>
-              <p className="text-[13px] text-[#C4B7AC] leading-relaxed">
-                Hyderabad, India. For order verifications, dispatch status, or assistance, contact our team directly via WhatsApp or email.
-              </p>
+              <FooterTextCopy value={content.textSections?.['footer-support']} fallback="Hyderabad, India. For order verifications, dispatch status, or assistance, contact our team directly via WhatsApp or email."/>
             </div>
             <div className="p-3 bg-black/40 rounded border border-[#B88A44]/30 text-[11px] text-[#C4B7AC] space-y-1">
               <span className="font-semibold text-[#F2BE72] uppercase tracking-wider block">

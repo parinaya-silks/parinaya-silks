@@ -1,3 +1,4 @@
+import {PolicyCopy} from '../content/TextCopy.tsx';
 import {usePublicContact} from '../content/public.tsx';
 import React, { useState, useEffect } from 'react';
 import {useStoreContent} from '../content/public.tsx';
@@ -87,11 +88,8 @@ export const PoliciesView: React.FC<PoliciesViewProps> = ({ initialTab = 'shippi
               {currentPolicy.badge}
             </span>
           </div>
-          <h1 className="font-serif text-[28px] sm:text-[34px] leading-tight text-[#231919] font-medium">
-            {currentPolicy.title}
-          </h1>
+          <PolicyCopy heading={content.policies[activeKey]?.approved&&content.policies[activeKey]?.heading?content.policies[activeKey].heading!:currentPolicy.title} text={content.policies[activeKey]?.text||''} approved={content.policies[activeKey]?.approved===true}/>
 
-          {content.policies[activeKey]?.approved?<div className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed">{content.policies[activeKey].text}</div>:<><div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 bg-[#F4EEE5] border border-[#B88A44]/40 rounded text-[11px]">Draft Document - Pending final client approval</div><p className="mt-4 text-[15px] text-[#5F5552]">Final policy terms are pending. Please contact us with any questions.</p></>}
         </div>
 
         {/* Compact Support Row */}

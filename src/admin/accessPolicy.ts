@@ -1,3 +1,4 @@
+import {contentSections} from '../content/sections.ts';
 import {customerUid} from './customers/model.ts';
 export function isAdminLocation(path: string): boolean {
   return path === '/admin' || path.startsWith('/admin/');
@@ -5,6 +6,7 @@ export function isAdminLocation(path: string): boolean {
 
 export function safeAdminDestination(value: string): string {
   if (/^\/admin(?:\/(?:dashboard|login|orders|products|categories|customers|coupons|inventory|marketing|banners|website-content|contact-information|about|enquiries|settings))?$/.test(value)) return value;
+  if(contentSections.some(s=>value==='/admin/website-content/'+s.id))return value;
   if(/^\/admin\/marketing\/(?:new|edit\/[a-f0-9]{32})$/.test(value))return value;
   if(value.startsWith('/admin/customers/')){try{customerUid(decodeURIComponent(value.slice('/admin/customers/'.length)));if(!/[?#]/.test(value))return value;}catch{}}
   if (/^\/admin\/orders\/[a-zA-Z0-9_-]+$/.test(value)) return value;
