@@ -1,7 +1,7 @@
 import {fallbackAbout,publicAbout} from '../src/about/model.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createServer} from 'node:http';
+import {createServer,request as httpRequest} from 'node:http';
 import {once} from 'node:events';
 import {publicContact} from '../src/contact/model.ts';
 import {blankContent} from '../src/content/model.ts';
@@ -10,6 +10,15 @@ import {CatalogConfigurationError,ReportingQueryError} from '../server/errors.ts
 import {ProductError} from '../src/products/model.ts';
 import {catalogResponse,productLoadFailure} from '../src/products/response.ts';
 
+test('anonymous enquiry JSON preserves UTF-8 split across transport chunks and remains size bounded',async()=>{
+ let received:Record<string,unknown>|undefined;
+ const server=createServer(catalogHandler(()=>({submitEnquiry:async(body:Record<string,unknown>)=>{received=body;return {received:true};}} as any),()=>{})).listen(0,'127.0.0.1');await once(server,'listening');const port=(server.address() as {port:number}).port;
+ try{const body={action:'enquiries:submit',enquiry:{message:'తెలుగు\n\nMessage'},operationId:'a'.repeat(32),website:''},bytes=Buffer.from(JSON.stringify(body)),split=bytes.findIndex(v=>v>127)+1;
+ const result=await new Promise<{status:number;text:string}>((resolve,reject)=>{const req=httpRequest({hostname:'127.0.0.1',port,path:'/api/catalog',method:'POST',headers:{'Content-Type':'application/json'}},res=>{let text='';res.on('data',v=>text+=v);res.on('end',()=>resolve({status:res.statusCode!,text}));});req.on('error',reject);req.write(bytes.subarray(0,split));setTimeout(()=>req.end(bytes.subarray(split)),10);});assert.equal(result.status,200);assert.deepEqual(received,body);
+ const large=await fetch(`http://127.0.0.1:${port}/api/catalog`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,website:'x'.repeat(16000)})});assert.equal(large.status,400);assert.deepEqual(received,body);
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
 test('handler distinguishes request, permission, configuration and internal failures without leaking diagnostics',async()=>{
   const diagnostics:unknown[]=[];
   let calls=0;
@@ -17,7 +26,7 @@ test('handler distinguishes request, permission, configuration and internal fail
   const handler=catalogHandler(()=>{
     calls++;
     if(failure)throw failure;
-    return {publicCampaignList:async()=>({items:[],serverNow:0}),publicCampaignBrowse:async()=>({items:[],nextCursor:null}),publicCampaignGet:async()=>{throw new ProductError('not-found','Unavailable');},sitemap:async()=>'<urlset/>',publicBrowse:async()=>({items:[],nextCursor:null}),publicContent:async()=>({...blankContent(),about:publicAbout(fallbackAbout()),aboutSaved:false,serverNow:0,nextBoundary:null,textSections:{},contact:publicContact(),banners:[],featuredProducts:[],featuredCategories:[]}),publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
+    return {submitEnquiry:async()=>({received:true}),publicCampaignList:async()=>({items:[],serverNow:0}),publicCampaignBrowse:async()=>({items:[],nextCursor:null}),publicCampaignGet:async()=>{throw new ProductError('not-found','Unavailable');},sitemap:async()=>'<urlset/>',publicBrowse:async()=>({items:[],nextCursor:null}),publicContent:async()=>({...blankContent(),about:publicAbout(fallbackAbout()),aboutSaved:false,serverNow:0,nextBoundary:null,textSections:{},contact:publicContact(),banners:[],featuredProducts:[],featuredCategories:[]}),publicAppearance:async()=>({desktop:null,mobile:null}),publicList:async()=>({items:[],nextCursor:null}),publicGet:async()=>{throw new ProductError('not-found','Product not found.');},privileged:async()=>{throw new ProductError('permission','Active administrator permission is required.');}};
   },diagnostic=>diagnostics.push(diagnostic));
   const server=createServer(handler).listen(0,'127.0.0.1');
   await once(server,'listening');

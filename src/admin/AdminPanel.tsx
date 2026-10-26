@@ -1,3 +1,4 @@
+import {EnquiriesPage} from './enquiries/EnquiriesPage.tsx';
 import {StoreSettingsPage} from './settings/StoreSettingsPage.tsx';
 import {AboutEditor} from './about/AboutEditor.tsx';
 import {CampaignManager} from './campaigns/CampaignManager.tsx';
@@ -59,7 +60,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
   } else if(path==='/admin/website-content'||path.startsWith('/admin/website-content/')){content=<WebsiteContent path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/contact-information'){content=<ContactInformation/>;
   } else if(path==='/admin/about'){content=<AboutEditor/>;
-  } else if(path==='/admin/enquiries'){content=<ModuleUnavailable title="Customer Enquiries"/>;
+  } else if(path==='/admin/enquiries'){content=<EnquiriesPage/>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;

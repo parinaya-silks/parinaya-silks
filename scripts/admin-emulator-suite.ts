@@ -25,6 +25,7 @@ await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/campaigns-emu
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/banners-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/website-content-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/contact-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/enquiries-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/about-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/dashboard-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/orders-list-emulator.test.ts']);
@@ -75,6 +76,7 @@ try {
   await run('python', ['scripts/banners-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/website-content-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/about-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await run('python', ['scripts/enquiries-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/contact-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/shopping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/delivery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });

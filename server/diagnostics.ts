@@ -5,7 +5,7 @@ export function catalogFailure(error: unknown) {
   if(error instanceof ReportingQueryError)return catalogFailure(error.cause);
   if(error instanceof CatalogConfigurationError) return {status:503,code:'configuration',message:'Catalog service is not configured.',fields:{},reason:error.reason};
   if(error instanceof ProductError) {
-    const status=({unauthorized:401,permission:403,'not-found':404,invalid:400,conflict:409,duplicate:409,configuration:503,'deletion-blocked':409,schema:500,media:400,upload:502} as Record<string,number>)[error.code] || 500;
+    const status=({'rate-limited':429,unauthorized:401,permission:403,'not-found':404,invalid:400,conflict:409,duplicate:409,configuration:503,'deletion-blocked':409,schema:500,media:400,upload:502} as Record<string,number>)[error.code] || 500;
     return {status,code:error.code,message:status>=500?'Catalog service is unavailable. Please try again.':error.message,fields:status>=500?{}:error.fields,reason:error.code};
   }
   const source=error as {code?:unknown;message?:unknown}|null;

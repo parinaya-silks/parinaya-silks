@@ -1,3 +1,4 @@
+import {enquiriesService} from './enquiries.ts';
 import {storeSettingsService} from './storeSettings.ts';
 import {aboutService} from './about.ts';
 import {contactService} from './contact.ts';
@@ -49,6 +50,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
   const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)),async slug=>{try{await campaigns.publicGet(slug);return true;}catch(e){if((e as {code?:string}).code==='not-found')return false;throw e;}});
   const contacts=contactService(db,transactionAccess);
+  const enquiries=enquiriesService(db,transactionAccess);
   const storeSettings=storeSettingsService(db,transactionAccess);
   const about=aboutService(db,transactionAccess),aboutMedia=loginAppearanceService(db,media,transactionAccess,'about');
   const websiteText=websiteTextService(db,transactionAccess);
@@ -168,6 +170,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   const orders=ordersService(db,transactionAccess,delivery.reviewInTransaction);
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
+    submitEnquiry:enquiries.submit,
     sitemap:()=>sitemap(db),
     publicCampaignList:campaigns.publicList,publicCampaignGet:campaigns.publicGet,publicCampaignBrowse:campaigns.browse,
     publicBrowse:browseService(db,async(doc,name)=>publicProduct(await present(doc,name))),
@@ -180,6 +183,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
+      if(typeof body.action==='string'&&body.action.startsWith('enquiries:'))return enquiries.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('campaigns:'))return campaigns.admin(uid,body);
       if(body.action==='dashboard:orders')return orders.admin(uid,body);
       if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
