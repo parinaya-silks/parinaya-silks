@@ -1,3 +1,4 @@
+import {loyaltyService} from './loyalty.ts';
 import {enquiriesService} from './enquiries.ts';
 import {storeSettingsService} from './storeSettings.ts';
 import {aboutService} from './about.ts';
@@ -50,6 +51,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   async function transactionAccess(transaction:Transaction,uid:string) {if((await transaction.get(db.doc(`adminAccess/${uid}`))).data()?.enabled!==true)throw new ProductError('permission','Active administrator permission is required.');}
   const content=contentService(db,transactionAccess,async(doc,name)=>publicProduct(await present(doc,name)),async slug=>{try{await campaigns.publicGet(slug);return true;}catch(e){if((e as {code?:string}).code==='not-found')return false;throw e;}});
   const contacts=contactService(db,transactionAccess);
+  const loyalty=loyaltyService(db);
   const enquiries=enquiriesService(db,transactionAccess);
   const storeSettings=storeSettingsService(db,transactionAccess);
   const about=aboutService(db,transactionAccess),aboutMedia=loginAppearanceService(db,media,transactionAccess,'about');
@@ -177,17 +179,19 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     publicAppearance:appearance.publicGet,publicContent:content.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(['loyalty:account','loyalty:customerHistory'].includes(String(body.action)))return loyalty.action((await authenticate(token)).uid,body);
       if(body.action==='profile:syncDirectory'){keys(body,['action']);return customers.sync((await authenticate(token)).uid);}
       if(body.action==='profile:update')return business.profile((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('orders:')){const user=await authenticate(token);if(body.action==='orders:place'&&!(await db.doc('customerDirectory/'+user.uid).get()).exists&&(await db.doc('customerProfiles/'+user.uid).get()).exists)await customers.sync(user.uid);return orders.customer(user.uid,user.email||'',body);}
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
+      if(['loyalty:adminAccount','loyalty:adminHistory'].includes(String(body.action)))return loyalty.action(uid,body,true);
       if(typeof body.action==='string'&&body.action.startsWith('enquiries:'))return enquiries.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('campaigns:'))return campaigns.admin(uid,body);
       if(body.action==='dashboard:orders')return orders.admin(uid,body);
       if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
-      if(typeof body.action==='string'&&body.action.startsWith('customers:'))return customers.admin(body);
+      if(typeof body.action==='string'&&body.action.startsWith('customers:')){const result=await customers.admin(body);if(body.action==='customers:list'&&result&&'items' in result){const points=await loyalty.many(result.items.map((v:any)=>v.uid));return {...result,items:result.items.map((v:any,i:number)=>({...v,availablePoints:points[i]}))};}return result;}
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {

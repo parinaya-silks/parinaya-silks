@@ -24,7 +24,7 @@ with sync_playwright() as p:
     if fail['lost']:fail['lost']=False;route.fetch();route.fulfill(status=503,json={'code':'unavailable'});return
   route.continue_()
  page.route('**/api/catalog',api);page.goto(origin+'/admin/settings');page.get_by_label('Email',exact=True).fill('parinayasilks.in@gmail.com');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();page.get_by_role('button',name='Retry store settings',exact=True).click();expect(page.get_by_label('Standard Shipping Charge',exact=True)).to_have_value('250.00');expect(page.get_by_text('Unsaved changes',exact=True)).to_have_count(0)
- expect(page.get_by_text('Not integrated',exact=True)).to_be_visible();expect(page.get_by_text('Supported checkout method',exact=True)).to_be_visible();assert page.get_by_role('checkbox').count()==1
+ expect(page.get_by_text('Not integrated',exact=True)).to_be_visible();expect(page.get_by_text('Supported checkout method',exact=True)).to_be_visible();assert page.get_by_role('checkbox').count()==3
  save=lambda:page.get_by_role('button',name='Save Changes',exact=True).filter(visible=True).first.click()
  page.get_by_label('Standard Shipping Charge',exact=True).fill('1.001');save();expect(page.get_by_role('alert')).to_contain_text('two decimal places');page.get_by_label('Standard Shipping Charge',exact=True).fill('123.45');page.get_by_label('Free shipping threshold',exact=True).fill('5000');expect(page.get_by_text('Orders strictly above',exact=False)).to_contain_text('At or below')
  for device in ['desktop','mobile']:

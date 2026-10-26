@@ -6,7 +6,7 @@ export const blankCustomerFilters=():CustomerFilters=>({search:'',sort:'newest',
 export type CustomerListState={filters:CustomerFilters;cursors:(string|null)[];scroll:number};
 export const initialCustomers=():CustomerListState=>({filters:blankCustomerFilters(),cursors:[null],scroll:0});
 export function restoreCustomers(value:any,uid:string):CustomerListState{try{const saved=value?.customersContext;if(!uid||saved?.uid!==uid)throw Error();const state=saved.state as CustomerListState;customerFilterQuery(state.filters);if(!Array.isArray(state.cursors)||!state.cursors.length||state.cursors.length>1000||state.cursors[0]!==null||state.cursors.some(cursor=>cursor!==null&&(typeof cursor!=='string'||cursor.length>2000))||!Number.isFinite(state.scroll)||state.scroll<0)throw Error();return state;}catch{return initialCustomers();}}
-export type CustomerRow={uid:string;displayName:string;email:string|null;mobileNumber:string|null;joinedAt:number|null;orderCount:number|null;itemsOrdered:number|null;latestOrderAt:number|null;latestOrderId:string|null;latestOrderReference:string|null};
+export type CustomerRow={availablePoints?:number;uid:string;displayName:string;email:string|null;mobileNumber:string|null;joinedAt:number|null;orderCount:number|null;itemsOrdered:number|null;latestOrderAt:number|null;latestOrderId:string|null;latestOrderReference:string|null};
 export type CustomerPage={items:CustomerRow[];nextCursor:string|null;total:number};
 export function customerUid(value:unknown):string{if(typeof value!=='string'||!value.length||value.length>128||/[\/\x00-\x1f\x7f]/.test(value))throw new ProductError('invalid','Invalid customer reference.');return value;}
 export const customerPath=(uid:string)=>'/admin/customers/'+encodeURIComponent(customerUid(uid));

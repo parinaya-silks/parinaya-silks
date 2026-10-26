@@ -10,7 +10,7 @@ export function checkoutSource(value:unknown):CheckoutSource {
  return {kind:'buy-now',productId:productId(raw.productId),variantId:variantId(raw.variantId),quantity:positiveQuantity(raw.quantity)};
 }
 export type CheckoutStage='delivery'|'summary'|'payment';
-export interface CheckoutDraft {version:1;id:string;uid:string|null;createdAt:number;source:CheckoutSource;slug:string;addressId:string;couponCode:string|null;approvedFingerprint:string;deliveryConfirmed:boolean}
+export interface CheckoutDraft {version:1;id:string;uid:string|null;createdAt:number;source:CheckoutSource;slug:string;addressId:string;couponCode:string|null;approvedFingerprint:string;deliveryConfirmed:boolean;points?:number}
 const prefix='parinaya:checkout:v1:',pending=prefix+'pending';
 export function checkoutPath(stage:CheckoutStage,id='bag'){return (stage==='delivery'?'/checkout':'/checkout/'+stage)+(id==='bag'?'':'?buyNow='+encodeURIComponent(id));}
 export function beginBuyNow(uid:string|null,source:CheckoutSource,slug:string):string {
@@ -30,7 +30,7 @@ export function readCheckoutDraft(uid:string,id:string):CheckoutDraft|null {
   const draft=JSON.parse(raw);if(draft.version!==1||draft.id!==id||draft.uid!==null&&draft.uid!==uid||!Number.isFinite(draft.createdAt)||Date.now()-draft.createdAt>2*60*60*1000||draft.createdAt>Date.now()+1000){sessionStorage.removeItem(key);return id==='bag'?freshBag():null;}
   draft.source=checkoutSource(draft.source);if((id==='bag')!==(draft.source.kind==='bag'))return null;
   if(typeof draft.slug!=='string'||draft.source.kind==='buy-now'&&!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(draft.slug)||typeof draft.addressId!=='string'||draft.addressId&&!/^[a-f0-9]{32}$/.test(draft.addressId)||draft.couponCode!==null&&typeof draft.couponCode!=='string'||typeof draft.approvedFingerprint!=='string'||draft.approvedFingerprint&&!/^[a-f0-9]{64}$/.test(draft.approvedFingerprint))return null;
-  draft.deliveryConfirmed=draft.deliveryConfirmed===true;draft.uid=uid;sessionStorage.setItem(key,JSON.stringify(draft));return draft;
+  if(draft.points!==undefined&&(!Number.isSafeInteger(draft.points)||draft.points<0||draft.points>1e12))return null;draft.deliveryConfirmed=draft.deliveryConfirmed===true;draft.uid=uid;sessionStorage.setItem(key,JSON.stringify(draft));return draft;
  }catch{return null;}
 }
 export function saveCheckoutDraft(draft:CheckoutDraft){try{sessionStorage.setItem(prefix+draft.uid+':'+draft.id,JSON.stringify(draft));return true;}catch{return false;}}
