@@ -28,6 +28,7 @@ import { Footer } from './components/Footer.tsx';
 import { MobileBottomNav } from './components/MobileBottomNav.tsx';
 
 // Customer Views
+import {HomeFooter} from './home/Footer.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { ShopView } from './views/ShopView.tsx';
 import { WishlistView } from './views/WishlistView.tsx';
@@ -100,7 +101,7 @@ function StorefrontContent() {
   });
 
   // Reactive Data State from StoreService
-  const catalog = usePublicCatalog({},!/^\/(?:shop|collections|sale|search)(?:[/?]|$)/.test(currentPath));
+  const catalog = usePublicCatalog(currentPath==='/'?{browse:'1',sort:'newest'}:{},!/^\/(?:shop|collections|sale|search)(?:[/?]|$)/.test(currentPath));
   const products = catalog.items.map(storefrontProduct);
   const [orders, setOrders] = useState<Order[]>(() => storeService.getOrders());
   const [customer, setCustomer] = useState<Customer>(() => storeService.getCustomer());
@@ -173,6 +174,7 @@ function StorefrontContent() {
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
         isWishlisted={isWishlisted}
+        isBusy={shopping.isBusy}
         catalogState={catalog.state}
         onRetry={catalog.retry}
       />
@@ -299,11 +301,11 @@ function StorefrontContent() {
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}
-        {!authExperience && catalog.state === 'ready' && catalog.hasMore && currentPath==='/' && <div className="text-center p-4"><p className="text-xs text-[#5F5552] mb-2">Showing loaded products. Load more to expand search and filters.</p><button className="min-h-11 px-5 border rounded-lg" disabled={catalog.busy} onClick={catalog.loadMore}>Load more products</button></div>}
+
       </main>
 
       {/* Storefront Footer */}
-      {!authExperience&&<Footer onNavigate={navigate} />}{!authExperience&&<FloatingContact path={currentPath}/>}
+      {!authExperience&&(currentPath==='/'?<HomeFooter onNavigate={navigate}/>:<Footer onNavigate={navigate}/>)}{!authExperience&&<FloatingContact path={currentPath}/>}
 
       {/* Approved 5-Tab Mobile Bottom Navigation (Home · Shop · Wishlist · Bag · Account) */}
       <MobileBottomNav

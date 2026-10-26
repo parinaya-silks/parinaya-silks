@@ -1,7 +1,9 @@
 import {ProductError} from '../products/model.ts';
 import {exact,noteText,text} from '../orders/model.ts';
 export const contentSections=[
- {id:'home-featured',group:'Homepage',name:'Featured Sarees Section',explanation:'Heading, introduction and description above the existing collection grid.',kind:'home',path:'/'},
+ {id:'home-new-arrivals',group:'Homepage',name:'New Arrivals Section',explanation:'Text above the four newest eligible public products. View All opens Shop.',kind:'home',path:'/'},
+ {id:'home-campaigns',group:'Homepage',name:'Occasion Curations Section',explanation:'Text above current public sale campaigns. Campaigns retain their saved order and prices.',kind:'home',path:'/'},
+ {id:'home-featured',group:'Homepage',name:'Featured Sarees Section',explanation:'Heading, introduction and description for the featured-product spotlight. The first eligible homepage assignment is highlighted.',kind:'home',path:'/'},
  {id:'home-categories',group:'Homepage',name:'Shop by Category Section',explanation:'Text above the existing featured-category navigation. Product/category assignments are unchanged.',kind:'home',path:'/'},
  {id:'shipping',group:'Policies',name:'Shipping Policy',explanation:'Owner-approved shipping wording. Charges are managed separately in Store Settings.',kind:'policy',path:'/shipping-policy'},
  {id:'returns',group:'Policies',name:'Returns & Exchanges',explanation:'Owner-approved return and exchange wording. Operational request settings remain unchanged.',kind:'policy',path:'/returns-policy'},
@@ -16,7 +18,7 @@ export type HomeText={heading:string;supportingText:string;description:string};
 export type PolicyText={heading:string;text:string;approved:boolean};
 export type FooterText={text:string};
 export type SectionValue=HomeText|PolicyText|FooterText;
-export type PublicWebsiteText=Partial<Record<'home-featured'|'home-categories',HomeText>>&Partial<Record<'footer-brand'|'footer-support',FooterText>>;
+export type PublicWebsiteText=Partial<Record<'home-featured'|'home-categories'|'home-new-arrivals'|'home-campaigns',HomeText>>&Partial<Record<'footer-brand'|'footer-support',FooterText>>;
 export type SectionRecord={id:ContentSectionId;value:SectionValue;added:boolean;updatedAt:number|null;updatedScope:'section'|'document'|'none'};
 export type WebsiteSnapshot={revision:number;sections:SectionRecord[]};
 export function sectionDefinition(id:unknown):SectionDefinition {const section=contentSections.find(s=>s.id===id);if(!section)throw new ProductError('invalid','Choose a supported website section.');return section;}

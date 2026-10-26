@@ -17,7 +17,7 @@ try:
   page=ctx.new_page();errors=[];writes=[]
   page.on('pageerror',lambda error:errors.append(str(error)))
   page.on('request',lambda request:writes.append(request.post_data_json['action']) if '/api/catalog' in request.url and request.method=='POST' else None)
-  page.goto(origin+'/');page.get_by_role('button',name='Shop Sarees',exact=True).first.click();page.wait_for_url('**/shop')
+  page.goto(origin+'/');page.get_by_role('link',name='Shop Sarees',exact=True).filter(visible=True).first.click();page.wait_for_url('**/shop')
   page.get_by_role('heading',name='Shopping Colours',exact=True).click();page.wait_for_url('**/product/shopping-colours')
   buy=page.get_by_role('button',name='Buy Now',exact=True);expect(buy).to_be_disabled();page.get_by_role('button',name='Wine',exact=True).click();expect(buy).to_be_enabled()
   page.get_by_role('button',name='Increase quantity',exact=True).click();page.get_by_role('button',name='Increase quantity',exact=True).click();expect(page.get_by_role('button',name='Increase quantity',exact=True)).to_be_disabled();page.get_by_role('button',name='Decrease quantity',exact=True).click()

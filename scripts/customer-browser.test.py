@@ -45,7 +45,7 @@ with sync_playwright() as p:
         assert nav.is_visible()==(width<1024)
         if width<1024:
             assert nav.get_by_role('button').count()==5
-            assert nav.get_by_role('button',name='person Account',exact=False).get_attribute('aria-current')=='page'
+            assert nav.get_by_role('button',name='Account',exact=True).get_attribute('aria-current')=='page'
         assert page.get_by_label('Email address',exact=True).evaluate('(input)=>parseFloat(getComputedStyle(input).fontSize)')>=16
         assert page.get_by_role('button',name='Sign In',exact=True).bounding_box()['height']>=44
         page.screenshot(path=str(screens/f'login-{width}.png'),full_page=True)
@@ -72,10 +72,10 @@ with sync_playwright() as p:
     assert page.get_by_role('button',name='Close Navigation Drawer',exact=True).is_visible()
     page.get_by_role('button',name='Close Navigation Drawer',exact=True).click()
     page.get_by_role('button',name='Search Catalog').click()
-    page.get_by_placeholder('Search pure silk sarees, Kanjeevaram, Brocade, zari...').fill('silk')
+    page.get_by_label('Search sarees',exact=True).fill('silk')
     page.get_by_role('button',name='Search',exact=True).click();assert '/shop?search=silk' in page.url
     assert not errors,errors
-    page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button',name='person Account',exact=False).click()
+    page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button',name='Account',exact=True).click()
     page.wait_for_url(origin+'/login?returnTo=%2Fshop%3Fsearch%3Dsilk')
     visual.close()
 

@@ -1,0 +1,5 @@
+import {useState} from 'react';
+import type {HomeText} from '../content/sections.ts';
+export function HomeLink({to,onNavigate,children,className=''}:{to:string;onNavigate:(p:string)=>void;children:React.ReactNode;className?:string}){return <a href={to} className={className} onClick={e=>{if(!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&e.button===0){e.preventDefault();onNavigate(to);}}}>{children}</a>;}
+export function HomeCopy({value,fallback}:{value?:HomeText;fallback:string}){return <div className="home-copy">{(value===undefined?fallback:value.heading)&&<h2>{value===undefined?fallback:value.heading}</h2>}{value?.supportingText&&<p>{value.supportingText}</p>}{value?.description&&<p>{value.description}</p>}</div>;}
+export function HomeImage({url,alt}:{url:string;alt:string}){const [failed,setFailed]=useState('');return url&&failed!==url?<img src={url} alt={alt} width="960" height="1280" loading="lazy" decoding="async" onError={()=>setFailed(url)}/>:<span className="home-image-empty">Image unavailable</span>;}

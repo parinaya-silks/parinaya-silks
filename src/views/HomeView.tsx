@@ -1,38 +1,23 @@
 import React from 'react';
-import {HomeSectionCopy} from '../content/TextCopy.tsx';
+import {ArrowRight,Palette,Sparkles,Truck,MessageCircle,ShoppingBag} from 'lucide-react';
 import {storefrontProduct} from '../products/adapter.ts';
-import {HomeBanners,useStoreContent} from '../content/public.tsx';
-import type { Product } from '../types/index.ts';
-
-interface HomeViewProps {
-  products: Product[];
-  onNavigate: (path: string) => void;
-  onAddToCart: (product: Product) => void;
-  onToggleWishlist: (product: Product) => void;
-  isWishlisted: (productId: string) => boolean;
-  catalogState?: 'loading' | 'ready' | 'error';
-  onRetry?: () => void;
-}
-
-export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, products, catalogState = 'ready', onRetry }) => {const {content}=useStoreContent();const featured=content.featuredProductIds.length?(content.featuredProducts||[]).map(storefrontProduct):products;return <div className="space-y-6"><HomeBanners onNavigate={onNavigate}/>
-  {!content.banners.length&&<section className="relative w-full h-[320px] sm:h-[400px] md:h-[460px] overflow-hidden bg-[#231919]">
-    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1qazM7x4nhlG1x9i7OeRv-PA2gwVUK0YEvgjjHfggLsNBmD7v4_s6_Ju3GFF2UX8VwSqUhgA6hjB2yKiXmeH8x49xLYO2bMNpOWluOq0xi0J5sc6zBZHsXkh3fJgu918qXJ2swSyL-K3KGZR2dy_F8met0_2MhWF4mK_85TuGriJvGlc7lmsFVlpW4uFuPLZ8TD_7w5rVhExoJRtQaZRvr1jXu-ttryDRcUd8ImkPfhbZjpOIvPs')` }} />
-    <div className="absolute inset-0 bg-gradient-to-t from-[#231919] via-[#231919]/60 to-transparent" />
-    <div className="absolute inset-0 p-4 sm:p-8 flex flex-col justify-end text-white max-w-4xl mx-auto">
-      <h1 className="font-serif text-[24px] sm:text-[34px] md:text-[40px] leading-tight font-medium">PARINAYA SILKS</h1>
-      <>{content.contact.address&&<p className="font-sans text-[13px] sm:text-[15px] text-[#E7DFD5] mt-2 break-words line-clamp-2">{content.contact.address}</p>}</>
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button onClick={() => onNavigate('/shop')} className="min-h-11 px-5 bg-[#780D24] text-white border border-[#B88A44] rounded-lg text-sm font-semibold hover:bg-[#5E091B] transition-colors">Shop Sarees</button>
-        <button onClick={() => onNavigate('/contact')} className="min-h-11 px-5 border border-[#B88A44] rounded-lg text-sm hover:bg-white/10 transition-colors">Contact Us</button>
-      </div>
-    </div>
-  </section>}
-  {!!content.featuredCategories?.length&&<section className="max-w-7xl mx-auto px-4"><HomeSectionCopy value={content.textSections?.['home-categories']}/><nav aria-label="Featured collections" className="flex flex-wrap gap-3 mt-3">{content.featuredCategories.map(category=><button className="min-h-11 px-4 border rounded text-[#780D24]" key={category.id} onClick={()=>onNavigate('/collections/'+category.slug)}>{category.name}</button>)}</nav></section>}
-  <section className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
-    <HomeSectionCopy value={content.textSections?.['home-featured']} fallbackHeading="Our Collection"/>
-    {catalogState !== 'ready' ? <div className="py-7 text-center space-y-3"><p role={catalogState==='error'?'alert':'status'}>{catalogState==='loading'?'Loading products…':'Products unavailable'}</p>{catalogState==='error'&&<button className="min-h-11 px-5 underline" onClick={onRetry}>Retry products</button>}</div> : featured.length ? <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6">{[...featured].sort((a,b)=>Number(b.tags.includes('Featured'))-Number(a.tags.includes('Featured'))).slice(0,8).map(product=><button key={product.id} className="text-left bg-white border border-[#E8DDD6] rounded-lg overflow-hidden min-w-0" onClick={()=>onNavigate(`/product/${product.slug||product.id}`)}><img src={product.images.full} alt={product.gallery?.find(image=>image.url===product.images.full)?.alt||product.name} className="w-full aspect-[3/4] object-contain bg-[#F4EEE5]"/><div className="p-3 space-y-1"><h3 className="font-serif text-sm break-words">{product.name}</h3><p className="text-xs">{product.categoryLabel}</p><p className="text-sm font-semibold text-[#780D24]">{new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(product.price)}</p>{product.tags.includes('New Arrival')&&<p className="text-xs">New Arrival</p>}</div></button>)}</div> : <div className="py-7 text-center space-y-3">
-      <p className="text-sm text-[#5F5552]">No products available yet.</p>
-      <button onClick={() => onNavigate('/contact')} className="min-h-11 px-5 text-[#780D24] underline underline-offset-4">Contact Us</button>
-    </div>}
-  </section>
-</div>;};
+import {useStoreContent,HomeBanners} from '../content/public.tsx';
+import {useHomeCampaigns} from '../home/campaigns.ts';
+import {HomeProductCard} from '../home/ProductCard.tsx';
+import {recentProducts,categoryArtwork} from '../home/model.ts';
+import {HomeCopy,HomeLink,HomeImage} from '../home/parts.tsx';
+import type {Product} from '../types/index.ts';
+import '../home/home.css';
+interface HomeViewProps {products:Product[];onNavigate:(path:string)=>void;onAddToCart:(p:Product)=>void;onToggleWishlist:(p:Product)=>void;isWishlisted:(id:string)=>boolean;isBusy?:(id:string)=>boolean;catalogState?:'loading'|'ready'|'error';onRetry?:()=>void}
+export const HomeView:React.FC<HomeViewProps>=({products,onNavigate,onAddToCart,onToggleWishlist,isWishlisted,isBusy=()=>false,catalogState='ready',onRetry})=>{
+ const {content,status,retry}=useStoreContent(),campaigns=useHomeCampaigns(),arrivals=recentProducts(products),spotlight=status==='ready'?(content.featuredProducts||[]).map(storefrontProduct)[0]:undefined,about=status==='ready'&&content.aboutSaved?content.about:undefined;
+ return <div className="home-page"><h1 className="sr-only">PARINAYA SILKS - Sarees</h1>
+ {status==='ready'&&content.banners.length>0?<HomeBanners onNavigate={onNavigate}/>:<section className="home-hero-empty"><div><span>PARINAYA SILKS</span><h2>Discover our saree collection</h2>{status==='error'?<><p>Homepage promotions are unavailable. You can still browse the collection.</p><button onClick={retry}>Retry homepage content</button></>:status==='loading'?<p role="status">Loading homepage...</p>:null}<HomeLink to="/shop" onNavigate={onNavigate} className="home-primary">Shop Sarees <ArrowRight size={17}/></HomeLink></div></section>}
+ {status==='ready'&&!!content.featuredCategories?.length&&<section className="home-categories home-container" aria-label="Shop by collection"><header className="home-rail-heading"><HomeCopy value={content.textSections?.['home-categories']} fallback="Shop by collection"/><span>Swipe for more <ArrowRight size={12}/></span></header><nav className="home-category-rail" aria-label="Featured collections">{content.featuredCategories.map(category=>{const image=categoryArtwork(category.id,products);return <HomeLink to={'/collections/'+category.slug} onNavigate={onNavigate} key={category.id}><span className="home-category-art">{image?<HomeImage url={image.images.full} alt=""/>:<Palette size={28}/>}</span><span>{category.name}</span></HomeLink>;})}</nav></section>}
+ <nav className="home-information-strip" aria-label="Shopping information"><HomeLink to="/shop" onNavigate={onNavigate}><ShoppingBag size={14}/>Shop sarees</HomeLink><HomeLink to="/shipping-policy" onNavigate={onNavigate}><Truck size={14}/>Delivery information</HomeLink><HomeLink to="/contact" onNavigate={onNavigate}><MessageCircle size={14}/>Customer support</HomeLink></nav>
+ <section className="home-arrivals home-container" aria-label="Recent sarees"><header className="home-section-heading"><HomeCopy value={content.textSections?.['home-new-arrivals']} fallback="New Arrivals"/><HomeLink to="/shop" onNavigate={onNavigate}>View All <ArrowRight size={14}/></HomeLink></header>{catalogState!=='ready'?<div className="home-state" role={catalogState==='error'?'alert':'status'}><p>{catalogState==='error'?'Unable to load sarees. Please try again.':'Loading sarees...'}</p>{catalogState==='error'&&<button onClick={onRetry}>Retry products</button>}</div>:arrivals.length?<div className="home-product-grid">{arrivals.map(p=><HomeProductCard key={p.id} product={p} onNavigate={onNavigate} onAdd={onAddToCart} onWishlist={onToggleWishlist} wishlisted={isWishlisted(p.id)} busy={isBusy(p.id)}/>)}</div>:<div className="home-state"><p>No products available yet.</p><HomeLink to="/contact" onNavigate={onNavigate}>Contact Us</HomeLink></div>}</section>
+ {(campaigns.status!=='ready'||!!campaigns.items.length)&&<section className="home-curations" aria-label="Seasonal collections"><div className="home-container"><header className="home-section-heading"><HomeCopy value={content.textSections?.['home-campaigns']} fallback="Occasion Curations"/></header>{campaigns.status!=='ready'?<div className="home-state" role={campaigns.status==='error'?'alert':'status'}><p>{campaigns.status==='error'?'Unable to load seasonal collections.':'Loading seasonal collections...'}</p>{campaigns.status==='error'&&<button onClick={campaigns.retry}>Retry collections</button>}</div>:<div className="home-campaign-grid">{campaigns.items.slice(0,3).map(c=>{const large=c.banners.desktop||c.banners.mobile,small=c.banners.mobile||large;return <HomeLink key={c.slug} to={'/sale/'+c.slug} onNavigate={onNavigate} className="home-campaign">{large&&<picture><source media="(max-width:767px)" srcSet={small?.url}/><img loading="lazy" width="1600" height="500" src={large.url} alt={large.alt||''} style={{'--wide-position':`${large.focalX}% ${large.focalY}%`,'--small-position':`${small?.focalX}% ${small?.focalY}%`} as React.CSSProperties} onError={e=>{e.currentTarget.style.visibility='hidden';}}/></picture>}<div><h3>{c.name}</h3>{c.description&&<p>{c.description}</p>}</div><ArrowRight size={21}/></HomeLink>;})}</div>}</div></section>}
+ {spotlight&&<section className="home-spotlight" aria-label="Curator's Spotlight"><div className="home-container"><header><span><Sparkles size={16}/>Curator's Spotlight</span><HomeCopy value={content.textSections?.['home-featured']} fallback={spotlight.name}/></header><div className="home-spotlight-layout"><HomeLink to={'/product/'+spotlight.slug} onNavigate={onNavigate} className="home-spotlight-image"><HomeImage url={spotlight.images.full} alt={spotlight.gallery?.find(i=>i.url===spotlight.images.full)?.alt||spotlight.name}/></HomeLink><div>{(content.textSections?.['home-featured']?.heading??spotlight.name)!==spotlight.name&&<h3>{spotlight.name}</h3>}{spotlight.description&&<p>{spotlight.description}</p>}<HomeLink to={'/product/'+spotlight.slug} onNavigate={onNavigate} className="home-gold">Explore Saree <ArrowRight size={16}/></HomeLink></div></div></div></section>}
+ {about&&(about.intro||about.story)&&<section className="home-story home-container" aria-label="Our story"><div><Sparkles size={28}/><h2>{about.heading}</h2><p>{about.intro||about.story.split('\n\n')[0]}</p><HomeLink to="/about" onNavigate={onNavigate}>Our story <ArrowRight size={15}/></HomeLink></div></section>}
+ </div>;
+};

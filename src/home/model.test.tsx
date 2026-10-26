@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {storefrontProduct} from '../products/adapter.ts';
+import {emptyProduct,type PublicProductRecord} from '../products/model.ts';
+import {HomeProductCard} from './ProductCard.tsx';
+import {recentProducts,categoryArtwork} from './model.ts';
+import {publicWebsiteText,sectionValue} from '../content/sections.ts';
+const product=(id:string,createdAt=0)=>storefrontProduct({...emptyProduct(),id,slug:'fixture-'+id,sku:id,categoryId:'c'.repeat(20),categoryName:'Silk',name:'Local saree '+id,status:'Published',pricePaise:123405,originalPricePaise:150000,inventory:{mode:'simple',quantity:3},newArrival:true,images:[],createdAt,updatedAt:0,revision:1} as unknown as PublicProductRecord);
+test('homepage recent products use deterministic newest public records without mutating catalog or assignments',()=>{const items=[product('a',1),product('b',9),product('c',9),product('d',2),product('e',4),{...product('private',10),status:'Draft' as const}];const before=items.map(p=>p.id);assert.deepEqual(recentProducts(items).map(p=>p.id),['c','b','e','d']);assert.deepEqual(items.map(p=>p.id),before);assert.equal(categoryArtwork('missing',items),undefined);assert.equal(categoryArtwork('c'.repeat(20),[{...items[0],images:{full:'real-cover.jpg'}}])?.id,'a');});
+test('homepage card keeps real prices, supported badges, unavailable and variant selection states',()=>{const render=(p=product('a'),busy=false)=>renderToStaticMarkup(<HomeProductCard product={p} busy={busy} wishlisted onAdd={()=>{}} onWishlist={()=>{}} onNavigate={()=>{}}/>);const markup=render();assert.match(markup,/1,234.05/);assert.match(markup,/1,500/);assert.match(markup,/New Arrival/);assert.match(markup,/aria-pressed="true"/);assert.match(markup,/href="\/product\/fixture-a"/);assert.ok(!/rating|review count|certified/i.test(markup));assert.match(render({...product('b'),inStock:false}),/disabled=""[^]*Out of stock/);assert.match(render({...product('v'),variants:[{id:'wine',name:'Wine',hex:'#780D24',quantity:1}]}),/Choose colour/);assert.match(render(product('c'),true),/Saving/);assert.ok(!render({...product('d'),originalPrice:1000,tags:[]}).includes('<del>'));});
+test('new homepage text uses bounded existing section writes and narrow public projection',()=>{for(const id of ['home-new-arrivals','home-campaigns'] as const){const value={heading:'Saved title',supportingText:'Saved intro',description:'Paragraph one\n\nParagraph two'};assert.deepEqual(sectionValue(id,value),value);assert.throws(()=>sectionValue(id,{...value,enabled:true}));assert.deepEqual(publicWebsiteText({private:'hidden',textSections:{[id]:value}}),{[id]:value});}});

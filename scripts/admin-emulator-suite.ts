@@ -66,6 +66,7 @@ try {
   await run('python', ['scripts/delivery-update-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/customer-orders-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/customer-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await run('python', ['scripts/homepage-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/loyalty-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
   await run('python', ['scripts/settings-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await run('python', ['scripts/appearance-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
