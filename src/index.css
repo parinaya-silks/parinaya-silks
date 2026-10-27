@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@font-face{font-family:ParinayaLora;src:url('/fonts/Lora-Variable.ttf') format('truetype');font-weight:400 700;font-style:normal;font-display:swap}
+/* Share the existing local font without changing Admin's font or sizing. */
+.customer-storefront {
+  --font-sans: ParinayaLora, Lora, Georgia, serif;
+  --font-serif: ParinayaLora, Lora, Georgia, serif;
+  font-family: ParinayaLora, Lora, Georgia, serif;
+}
+/* Existing customer component shorthands must not select a competing font.
+   Override family only; retain their sizes, weights and line heights. */
+.customer-storefront :where(*):not(:where(svg, svg *, .material-symbols-outlined)) {
+  font-family: inherit !important;
+}
+
+
 @theme {
   --font-serif: "Bodoni Moda", Georgia, serif;
   --font-sans: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

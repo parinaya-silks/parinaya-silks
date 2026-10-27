@@ -1,4 +1,4 @@
-.homepage-shell .storefront-brand,.home-page h2,.home-page h3,.home-footer-brand{font-family:"Bodoni Moda",ParinayaLora,Lora,Georgia,serif}
+.homepage-shell .storefront-brand,.home-page h2,.home-page h3,.home-footer-brand{font-family:ParinayaLora,Lora,Georgia,serif}
 .home-product-art img{object-fit:cover}
 /* Focused Stitch alignment; no zoom, wrappers or Admin overrides. */
 .home-heart{background:transparent;right:0;top:0}
@@ -10,7 +10,6 @@
 .home-categories>.home-copy h2{font:600 12px/1.4 var(--font-sans);text-transform:uppercase;letter-spacing:.06em;color:#780D24}
 .home-page .home-rail-heading h2{font-family:var(--font-sans)}
 .home-category-art img{object-fit:cover}
-.home-information-strip a{flex:1;max-width:240px;flex-direction:column;gap:4px;font-size:10px;min-height:36px}
 .home-page .home-banner-cta{gap:20px;border-radius:3px}
 .home-page .home-banner-overlay.artwork-only{background:none;pointer-events:none}
 .home-page .home-banner-overlay.artwork-only a{pointer-events:auto}
@@ -22,7 +21,7 @@
  .homepage-shell .storefront-bottom-nav button{font-size:10px;letter-spacing:.025em;text-transform:uppercase;gap:3px}
  .homepage-shell .storefront-bottom-nav svg{width:20px;height:20px}
  .homepage-shell .storefront-tab-icon b{min-width:14px;font-size:9px;line-height:12px;right:-8px;top:-4px}
- .home-page .home-banner-slide{height:clamp(216px,64vw,275px);aspect-ratio:auto}
+ .home-page .home-banner-slide{aspect-ratio:4/5}
  .home-page .home-banner-overlay{padding:14px 14px 20px;gap:6px;background:linear-gradient(0deg,#231919db,#23191935 65%,transparent)}
  .home-page .home-banner-overlay h2{font-size:24px;line-height:1.15;font-weight:500}
  .home-page .home-banner-overlay p{font-size:11px;line-height:1.4;max-width:90%}
@@ -37,9 +36,6 @@
  .home-category-art img{border-radius:4px}
  .home-rail-heading h2,.home-categories>.home-copy h2{font-size:10px;line-height:14px}
  .home-rail-heading>span{font-size:9px;line-height:14px}
- .home-information-strip{padding:6px 10px}
- .home-information-strip a{font-size:8.5px;line-height:12px;letter-spacing:.015em;gap:3px;padding-inline:5px;min-height:38px}
- .home-information-strip svg{display:block;width:15px;height:15px;color:#B88A44}
  .home-arrivals{padding-block:20px 16px}
  .home-section-heading{margin-bottom:12px;align-items:baseline}
  .home-section-heading h2{font-size:22px;line-height:28px;font-weight:500;letter-spacing:.01em}
