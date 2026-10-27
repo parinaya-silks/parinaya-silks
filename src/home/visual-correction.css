@@ -1,0 +1,58 @@
+.homepage-shell .storefront-brand,.home-page h2,.home-page h3,.home-footer-brand{font-family:"Bodoni Moda",ParinayaLora,Lora,Georgia,serif}
+.home-product-art img{object-fit:cover}
+/* Focused Stitch alignment; no zoom, wrappers or Admin overrides. */
+.home-heart{background:transparent;right:0;top:0}
+.home-heart:before{content:"";position:absolute;width:28px;height:28px;border-radius:50%;background:#ffffffe0}
+.home-heart svg{position:relative;width:18px;height:18px}
+.home-product-art{margin:6px 6px 0}
+.home-collection-status{font-size:12px;color:#817567;margin-top:12px}
+.home-collection-retry{min-height:44px;text-decoration:underline;color:#780D24;font-size:12px}
+.home-categories>.home-copy h2{font:600 12px/1.4 var(--font-sans);text-transform:uppercase;letter-spacing:.06em;color:#780D24}
+.home-page .home-rail-heading h2{font-family:var(--font-sans)}
+.home-category-art img{object-fit:cover}
+.home-information-strip a{flex:1;max-width:240px;flex-direction:column;gap:4px;font-size:10px;min-height:36px}
+.home-page .home-banner-cta{gap:20px;border-radius:3px}
+.home-page .home-banner-overlay.artwork-only{background:none;pointer-events:none}
+.home-page .home-banner-overlay.artwork-only a{pointer-events:auto}
+@media(max-width:767px){
+ .homepage-shell .storefront-header-row{height:64px;gap:4px;padding-inline:10px}
+ .homepage-shell .storefront-brand{flex:1;justify-content:center;font-size:16px;letter-spacing:.045em}
+ .homepage-shell .storefront-brand img{width:32px;height:32px}
+ .homepage-shell .storefront-header-actions{margin-left:0}
+ .homepage-shell .storefront-bottom-nav button{font-size:10px;letter-spacing:.025em;text-transform:uppercase;gap:3px}
+ .homepage-shell .storefront-bottom-nav svg{width:20px;height:20px}
+ .homepage-shell .storefront-tab-icon b{min-width:14px;font-size:9px;line-height:12px;right:-8px;top:-4px}
+ .home-page .home-banner-slide{height:clamp(216px,64vw,275px);aspect-ratio:auto}
+ .home-page .home-banner-overlay{padding:14px 14px 20px;gap:6px;background:linear-gradient(0deg,#231919db,#23191935 65%,transparent)}
+ .home-page .home-banner-overlay h2{font-size:24px;line-height:1.15;font-weight:500}
+ .home-page .home-banner-overlay p{font-size:11px;line-height:1.4;max-width:90%}
+ .home-page .home-banner-cta{font-size:11px;min-height:40px;padding:7px 12px}
+ .home-page .home-banner-controls{right:8px;bottom:6px;max-width:47%;padding:0;overflow-x:auto;scrollbar-width:none;background:#23191966}
+ .home-page .home-banner-controls button{min-width:24px;flex-shrink:0;font-size:10px;min-height:32px}
+ .home-page .home-banner-carousel[data-many=true] .home-banner-overlay{padding-bottom:54px}
+ .home-categories{padding-block:16px 14px}
+ .home-category-rail{padding-top:10px;gap:10px;scrollbar-width:none}
+ .home-category-rail>a{flex-basis:68px;gap:5px;font-size:10px;line-height:1.35}
+ .home-category-art{width:64px;height:64px;padding:4px;border-radius:9px}
+ .home-category-art img{border-radius:4px}
+ .home-rail-heading h2,.home-categories>.home-copy h2{font-size:10px;line-height:14px}
+ .home-rail-heading>span{font-size:9px;line-height:14px}
+ .home-information-strip{padding:6px 10px}
+ .home-information-strip a{font-size:8.5px;line-height:12px;letter-spacing:.015em;gap:3px;padding-inline:5px;min-height:38px}
+ .home-information-strip svg{display:block;width:15px;height:15px;color:#B88A44}
+ .home-arrivals{padding-block:20px 16px}
+ .home-section-heading{margin-bottom:12px;align-items:baseline}
+ .home-section-heading h2{font-size:22px;line-height:28px;font-weight:500;letter-spacing:.01em}
+ .home-copy p{font-size:11px;line-height:16px;margin-top:2px}
+ .home-section-heading>a{font-size:10px;gap:3px}
+ .home-product-grid{gap:8px}
+ .home-product-body{padding:9px;gap:4px}
+ .home-product-body h3{font-size:13px;line-height:18px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+ .home-product-body p{font-size:11px;line-height:15px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden}
+ .home-price{gap:6px;padding-top:4px}
+ .home-price strong{font-size:15px;line-height:20px}
+ .home-price del{font-size:10px}
+ .home-add{font-size:10px;margin-top:4px}
+ .home-product-label{font-size:9px;line-height:12px;padding:3px 5px}
+ .home-sale{font-size:9px;line-height:12px;padding:3px 5px;left:5px;bottom:5px}
+}

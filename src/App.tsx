@@ -270,7 +270,7 @@ function StorefrontContent() {
   }
 
   return (
-    <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")}>
+    <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")+(currentPath==='/'?" homepage-shell":"")}>
       <Seo path={currentPath}/>
       {/* Top Store Announcement Banner */}
       {settings.announcementBarActive && settings.announcementBarText && (

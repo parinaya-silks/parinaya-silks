@@ -28,10 +28,13 @@ try:
    if selected=='error':route.fulfill(status=503,json={'code':'unavailable'});return
    value=route.fetch().json()
    if kind=='content':
-    if selected=='zero':value['banners']=[]
+    if selected=='unassigned':value['featuredCategories']=[];value['featuredCategoryIds']=[]
+    elif selected=='zero':value['banners']=[]
     elif selected=='one':value['banners']=value['banners'][:1]
     elif selected=='artwork':value['banners']=value['banners'][:1];value['banners'][0].update({'title':'','supportingText':'','showButton':False,'link':''})
+    elif selected=='artwork-cta':value['banners']=value['banners'][:1];value['banners'][0].update({'title':'','supportingText':'','showButton':True})
     elif selected=='long':value['banners'][0]['title']='A very long approved banner title with meaningful wrapping across small screens';value['banners'][0]['supportingText']='A supporting paragraph with many words to test reading and access to the saved call to action.'
+   elif selected=='partial' and kind=='products' and 'category' not in q:value['items']=value['items'][:1]
    elif selected=='empty':value['items']=[];value['nextCursor']=None
    elif selected=='long' and kind=='products':value['items'][0]['name']='A very long traditional Kanchipuram handwoven saree product title with many carefully recorded details'
    route.fulfill(status=200,json=value)
@@ -39,6 +42,14 @@ try:
   expect(page.locator('.home-banner-slide img')).to_have_attribute('src',re.compile('home-mobile'))
   assert not any('home-desktop.jpg' in x for x in requests),'Mobile must not download desktop hero'
   art=page.locator('.home-product-art').first.bounding_box();assert abs(art['height']/art['width']-4/3)<0.02
+  assert page.locator('.storefront-header-row').bounding_box()['height']==64
+  assert 249<=page.locator('.home-banner-slide').bounding_box()['height']<=251
+  heart=page.locator('.home-heart').first
+  assert heart.bounding_box()['width']>=44 and heart.bounding_box()['height']>=44
+  assert heart.evaluate("el=>getComputedStyle(el,'::before').width")=='28px'
+  assert page.locator('.home-category-art').first.bounding_box()['width']==64
+  expect(page.locator('.home-information-strip svg')).to_have_count(3)
+  assert all(icon.is_visible() for icon in page.locator('.home-information-strip svg').all())
   assert not any(x in page.locator('.home-footer').inner_text() for x in ['UPI','Visa','No COD','100% Online'])
   assert not any('loyalty:' in x for x in requests)
   header=page.locator('.storefront-header');nav=page.get_by_role('navigation',name='Mobile Bottom Navigation');expect(nav.get_by_role('button')).to_have_count(5)
@@ -51,14 +62,18 @@ try:
    if width<768:
     expect(nav).to_be_visible();float_box=page.get_by_role('link',name='Chat on WhatsApp',exact=True).bounding_box();assert float_box['y']+float_box['height']<=nav.bounding_box()['y']
    else:expect(nav).not_to_be_visible()
-   page.screenshot(path=str(screens/f'home-{width}.png'),full_page=True)
+   page.evaluate('document.activeElement.blur()');page.screenshot(path=str(screens/f'home-{width}.png'),full_page=True)
   page.set_viewport_size({'width':390,'height':900});page.route('**/home-mobile.jpg',lambda route:route.abort());page.reload();expect(page.locator('.home-banner-slide img')).to_have_attribute('src',re.compile('home-desktop'));page.unroute('**/home-mobile.jpg');page.reload();expect(page.locator('.home-banner-slide img')).to_have_attribute('src',re.compile('home-mobile'));page.get_by_role('button',name='Show banner 2').click();expect(page.get_by_role('group',name='2 of 2',exact=True)).to_be_visible();page.get_by_role('button',name='Previous banner').click();expect(page.get_by_role('group',name='1 of 2',exact=True)).to_be_visible()
-  for state in ['one','zero','artwork','long']:
+  mode['content']='unassigned';page.reload();expect(page.get_by_role('navigation',name='Featured collections').get_by_role('link')).to_have_count(4);mode['content']='normal'
+  mode['products']='partial';page.reload();expect(page.locator('[data-home-product]')).to_have_count(1);expect(page.locator('.home-category-art img')).to_have_count(4);mode['products']='normal'
+  for state in ['one','zero','artwork','artwork-cta','long']:
    mode['content']=state;page.reload();expect(page.locator('[data-home-product]')).to_have_count(4)
    if state=='zero':expect(page.locator('.home-hero-empty')).to_be_visible();expect(page.get_by_role('region',name='Homepage promotions')).to_have_count(0)
    else:expect(page.get_by_role('region',name='Homepage promotions')).to_be_visible()
    if state=='one':expect(page.get_by_role('button',name='Next banner')).to_have_count(0)
    if state=='artwork':expect(page.locator('.home-banner-overlay')).to_have_count(0)
+   if state=='artwork-cta':
+    expect(page.locator('.home-banner-overlay.artwork-only')).to_be_visible();expect(page.locator('.home-banner-overlay h2,.home-banner-overlay p')).to_have_count(0);expect(page.locator('.home-banner-cta')).to_be_visible()
    if state=='long':assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1');page.locator('.home-banner-cta').click();page.wait_for_url('**/shop')
   mode['content']='error';page.goto(origin+'/');expect(page.get_by_role('button',name='Retry homepage content')).to_be_visible();expect(page.locator('[data-home-product]')).to_have_count(4);mode['content']='normal';page.get_by_role('button',name='Retry homepage content').click();expect(page.get_by_role('region',name='Homepage promotions')).to_be_visible()
   mode['products']='error';page.reload();expect(page.get_by_role('button',name='Retry products',exact=True)).to_be_visible();expect(page.locator('.home-campaign')).to_have_count(3);mode['products']='normal';page.get_by_role('button',name='Retry products',exact=True).click();expect(page.locator('[data-home-product]')).to_have_count(4)
