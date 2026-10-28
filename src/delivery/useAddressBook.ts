@@ -1,8 +1,8 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {collection,doc,getDoc,limit,onSnapshot,query} from 'firebase/firestore';
+import {collection,doc,getDoc,onSnapshot} from 'firebase/firestore';
 import {useCustomerAuth} from '../customer/CustomerAuth.tsx';
 import {getAuthClients} from '../services/firebase/auth.ts';
-import {ADDRESS_LIMIT,type AddressBook} from './model.ts';
+import {type AddressBook} from './model.ts';
 import {deliveryAction} from './client.ts';
 const empty:AddressBook={addresses:[],defaultAddressId:null,revision:0};
 export function useAddressBook(){
@@ -24,7 +24,7 @@ export function useAddressBook(){
     const changed=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(live)void reload();},50);};
     const failed=()=>{if(live&&active.current===uid)setState({uid,status:'error',book:empty});};
     const stops:(()=>void)[]=[];
-    try{const {database}=getAuthClients();stops.push(onSnapshot(query(collection(database,'customerShopping',uid,'addresses'),limit(ADDRESS_LIMIT+1)),changed,failed));stops.push(onSnapshot(doc(database,'customerShopping',uid,'preferences','delivery'),changed,failed));
+    try{const {database}=getAuthClients();stops.push(onSnapshot(collection(database,'customerShopping',uid,'addresses'),changed,failed));stops.push(onSnapshot(doc(database,'customerShopping',uid,'preferences','delivery'),changed,failed));
       void getDoc(doc(database,'customerProfiles',uid)).then(result=>{if(live&&active.current===uid&&epoch.current===generation)setProfile({uid,name:result.data()?.displayName||session.user?.displayName||'',mobile:result.data()?.mobileNumber||''});}).catch(()=>{});
     }catch{failed();}
     return()=>{live=false;epoch.current++;clearTimeout(timer);stops.forEach(stop=>stop());};

@@ -154,7 +154,7 @@ function StorefrontContent() {
   const checkoutExperience=/^\/checkout(?:[/?]|$)/.test(currentPath);
   const orderExperience=/^\/(?:order-result|order-confirmed|order-tracking)\//.test(authRoute)||/^\/account\/orders\/[^/]+$/.test(authRoute);
   const focusedExperience=checkoutExperience||orderExperience;
-  const authExperience=['/login','/register','/forgot-password','/verify-email','/account'].includes(authRoute);
+  const authExperience=['/login','/register','/forgot-password','/verify-email','/account'].includes(authRoute)&&!(authRoute==='/account'&&session.status==='signed-in');
 
   const shopping=useShopping(currentPath,navigate);
   const isWishlisted=shopping.isWishlisted;

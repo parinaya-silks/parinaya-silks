@@ -1,4 +1,10 @@
-import {AccountPoints} from '../loyalty/AccountPoints.tsx';
+import {ProfilePoints} from './ProfilePoints.tsx';
+import {ProfileEditor} from './ProfileEditor.tsx';
+import {customerInitials} from './profileModel.ts';
+import {AddressManager} from '../delivery/AddressManager.tsx';
+import {useAddressBook} from '../delivery/useAddressBook.ts';
+import {UserRound,ShoppingBag,MessageCircle,LogOut,ChevronRight,Pencil,Lock} from 'lucide-react';
+import './profile.css';
 import React,{useEffect,useRef,useState} from 'react';
 import {customerAction} from '../orders/client.ts';
 import {updateProfile} from 'firebase/auth';
@@ -12,6 +18,8 @@ import {CustomerError,customerErrorMessage} from './policy.ts';
 
 export function CustomerAccount({onNavigate}:{onNavigate:(path:string)=>void}) {
   const {user,leave}=useCustomerAuth();
+  const book=useAddressBook();
+  const [notice,setNotice]=useState('');
   const pending=user?pendingProfile(user.uid):undefined;
   const [profile,setProfile]=useState<CustomerProfile|null>(null),[loading,setLoading]=useState(true),[profileError,setProfileError]=useState(false),[name,setName]=useState(user?.displayName||pending?.displayName||'');
   const [mobile,setMobile]=useState(pending?.mobileNumber||''),[country,setCountry]=useState<CountryCode>(mobileCountry(pending?.mobileNumber||'')),[mobileError,setMobileError]=useState('');
@@ -30,7 +38,7 @@ export function CustomerAccount({onNavigate}:{onNavigate:(path:string)=>void}) {
     }catch(failure){if(mounted.current&&current===generation.current){setProfileError(true);if(recover)setMobileError(failure instanceof CustomerError?failure.fields.mobileNumber||'':'');}}
     finally{if(mounted.current&&current===generation.current)setLoading(false);}
   }
-  useEffect(()=>{void loadProfile();},[]);
+  useEffect(()=>{void loadProfile();const refresh=()=>{if(document.visibilityState==='visible')void loadProfile();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[]);
   if(!user)return null;
   async function signOut() {
     if(lock.current)return;lock.current=true;setBusy(true);setError('');
@@ -38,13 +46,12 @@ export function CustomerAccount({onNavigate}:{onNavigate:(path:string)=>void}) {
     catch(failure){if(mounted.current)setError(customerErrorMessage(failure));}
     finally{lock.current=false;if(mounted.current)setBusy(false);}
   }
-  async function saveProfile(event:React.FormEvent){event.preventDefault();if(!user||lock.current)return;lock.current=true;setBusy(true);setError('');try{const mobileNumber=mobile.trim()?normalizeMobile(mobile,country):null;const saved=await customerAction<CustomerProfile>(user.uid,{action:'profile:update',displayName:name,mobileNumber});setProfile(saved);setEditing(false);}catch(failure){setError(failure instanceof Error?failure.message:'Unable to save your profile.');}finally{lock.current=false;setBusy(false);}}
-  return <div>
-    {error&&<p role="alert" className="customer-auth-notice">{error}</p>}
-    <dl className="customer-account-details"><div><dt>Name</dt><dd>{profile?.displayName||user.displayName||'Finish your profile below'}</dd></div><div><dt>Email address</dt><dd>{user.email}</dd></div><div><dt>Mobile number</dt><dd>{profile?.mobileNumber||'Not provided'}</dd></div></dl>
-    {loading&&<p role="status" className="customer-auth-notice">Loading your profile…</p>}
-    {profileError&&!loading&&<div className="customer-auth-notice" role="alert"><p>Your sign-in worked. We couldn’t finish loading or saving your profile. Your account already exists; do not register again.</p><label className="customer-auth-field mt-3">Name<input autoComplete="name" maxLength={100} value={name} onChange={event=>setName(event.target.value)}/></label><MobileField id="customer-recovery-mobile" value={mobile} country={country} onChange={setMobile} onCountry={setCountry} error={mobileError} disabled={loading||busy}/><div className="customer-auth-actions mt-3"><button type="button" onClick={()=>void loadProfile(true)} disabled={!name.trim()||Boolean(busy)}>Retry profile setup</button></div></div>}
-    {profile&&!profileError&&<><button className="min-h-11 underline text-[#780D24]" onClick={()=>{setName(profile.displayName);setMobile(profile.mobileNumber||'');setCountry(mobileCountry(profile.mobileNumber||''));setEditing(true);}}>Edit name and mobile</button>{editing&&<form className="space-y-3 my-4" onSubmit={saveProfile}><label className="customer-auth-field">Name<input required maxLength={100} autoComplete="name" value={name} onChange={event=>setName(event.target.value)}/></label><MobileField required={!!profile.mobileNumber} id="customer-edit-mobile" value={mobile} country={country} onChange={setMobile} onCountry={setCountry} error={mobileError} disabled={busy}/><p className="text-sm">Your sign-in email is unchanged. Legacy profiles may keep an empty mobile number.</p><div className="customer-auth-actions"><button disabled={busy}>Save profile</button><button type="button" disabled={busy} onClick={()=>setEditing(false)}>Cancel</button></div></form>}</>}
-    <AccountPoints key={user.uid} uid={user.uid} onNavigate={onNavigate}/><div className="customer-auth-actions"><button type="button" onClick={()=>onNavigate('/account/orders')}>My orders</button><button type="button" onClick={()=>onNavigate('/account/addresses')}>Addresses</button><button type="button" onClick={()=>onNavigate('/shop')}>Browse sarees</button><button type="button" disabled={Boolean(busy)} onClick={()=>void signOut()}>{busy?'Signing out…':'Sign out'}</button></div>
+  return <div className="customer-profile"><nav className="profile-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>My Account</span></nav><header className="profile-greeting"><div className="profile-avatar" aria-hidden="true">{customerInitials(profile?.displayName||user.displayName||'')}</div><div><h1>Hello, {profile?.displayName||user.displayName||'Customer'}</h1><p>Your details, addresses and rewards, all in one place.</p></div></header>
+    {error&&<p role="alert" className="profile-notice">{error}</p>}{notice&&<p role="status" className="profile-notice">{notice}</p>}
+    <div className="profile-grid"><div className="profile-left"><section className="profile-card profile-personal"><header><h2><UserRound size={19}/>Personal Details</h2>{profile&&!profileError&&<button className="profile-link" onClick={()=>setEditing(true)}><Pencil size={13}/>Edit Details</button>}</header>
+    {loading&&<p role="status">Loading your profile...</p>}{!loading&&!profileError&&<dl className="customer-account-details"><div><dt>Full name</dt><dd>{profile?.displayName||user.displayName||'Not provided'}</dd></div><div><dt>Mobile number</dt><dd>{profile?.mobileNumber||<button className="profile-link" onClick={()=>setEditing(true)}>Add mobile number</button>}</dd></div><div className="profile-email"><dt><Lock size={12}/>Sign-in email (read-only)</dt><dd>{user.email}</dd></div></dl>}
+    {profileError&&!loading&&<div className="profile-notice" role="alert"><p>Your sign-in worked. We couldn’t finish loading or saving your profile. Your account already exists; do not register again.</p><label>Name<input autoComplete="name" maxLength={100} value={name} onChange={event=>setName(event.target.value)}/></label><MobileField id="customer-recovery-mobile" value={mobile} country={country} onChange={setMobile} onCountry={setCountry} error={mobileError} disabled={loading||busy}/><button type="button" onClick={()=>void loadProfile(true)} disabled={!name.trim()||busy}>Retry profile setup</button></div>}
+    </section><div className="profile-addresses-wrap"><AddressManager key={book.uid} book={book} profile/></div></div><div className="profile-right"><ProfilePoints key={user.uid} uid={user.uid} onNavigate={onNavigate}/><section className="profile-card profile-management" aria-label="Account management"><h2>Account Management</h2><button aria-label="My Orders" onClick={()=>onNavigate('/account/orders')}><ShoppingBag size={21}/><span>My Orders<small>View your orders and delivery updates</small></span><ChevronRight size={16}/></button><button aria-label="Help & Contact" onClick={()=>onNavigate('/contact')}><MessageCircle size={21}/><span>Help & Contact<small>Get help from the Parinaya Silks team</small></span><ChevronRight size={16}/></button><button disabled={busy} onClick={()=>void signOut()}><LogOut size={21}/><span>{busy?'Signing out...':'Sign out'}</span></button></section></div></div>
+    {editing&&profile&&<ProfileEditor profile={profile} email={user.email||''} onClose={()=>setEditing(false)} onSaved={value=>{setProfile(value);setEditing(false);setNotice('Your details have been saved.');}}/>}
   </div>;
 }

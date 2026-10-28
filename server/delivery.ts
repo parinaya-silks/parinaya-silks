@@ -13,28 +13,28 @@ const validateAddressFields={recipientName:1,mobileNumber:1,pinCode:1,line1:1,lo
 export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFirestore.DocumentSnapshot,name?:string)=>Promise<PublicProductRecord>) {
   const root=(uid:string)=>db.doc(`customerShopping/${uid}`);
   async function list(uid:string):Promise<AddressBook>{return db.runTransaction(async tx=>{
-    const [docs,preferences]=await Promise.all([tx.get(root(uid).collection('addresses').limit(ADDRESS_LIMIT+1)),tx.get(root(uid).collection('preferences').doc('delivery'))]);
-    if(docs.size>ADDRESS_LIMIT)throw new ProductError('conflict','Your address book needs owner review.');
+    const [docs,preferences]=await Promise.all([tx.get(root(uid).collection('addresses')),tx.get(root(uid).collection('preferences').doc('delivery'))]);
     return {addresses:docs.docs.map(presentAddress),defaultAddressId:preferences.data()?.defaultAddressId||null,revision:preferences.data()?.revision||0};
   });}
   async function mutate(uid:string,body:Record<string,unknown>){
     const save=body.action==='addresses:save',remove=body.action==='addresses:delete';
     if(!save&&!remove&&body.action!=='addresses:default')throw new ProductError('invalid','Unsupported address operation.');
-    fields(body,save?['action','id','expectedRevision','operationId','address']:['action','id','expectedRevision','operationId']);
+    if('makeDefault' in body&&(!save||typeof body.makeDefault!=='boolean'))throw new ProductError('invalid','Invalid default address setting.');
+    fields(body,save?['action','id','expectedRevision','operationId','address',...('makeDefault' in body?['makeDefault']:[])]:['action','id','expectedRevision','operationId']);
     const id=addressId(body.id),operationId=addressId(body.operationId);
     if(!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<0)throw new ProductError('invalid','Invalid address revision.');
     const address=save?validateAddress(body.address):null;
-    const hash=createHash('sha256').update(JSON.stringify([body.action,id,body.expectedRevision,address])).digest('hex');
+    const hash=createHash('sha256').update(JSON.stringify([body.action,id,body.expectedRevision,address,...('makeDefault' in body?[body.makeDefault]:[])])).digest('hex');
     const ref=root(uid).collection('addresses').doc(id),pref=root(uid).collection('preferences').doc('delivery'),receipt=root(uid).collection('operations').doc(operationId);
     return db.runTransaction(async tx=>{
       const recorded=await tx.get(receipt);if(recorded.exists){if(recorded.data()!.hash!==hash)throw new ProductError('conflict','This operation was used for different changes.');return {id,bookRevision:recorded.data()!.bookRevision||0};}
-      const [all,preferences]=await Promise.all([tx.get(root(uid).collection('addresses').limit(ADDRESS_LIMIT+1)),tx.get(pref)]);
+      const [all,preferences]=await Promise.all([tx.get(root(uid).collection('addresses')),tx.get(pref)]);
       const old=all.docs.find(doc=>doc.id===id);
       if((old?.data().revision||0)!==body.expectedRevision)throw new ProductError('conflict','This address changed in another session. Reload addresses before saving; your form has been kept.');
       if(!save&&!old)throw new ProductError('not-found','This saved address is no longer available.');
       if(save&&!old&&all.size>=ADDRESS_LIMIT)throw new ProductError('conflict',`You can save up to ${ADDRESS_LIMIT} addresses. Delete an address before adding another.`);
       let defaultId=preferences.data()?.defaultAddressId||null;
-      if(save){tx.set(ref,{...address,revision:(old?.data().revision||0)+1,updatedAt:FieldValue.serverTimestamp(),createdAt:old?.data().createdAt||FieldValue.serverTimestamp()});if(!defaultId||!all.docs.some(doc=>doc.id===defaultId))defaultId=id;}
+      if(save){tx.set(ref,{...address,revision:(old?.data().revision||0)+1,updatedAt:FieldValue.serverTimestamp(),createdAt:old?.data().createdAt||FieldValue.serverTimestamp()},{merge:true});if(body.makeDefault===true||!defaultId||!all.docs.some(doc=>doc.id===defaultId))defaultId=id;}
       else if(remove){tx.delete(ref);if(defaultId===id||!all.docs.some(doc=>doc.id===defaultId))defaultId=all.docs.map(doc=>doc.id).filter(value=>value!==id).sort()[0]||null;}
       else defaultId=id;
       // One pointer, serialized by the same transaction: never competing flags.

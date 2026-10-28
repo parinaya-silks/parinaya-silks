@@ -33,7 +33,7 @@ try:
     page.on('request',lambda req:saves.append(req.post_data_json) if req.method=='POST' and '/api/catalog' in req.url and req.post_data_json.get('action')=='addresses:save' else None)
     page.goto(origin+'/checkout');page.wait_for_url('**/login?returnTo=%2Fcheckout');login(page)
     page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.get_by_role('button',name=re.compile(r'^Place Order')).count()==0
-    page.goto(origin+'/account');page.get_by_role('button',name='Addresses',exact=True).click();page.get_by_role('heading',name='My Addresses',exact=True).wait_for()
+    page.goto(origin+'/account/addresses');page.get_by_role('heading',name='My Addresses',exact=True).wait_for()
     page.get_by_text('No saved addresses yet.',exact=False).wait_for();page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click()
     dialog=page.get_by_role('dialog');expect(dialog).to_be_visible();expect(page.get_by_label('Recipient full name',exact=True)).to_be_focused()
     expect(page.get_by_label('Recipient full name',exact=True)).to_have_value('Delivery Customer');expect(page.get_by_label('Mobile number',exact=True)).to_have_value('+919876543210')
