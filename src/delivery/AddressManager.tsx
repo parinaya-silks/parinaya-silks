@@ -5,7 +5,7 @@ import type {AddressBookState} from './useAddressBook.ts';
 import {deliveryOperation} from './client.ts';
 import {AddressEditor} from './AddressEditor.tsx';
 
-export function AddressManager({book,selected,onSelect,onSaved}:{book:AddressBookState;selected?:string;onSelect?:(id:string)=>void;onSaved?:(id:string,revision:number)=>void}){
+export function AddressManager({book,selected,onSelect,onSaved,checkout=false}:{book:AddressBookState;selected?:string;onSelect?:(id:string)=>void;onSaved?:(id:string,revision:number)=>void;checkout?:boolean}){
   const [editor,setEditor]=useState<DeliveryAddress|null|undefined>(undefined),[deleting,setDeleting]=useState<DeliveryAddress|null>(null),[error,setError]=useState('');
   const attempt=useRef<{signature:string;operationId:string}|null>(null),lock=useRef(false),active=useRef(true);
   useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
@@ -16,8 +16,9 @@ export function AddressManager({book,selected,onSelect,onSaved}:{book:AddressBoo
     catch(error){if(active.current)setError(error instanceof Error?error.message:'Unable to update your addresses. Please retry.');}
     finally{lock.current=false;}
   }
-  return <section aria-label="Saved delivery addresses" className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-serif text-xl">Delivery address</h2><button disabled={book.status!=='ready'||book.busy||book.addresses.length>=ADDRESS_LIMIT} onClick={()=>{setError('');setEditor(null);}} className="min-h-11 px-4 border border-[#780D24] text-[#780D24] rounded disabled:opacity-50">Add address</button></div>
+  return <section aria-label="Saved delivery addresses" className={checkout?"checkout-address-list":"space-y-4"}>
+    {!checkout&&<div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-serif text-xl">Delivery address</h2><button disabled={book.status!=='ready'||book.busy||book.addresses.length>=ADDRESS_LIMIT} onClick={()=>{setError('');setEditor(null);}} className="min-h-11 px-4 border border-[#780D24] text-[#780D24] rounded disabled:opacity-50">Add address</button></div>}
+    {checkout&&<header><h2>Saved addresses ({book.status==='ready'?book.addresses.length:'...'})</h2><span>Choose a delivery address</span></header>}
     {book.status==='loading'&&<p role="status">Loading your addresses…</p>}
     {book.status==='error'&&<div role="alert" className="space-y-2"><p>Unable to load your addresses.</p><button className="min-h-11 underline text-[#780D24]" onClick={book.reload}>Retry addresses</button></div>}
     {error&&<div role="alert"><p className="text-sm text-[#780D24]">{error}</p><button className="min-h-11 underline" onClick={book.reload}>Reload addresses</button></div>}
@@ -28,8 +29,8 @@ export function AddressManager({book,selected,onSelect,onSaved}:{book:AddressBoo
       <p className="text-sm">{address.line1}, {address.locality}<br/>{address.city}, {address.state} {address.pinCode}<br/>India{address.landmark&&<><br/>Landmark: {address.landmark}</>}</p><p className="text-sm">{address.mobileNumber}</p>
       <div className="flex flex-wrap gap-x-5"><button disabled={book.busy} onClick={()=>{setError('');setEditor(address);}} className="min-h-11 text-sm underline text-[#780D24]">Edit address</button>{book.defaultAddressId!==address.id&&<button disabled={book.busy} onClick={()=>void change('addresses:default',address)} className="min-h-11 text-sm underline text-[#780D24]">Set as default</button>}<button disabled={book.busy} onClick={()=>{setError('');setDeleting(address);}} className="min-h-11 text-sm underline text-[#780D24]">Delete address</button></div>
     </article>)}
-    {book.status==='ready'&&<p className="text-xs text-[#5F5552]">{book.addresses.length} of {ADDRESS_LIMIT} addresses saved.</p>}
-    {editor!==undefined&&<AddressEditor book={book} address={editor} onClose={()=>setEditor(undefined)} onSaved={(id,revision)=>{setEditor(undefined);onSaved?.(id,revision);}}/>}
+    {book.status==='ready'&&(checkout?<button className="checkout-add-address" disabled={book.busy||book.addresses.length>=ADDRESS_LIMIT} onClick={()=>{setError('');setEditor(null);}}>+ Add address</button>:<p className="text-xs text-[#5F5552]">{book.addresses.length} of {ADDRESS_LIMIT} addresses saved.</p>)}
+    {editor!==undefined&&<AddressEditor checkout={checkout} book={book} address={editor} onClose={()=>setEditor(undefined)} onSaved={(id,revision)=>{setEditor(undefined);onSaved?.(id,revision);}}/>}
     {deleting&&<DeleteAddress address={deleting} busy={book.busy} error={error} onCancel={()=>setDeleting(null)} onConfirm={()=>void change('addresses:delete',deleting)}/>}
   </section>;
 }

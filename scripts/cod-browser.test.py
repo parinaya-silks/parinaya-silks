@@ -1,3 +1,4 @@
+import re
 """Real loopback COD acceptance, lost-response recovery and six-width order UI."""
 import os,subprocess
 from pathlib import Path
@@ -19,7 +20,7 @@ try:
   def login(page,admin=False):
    page.get_by_label('Email' if admin else 'Email address',exact=True).fill('parinayasilks.in@gmail.com' if admin else 'customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click()
   ctx=context();page=ctx.new_page();errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
-  page.goto(origin+'/login?returnTo=%2Fcheckout');login(page);page.get_by_role('button',name='Continue to Summary',exact=True).click();page.get_by_role('button',name='Continue to Payment',exact=True).click();place=page.get_by_role('button',name='Place COD Order',exact=True);expect(place).to_be_enabled()
+  page.goto(origin+'/login?returnTo=%2Fcheckout');login(page);page.get_by_role('button',name='Continue to Review',exact=True).click();page.get_by_role('button',name='Continue to Payment',exact=True).click();place=page.get_by_role('button',name=re.compile(r'^Place Order'));expect(place).to_be_enabled()
   for width in [320,375,390,768,1024,1440]:
    page.set_viewport_size({'width':width,'height':900});assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width;page.screenshot(path=str(screens/f'checkout-{width}.png'),full_page=True)
   def reject_once(route):
@@ -33,7 +34,7 @@ try:
     if lost['once']:
      lost['once']=False;response=route.fetch();assert response.status==200;route.abort();return
    route.continue_()
-  page.route('**/api/catalog',lose_response);place.click();retry=page.get_by_role('button',name='Retry COD order safely',exact=True);expect(retry).to_be_enabled();retry.click();page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();assert len(operations)==2 and operations[0]==operations[1];fixture('assert-single')
+  page.route('**/api/catalog',lose_response);place.click();retry=page.get_by_role('button',name='Check order status',exact=True);expect(retry).to_be_enabled();retry.click();page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();assert len(operations)==2 and operations[0]==operations[1];fixture('assert-single')
   order_id=page.url.rsplit('/',1)[1];page.reload();page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();fixture('assert-single')
   # Recreate the durable state left by a response lost before navigation. Mount
   # recovery must read the accepted operation, without submitting it again.

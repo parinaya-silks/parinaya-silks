@@ -151,6 +151,7 @@ function StorefrontContent() {
   }, [currentPath,session.status]);
 
   const authRoute=currentPath.split('?')[0];
+  const checkoutExperience=/^\/checkout(?:[/?]|$)/.test(currentPath);
   const authExperience=['/login','/register','/forgot-password','/verify-email','/account'].includes(authRoute);
 
   const shopping=useShopping(currentPath,navigate);
@@ -273,7 +274,7 @@ function StorefrontContent() {
     <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"customer-storefront min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")+(currentPath==='/'?" homepage-shell":"")}>
       <Seo path={currentPath}/>
       {/* Top Store Announcement Banner */}
-      {settings.announcementBarActive && settings.announcementBarText && (
+      {!checkoutExperience && settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-[15px] text-[#B88A44]">sparkles</span>
           <span>{settings.announcementBarText}</span>
@@ -287,15 +288,15 @@ function StorefrontContent() {
       )}
 
       {/* Main Storefront Header */}
-      <Header
+      {!checkoutExperience&&<Header
         authLayout={authExperience}
         currentPath={currentPath}
         onNavigate={navigate}
         cartCount={cartCount}
         wishlistCount={wishlistCount}
-      />
+      />}
 
-      {shopping.notice&&<div className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:w-96 z-50 bg-white border border-[#B88A44] rounded-xl shadow-lg p-4 text-sm" role={shopping.notice.error?'alert':'status'}>
+      {!checkoutExperience&&shopping.notice&&<div className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:w-96 z-50 bg-white border border-[#B88A44] rounded-xl shadow-lg p-4 text-sm" role={shopping.notice.error?'alert':'status'}>
         <p>{shopping.notice.message}</p><div className="flex flex-wrap gap-4 mt-2">{shopping.notice.error&&<button className="min-h-11 underline text-[#780D24]" onClick={shopping.retryChange}>Retry change</button>}{shopping.signedIn&&<button className="min-h-11 underline text-[#780D24]" onClick={()=>navigate('/bag')}>View bag</button>}<button className="min-h-11 underline" onClick={shopping.dismiss}>Dismiss</button></div>
       </div>}
       {/* Main Page View */}
@@ -305,16 +306,16 @@ function StorefrontContent() {
       </main>
 
       {/* Storefront Footer */}
-      {!authExperience&&(currentPath==='/'?<HomeFooter onNavigate={navigate}/>:<Footer onNavigate={navigate}/>)}{!authExperience&&<FloatingContact path={currentPath}/>}
+      {!checkoutExperience&&!authExperience&&(currentPath==='/'?<HomeFooter onNavigate={navigate}/>:<Footer onNavigate={navigate}/>)}{!checkoutExperience&&!authExperience&&<FloatingContact path={currentPath}/>}
 
       {/* Approved 5-Tab Mobile Bottom Navigation (Home · Shop · Wishlist · Bag · Account) */}
-      <MobileBottomNav
+      {!checkoutExperience&&<MobileBottomNav
         authLayout={authExperience}
         currentPath={currentPath}
         onNavigate={navigate}
         cartCount={cartCount}
         wishlistCount={wishlistCount}
-      />
+      />}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import re
 """Delivery/address UI with real loopback Auth/Firestore/API; no production records."""
 import os,subprocess,json
 from pathlib import Path
@@ -31,9 +32,9 @@ try:
     page.on('pageerror',lambda error:errors.append(str(error)))
     page.on('request',lambda req:saves.append(req.post_data_json) if req.method=='POST' and '/api/catalog' in req.url and req.post_data_json.get('action')=='addresses:save' else None)
     page.goto(origin+'/checkout');page.wait_for_url('**/login?returnTo=%2Fcheckout');login(page)
-    page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.get_by_role('button',name='Place COD Order',exact=True).count()==0
+    page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.get_by_role('button',name=re.compile(r'^Place Order')).count()==0
     page.goto(origin+'/account');page.get_by_role('button',name='Addresses',exact=True).click();page.get_by_role('heading',name='My Addresses',exact=True).wait_for()
-    page.get_by_text('No saved addresses yet.',exact=False).wait_for();page.get_by_role('button',name='Add address',exact=True).click()
+    page.get_by_text('No saved addresses yet.',exact=False).wait_for();page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click()
     dialog=page.get_by_role('dialog');expect(dialog).to_be_visible();expect(page.get_by_label('Recipient full name',exact=True)).to_be_focused()
     expect(page.get_by_label('Recipient full name',exact=True)).to_have_value('Delivery Customer');expect(page.get_by_label('Mobile number',exact=True)).to_have_value('+919876543210')
     page.get_by_role('button',name='Save address',exact=True).click();page.get_by_label('PIN code',exact=True).wait_for();assert page.locator('[aria-invalid="true"]').count()>0
@@ -49,12 +50,14 @@ try:
         route.continue_()
     page.route('**/api/catalog',fail_save);page.get_by_role('button',name='Edit address',exact=True).click();page.get_by_label('Recipient full name',exact=True).fill('Edited Recipient');page.get_by_role('button',name='Save address',exact=True).click()
     dialog.get_by_role('alert').wait_for();expect(page.get_by_label('Recipient full name',exact=True)).to_have_value('Edited Recipient');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();assert ops[0]==ops[1];page.unroute('**/api/catalog',fail_save)
-    page.get_by_role('button',name='Add address',exact=True).click();fill_address(page,'Recipient Two','Work');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();expect(page.locator('[data-address-id]')).to_have_count(2)
+    page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click();fill_address(page,'Recipient Two','Work');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();expect(page.locator('[data-address-id]')).to_have_count(2)
     second=page.locator('[data-address-id]').filter(has_text='Recipient Two').get_attribute('data-address-id')
     # Existing catalog action adds an item; no direct guest Bag writes.
     page.goto(origin+'/product/shopping-simple');page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for();page.goto(origin+'/bag');page.get_by_role('button',name='Increase quantity',exact=True).click();page.get_by_role('heading',name='My Bag (2)',exact=True).wait_for();page.get_by_role('button',name='Review checkout',exact=True).click()
-    page.get_by_role('heading',name='Checkout review',exact=True).wait_for();summary=page.locator('[data-review-address]');expect(summary).to_have_attribute('data-review-address',first);page.locator('[data-checkout-line]').wait_for()
-    assert page.get_by_role('button',name='Continue to Summary',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
+    page.get_by_role('heading',name='Where should we deliver?',exact=True).wait_for();summary=page.locator('[data-review-address]');expect(summary).to_have_attribute('data-review-address',first);
+    if not page.locator('.checkout-summary details').evaluate('el=>el.open'):page.locator('.checkout-summary summary').click()
+    page.locator('[data-checkout-line]').wait_for()
+    assert page.get_by_role('button',name='Continue to Review',exact=True).is_disabled();assert 'To be confirmed' in page.locator('body').inner_text();assert 'Free delivery' not in page.locator('body').inner_text()
     # Delayed prior-address response must never replace the newer selection.
     held=[]
     def delay_review(route):
@@ -79,7 +82,7 @@ try:
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='addresses:list':route.fulfill(status=200,content_type='application/json',body=json.dumps(old_book))
         else:route.continue_()
     page.route('**/api/catalog',stale_book)
-    page.get_by_role('button',name='Add address',exact=True).click();fill_address(page,'Recipient Three','Other');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();third=saves[-1]['id'];expect(summary).to_have_attribute('data-review-address',third)
+    page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click();fill_address(page,'Recipient Three','Other');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();third=saves[-1]['id'];expect(summary).to_have_attribute('data-review-address',third)
     page.unroute('**/api/catalog',stale_book);fixture('touch-book');page.locator('[data-address-id="'+third+'"]').wait_for();expect(summary).to_have_attribute('data-review-address',third)
     two=context();other=two.new_page();other.goto(origin+'/login?returnTo=%2Faccount%2Faddresses');login(other);other.get_by_role('heading',name='My Addresses',exact=True).wait_for()
     target=other.locator('[data-address-id="'+third+'"]');target.get_by_role('button',name='Edit address',exact=True).click();other.get_by_label('Recipient full name',exact=True).fill('Updated From Another Tab');other.get_by_role('button',name='Save address',exact=True).click();other.get_by_role('dialog').wait_for(state='hidden');page.get_by_role('radio',name='Updated From Another Tab',exact=False).wait_for();expect(summary).to_have_attribute('data-review-revision','2')
@@ -89,15 +92,17 @@ try:
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900});assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
         page.screenshot(path=str(screens/f'checkout-{width}.png'),full_page=True)
-        page.get_by_role('button',name='Add address',exact=True).click();expect(dialog).to_be_visible();assert not dialog.evaluate('(el)=>el.scrollWidth>el.clientWidth+1'),width
+        page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click();expect(dialog).to_be_visible();assert not dialog.evaluate('(el)=>el.scrollWidth>el.clientWidth+1'),width
         page.keyboard.press('Shift+Tab');assert page.evaluate('document.activeElement.closest("dialog")!==null')
         page.screenshot(path=str(screens/f'address-form-{width}.png'),full_page=True)
-        page.keyboard.press('Escape');expect(dialog).not_to_be_visible();expect(page.get_by_role('button',name='Add address',exact=True)).to_be_focused()
+        page.keyboard.press('Escape');expect(dialog).not_to_be_visible();expect(page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$'))).to_be_focused()
     # Network error remains distinct from item validation; saved data is untouched.
     def fail_review(route):
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
         else:route.continue_()
-    page.route('**/api/catalog',fail_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('button',name='Retry checkout review',exact=True).wait_for();assert page.locator('[data-checkout-line]').count()==0;page.unroute('**/api/catalog',fail_review);page.get_by_role('button',name='Retry checkout review',exact=True).click();page.locator('[data-checkout-line]').wait_for()
+    page.route('**/api/catalog',fail_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('button',name='Retry checkout review',exact=True).wait_for();assert page.locator('[data-checkout-line]').count()==0;page.unroute('**/api/catalog',fail_review);page.get_by_role('button',name='Retry checkout review',exact=True).click();
+    if not page.locator('.checkout-summary details').evaluate('el=>el.open'):page.locator('.checkout-summary summary').click()
+    page.locator('[data-checkout-line]').wait_for()
     fixture('hide');page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('heading',name='Product unavailable',exact=True).wait_for();assert 'Shopping Simple' not in page.locator('body').inner_text()
     page.goto(origin+'/account');expect(page.locator('.customer-account-details dd').first).to_have_text('Delivery Customer');page.get_by_role('button',name='Sign out',exact=True).click();page.goto(origin+'/account/addresses');page.wait_for_url('**/login?returnTo=%2Faccount%2Faddresses');assert page.locator('[data-address-id]').count()==0;login(page,'legacy-customer@example.test');page.get_by_text('No saved addresses yet.',exact=False).wait_for();assert page.locator('[data-address-id]').count()==0
     assert not errors,errors
