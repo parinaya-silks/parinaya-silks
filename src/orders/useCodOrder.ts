@@ -1,3 +1,4 @@
+import {markPlacementArrival} from './confirmation.ts';
 import {useEffect,useRef,useState} from 'react';
 import {useCustomerAuth} from '../customer/CustomerAuth.tsx';
 import type {CheckoutReview} from '../delivery/model.ts';
@@ -15,7 +16,7 @@ export function useCodOrder(review:CheckoutReview|undefined,onReview:(review:Che
   if(lock.current||!uid||(!pending&&(!review?.valid||review.shipping.state!=='ready')))return;lock.current=true;setBusy(true);setError('');
   const body=pending||{action:'orders:place',addressId:review!.address!.id,couponCode:review!.couponCode||null,fingerprint:review!.fingerprint,source:review!.source||{kind:'bag'},points:review!.loyalty?.requestedPoints??0,operationId:crypto.randomUUID().replaceAll('-','')};
   try{localStorage.setItem(key,JSON.stringify(body));setPending(body);const result=await customerAction<Outcome>(uid,body);if(!mounted.current||latest.current!==uid)return;
-   if(result.order){localStorage.removeItem(key);setPending(null);onNavigate('/order-confirmed/'+result.order.id);}
+   if(result.order){markPlacementArrival(uid,result.order.id);localStorage.removeItem(key);setPending(null);onNavigate('/order-confirmed/'+result.order.id);}
    else if(result.changed&&result.review){localStorage.removeItem(key);setPending(null);onReview(result.review);setError('Checkout changed. Review the updated amounts and items, then confirm again.');}
   }catch(failure){
    // A definitive validation/access rejection can be corrected, but first check

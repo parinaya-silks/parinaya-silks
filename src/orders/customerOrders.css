@@ -1,0 +1,158 @@
+.customer-order-experience{--order-maroon:#780d24;--order-gold:#b88a44;--order-line:#e8ddd6;background:#fbf7f0;color:#231919;min-height:100%;font-family:ParinayaLora,Lora,Georgia,serif;font-size:14px;line-height:1.55;padding-bottom:76px}
+.customer-order-experience *{box-sizing:border-box;min-width:0}
+.customer-order-experience :is(button,input,textarea,select){font:inherit}
+.customer-order-experience button,.customer-order-experience a{touch-action:manipulation}
+.customer-order-experience button{cursor:pointer;background:white;border:1px solid var(--order-line);border-radius:4px;padding:10px 18px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.customer-order-experience button:disabled{opacity:.55;cursor:default}
+.customer-order-experience :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--order-maroon);outline-offset:3px}
+.customer-order-experience a{color:var(--order-maroon);text-underline-offset:4px}
+.customer-order-experience :is(h1,h2,h3,p,ol,dl){margin:0}
+.customer-order-experience h2{font-size:20px;line-height:1.35;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.customer-order-experience h3{font-size:15px;font-weight:500}
+.customer-order-experience small{font-size:12px}
+.customer-order-experience svg{flex-shrink:0}
+.customer-order-experience .order-primary{background:var(--order-maroon);border-color:var(--order-maroon);color:white}
+.customer-order-experience .order-text-button{border:0;background:transparent;text-decoration:underline;text-underline-offset:4px;color:var(--order-maroon);padding:8px}
+:where(.customer-order-experience) .order-header{height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 32px;background:#fff;border-bottom:1px solid var(--order-line)}
+:where(.customer-order-experience) .order-header .order-back{border:0;background:transparent;padding:0;justify-content:flex-start;flex:1}
+:where(.customer-order-experience) .order-brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-size:23px;letter-spacing:.06em;white-space:nowrap}
+:where(.customer-order-experience) .order-brand img{width:36px;height:36px}
+:where(.customer-order-experience) .order-care-link{display:flex;justify-content:flex-end;gap:8px;align-items:center;text-decoration:none;flex:1;font-size:13px}
+:where(.customer-order-experience) .order-mobile-title{display:none}
+:where(.customer-order-experience) .customer-order-container{max-width:1120px;padding:32px 24px;margin:0 auto}
+:where(.customer-order-experience) .order-card{background:white;border:1px solid var(--order-line);border-radius:4px;padding:26px;box-shadow:0 1px 2px #23191906;overflow-wrap:anywhere}
+:where(.customer-order-experience) .order-label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#75685c}
+:where(.customer-order-experience) .order-greeting{text-align:center;max-width:760px;margin:12px auto 46px;display:flex;align-items:center;flex-direction:column;gap:10px}
+:where(.customer-order-experience) .order-greeting h1{font-size:34px;font-weight:500;line-height:1.3;color:var(--order-maroon)}
+:where(.customer-order-experience) .order-greeting h2{font-size:20px;font-weight:400;margin:0}
+:where(.customer-order-experience) .order-greeting>p{font-size:13px;color:#75685c}
+:where(.customer-order-experience) .order-greeting .order-greeting-quote{font-style:italic;font-size:15px;color:#4f4538;margin-top:2px}
+:where(.customer-order-experience) .order-greeting .order-label{color:#805719;margin-top:6px}
+:where(.customer-order-experience) .order-motif{width:84px;height:84px;padding:4px;background:white;border:1px solid var(--order-line);border-radius:14px;margin:0 0 8px;box-shadow:0 1px 2px #23191908}
+:where(.customer-order-experience) .order-motif svg{width:100%;height:100%;overflow:visible;fill:none}
+:where(.customer-order-experience) .order-ring{stroke:#b88a44;stroke-width:1.8;stroke-dasharray:264;stroke-dashoffset:0}
+:where(.customer-order-experience) .order-check{stroke:#780d24;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:0}
+:where(.customer-order-experience) .order-spark{fill:#b88a44;opacity:.5}
+:where(.customer-order-experience) .order-motif-animate .order-ring{animation:order-ring-draw .8s ease-out both}
+:where(.customer-order-experience) .order-motif-animate .order-check{animation:order-check-draw .9s ease-out both}
+:where(.customer-order-experience) .order-motif-animate .order-spark{animation:order-spark-settle 1s ease-out both}
+:where(.customer-order-experience) .order-greeting-animate :is(h1,h2){animation:order-greeting-reveal .65s ease-out both}
+@keyframes order-ring-draw{from{stroke-dashoffset:264}to{stroke-dashoffset:0}}
+@keyframes order-check-draw{0%,35%{stroke-dashoffset:60}100%{stroke-dashoffset:0}}
+@keyframes order-spark-settle{from{opacity:0;translate:0 4px}to{opacity:.5;translate:0 0}}
+@keyframes order-greeting-reveal{from{opacity:.5;translate:0 6px}to{opacity:1;translate:0 0}}
+:where(.customer-order-experience) .order-payment-notice{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;border:1px solid var(--order-line);border-left:3px solid var(--order-gold);background:white;overflow-wrap:anywhere}
+.customer-order-experience.order-confirmation>.customer-order-container>.order-payment-notice{width:100%;max-width:830px;margin:0 auto 38px}
+:where(.customer-order-experience) .order-payment-notice>svg{color:var(--order-maroon);margin-top:4px}
+:where(.customer-order-experience) .order-payment-notice .order-label{color:var(--order-maroon);background:#fff0f0;width:fit-content;padding:2px 6px}
+:where(.customer-order-experience) .order-payment-notice p{font-size:18px;color:var(--order-maroon);margin-top:5px}
+:where(.customer-order-experience) .order-payment-notice small{display:block;margin-top:4px;color:#75685c}
+:where(.customer-order-experience) .order-confirm-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin:32px auto 0;max-width:600px}
+:where(.customer-order-experience) .order-confirm-actions>button:not(.order-text-button){min-width:210px}
+:where(.customer-order-experience) .order-confirm-actions .order-text-button{flex-basis:100%;font-size:13px}
+.customer-order-experience.order-confirmation .customer-order-container{display:flex;flex-direction:column}
+:where(.customer-order-experience) .order-confirm-grid{align-items:start;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;order:1}
+:where(.customer-order-experience) .order-confirm-actions{order:2}
+:where(.customer-order-experience) .order-confirm-side{display:grid;gap:24px;align-content:start}
+:where(.customer-order-experience) .order-reference-heading{display:flex;justify-content:space-between;gap:20px;padding-bottom:22px;border-bottom:1px solid var(--order-line);margin-bottom:22px}
+:where(.customer-order-experience) .order-reference-heading>div:first-child{flex:1}
+:where(.customer-order-experience) .order-reference-heading>div:last-child{flex:1;text-align:right}
+:where(.customer-order-experience) .order-reference-heading time{display:block;margin-top:10px;font-size:13px}
+:where(.customer-order-experience) .order-reference{display:flex;align-items:center;gap:8px;flex-wrap:wrap;overflow-wrap:anywhere}
+:where(.customer-order-experience) .order-reference strong{font-size:17px;font-weight:500;color:var(--order-maroon);overflow-wrap:anywhere;flex:1;line-height:1.45}
+:where(.customer-order-experience) .order-reference .order-copy{padding:6px 10px;font-size:11px;flex-shrink:0}
+:where(.customer-order-experience) .order-reference small{flex-basis:100%;color:#6f6262}
+:where(.customer-order-experience) .order-confirm-items>.order-purchased{border:0;box-shadow:none;padding:0}
+:where(.customer-order-experience) .order-item{display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--order-line)}
+:where(.customer-order-experience) .order-item:last-child{border-bottom:0;padding-bottom:0}
+:where(.customer-order-experience) .order-item:first-child{padding-top:0}
+:where(.customer-order-experience) .order-item-photo{width:80px;height:106px;flex:0 0 80px;background:#f4eee5;display:flex;align-items:center;justify-content:center;border:1px solid var(--order-line);overflow:hidden;border-radius:2px}
+:where(.customer-order-experience) .order-item-photo img{display:block;width:100%;height:100%;object-fit:contain}
+:where(.customer-order-experience) .order-item-text{flex:1}
+:where(.customer-order-experience) .order-item-text h3{font-size:18px;line-height:1.4}
+:where(.customer-order-experience) .order-item-text>p{color:#75685c;font-size:13px;margin-top:4px}
+:where(.customer-order-experience) .order-item-amount{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px}
+:where(.customer-order-experience) .order-item-amount strong{font-size:17px}
+:where(.customer-order-experience) .order-address p{margin-top:6px;color:#75685c;font-size:13px}
+:where(.customer-order-experience) .order-payment dl>div{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-top:12px}
+:where(.customer-order-experience) .order-payment dd{flex-shrink:0;margin:0;text-align:right}
+:where(.customer-order-experience) .order-payment dt{font-size:13px}
+:where(.customer-order-experience) .order-payment .order-total{margin-top:20px;padding-top:16px;border-top:1px solid var(--order-line);align-items:center;color:var(--order-maroon)}
+:where(.customer-order-experience) .order-total dt{font-size:17px;font-weight:600}
+:where(.customer-order-experience) .order-total dd{font-size:25px;font-weight:600}
+:where(.customer-order-experience) .order-payment-status{font-size:12px;color:#75685c;margin-top:5px!important}
+:where(.customer-order-experience) .order-payment>p:not(.order-payment-status){font-size:12px;margin-top:8px}
+:where(.customer-order-experience) .order-loyalty,:where(.customer-order-experience) .order-refunds{border-top:1px solid var(--order-line);margin-top:18px;padding-top:16px;font-size:12px;color:#75685c}
+:where(.customer-order-experience) .order-loyalty h3,:where(.customer-order-experience) .order-refunds h3{color:#805719;margin-bottom:5px}
+:where(.customer-order-experience) .order-loyalty p+p{margin-top:5px}
+:where(.customer-order-experience) .order-detail-heading{display:flex;justify-content:space-between;gap:32px;margin-bottom:26px}
+:where(.customer-order-experience) .order-detail-heading>div:first-child{flex:1}
+:where(.customer-order-experience) .order-detail-heading h1{font-size:30px;margin:8px 0 12px}
+:where(.customer-order-experience) .order-detail-heading .order-payment-notice{max-width:350px;align-self:center;padding:16px}
+:where(.customer-order-experience) .order-detail-heading .order-payment-notice p{font-size:15px}
+:where(.customer-order-experience) .order-detail-heading time{display:block;font-size:12px;color:#75685c;margin-top:10px}
+:where(.customer-order-experience) .order-status{display:inline-block;background:#eef7f0;color:#226546;border:1px solid #b8d6c3;border-radius:20px;padding:2px 10px;font-size:11px}
+:where(.customer-order-experience) .order-status[data-status=Cancelled],:where(.customer-order-experience) .order-status[data-status=Rejected]{background:#fff0f0;color:#780d24;border-color:#dfb3bd}
+:where(.customer-order-experience) .order-detail-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:24px;align-items:start}
+:where(.customer-order-experience) .order-progress{grid-column:1;grid-row:1}
+:where(.customer-order-experience) .order-detail-grid>.order-purchased{grid-column:1;grid-row:2 / span 3}
+:where(.customer-order-experience) .order-detail-grid>.order-address{grid-column:2;grid-row:1}
+:where(.customer-order-experience) .order-detail-grid>.order-payment{grid-column:2;grid-row:2}
+:where(.customer-order-experience) .order-detail-grid>.order-assistance{grid-column:2;grid-row:3}
+:where(.customer-order-experience) .order-progress ol{list-style:none;display:flex;padding:0;margin:26px 0 22px;gap:12px}
+:where(.customer-order-experience) .order-progress li{flex:1;position:relative;display:flex;align-items:center;flex-direction:column;text-align:center;gap:12px}
+:where(.customer-order-experience) .order-progress li:not(:last-child):before{content:'';height:1px;background:var(--order-line);position:absolute;top:14px;left:50%;width:calc(100% + 12px)}
+:where(.customer-order-experience) .order-step-marker{width:29px;height:29px;display:flex;align-items:center;justify-content:center;z-index:1;border-radius:50%;background:white;border:1px solid var(--order-line);font-size:12px;color:#75685c}
+:where(.customer-order-experience) .order-step-marker>span{width:8px;height:8px;border-radius:50%;background:#b88a44}
+:where(.customer-order-experience) .order-progress [data-state=completed] .order-step-marker{background:#27724a;border-color:#27724a;color:white}
+:where(.customer-order-experience) .order-progress [data-state=current] .order-step-marker{border:2px solid var(--order-gold)}
+:where(.customer-order-experience) .order-progress [data-state=upcoming]{color:#817567}
+:where(.customer-order-experience) .order-progress li strong{font-size:12px;font-weight:500}
+:where(.customer-order-experience) .order-progress li small{display:block;font-size:10px;color:#75685c;margin-top:4px}
+:where(.customer-order-experience) .order-tracking{background:#fbf7f0;border-radius:4px;padding:12px 14px;font-size:12px;margin-top:18px;overflow-wrap:anywhere}
+:where(.customer-order-experience) .order-tracking h3,:where(.customer-order-experience) .order-tracking>p:only-child{display:flex;align-items:center;gap:8px;font-size:12px}
+:where(.customer-order-experience) .order-tracking :is(p,a){margin-top:6px}
+:where(.customer-order-experience) .order-tracking a{display:inline-block;min-height:30px}
+:where(.customer-order-experience) .order-support-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+:where(.customer-order-experience) .order-support-actions a{border:1px solid var(--order-line);border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 12px;text-decoration:none;font-size:12px;flex:1}
+:where(.customer-order-experience) .order-assistance>p{color:#75685c;font-size:12px}
+:where(.customer-order-experience) .order-request-trigger{width:100%;margin-top:12px}
+:where(.customer-order-experience) .order-request-status{background:#fff6f3;border:1px solid var(--order-line);padding:12px;margin-top:16px;font-size:12px}
+:where(.customer-order-experience) .order-refresh{font-size:11px!important;margin-top:12px}
+:where(.customer-order-experience) .order-muted{margin-top:14px!important}
+:where(.customer-order-experience) .order-notice{border:1px solid var(--order-gold);padding:12px 16px;background:#fff6e8;margin-bottom:18px;overflow-wrap:anywhere}
+:where(.customer-order-experience) .order-notice button{margin-top:8px}
+:where(.customer-order-experience) .order-load-state{max-width:560px;margin:35px auto;min-height:180px}
+:where(.customer-order-experience) .order-load-state h1{font-size:25px;margin-bottom:15px}
+:where(.customer-order-experience) .order-load-state button{margin:16px 10px 0 0}
+:where(.customer-order-experience) .order-footer{border-top:1px solid var(--order-line);padding:24px 32px;display:flex;justify-content:center;gap:24px;font-size:12px;margin-top:24px}
+:where(.customer-order-experience) .order-footer>span{color:var(--order-maroon);margin-right:auto;letter-spacing:.04em}
+:where(.customer-order-experience) .order-bottom-nav{display:none}
+:where(.customer-order-experience) .customer-order-dialog{color:#231919;border:1px solid var(--order-line);border-radius:12px;padding:0;width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 40px);margin:auto;background:white;box-shadow:0 8px 30px #23191922;font-family:ParinayaLora,Lora,Georgia,serif}
+:where(.customer-order-experience) .customer-order-dialog::backdrop{background:#23191970;backdrop-filter:blur(3px)}
+:where(.customer-order-experience) .customer-order-dialog form{max-height:calc(100dvh - 42px);display:flex;flex-direction:column}
+:where(.customer-order-experience) .customer-order-dialog header,:where(.customer-order-experience) .customer-order-dialog footer{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;background:white}
+:where(.customer-order-experience) .customer-order-dialog header{border-bottom:1px solid var(--order-line)}
+:where(.customer-order-experience) .customer-order-dialog h2{font-size:20px;margin:0}
+:where(.customer-order-experience) .customer-order-dialog footer{border-top:1px solid var(--order-line);padding-bottom:max(16px,env(safe-area-inset-bottom))}
+:where(.customer-order-experience) .customer-order-dialog footer button{flex:1}
+:where(.customer-order-experience) .order-dialog-body{padding:20px;overflow:auto;font-size:14px}
+:where(.customer-order-experience) .order-dialog-body p{margin-bottom:14px}
+:where(.customer-order-experience) .order-dialog-body label{display:block;margin:14px 0}
+:where(.customer-order-experience) .order-dialog-body :is(textarea,select){display:block;border:1px solid var(--order-line);border-radius:4px;padding:12px;width:100%;margin-top:8px;background:white;font-size:16px}
+:where(.customer-order-experience) .order-dialog-body textarea{resize:vertical}
+@media(min-width:768px){.customer-order-experience{padding-bottom:0}.customer-order-experience.customer-order-detail-screen .customer-order-container{max-width:1248px}}
+@media(max-width:767px){
+ .customer-order-experience{font-size:13px}:where(.customer-order-experience) .order-header{height:60px;padding:0 16px;gap:10px}:where(.customer-order-experience) .order-header .order-back{flex:0}:where(.customer-order-experience) .order-back span,:where(.customer-order-experience) .order-care-link span{display:none}:where(.customer-order-experience) .order-brand{font-size:17px;gap:8px;margin-right:auto}:where(.customer-order-experience) .order-brand img{width:30px;height:30px}:where(.customer-order-experience) .order-care-link{flex:0;min-width:32px;min-height:40px;align-items:center}.customer-order-experience.order-confirmation .order-back{display:none}.customer-order-experience.customer-order-detail-screen .order-brand{display:none}:where(.customer-order-experience) .order-mobile-title{display:block;font-size:17px;flex:1;text-align:center}:where(.customer-order-experience) .order-header .order-back{min-width:32px}
+ :where(.customer-order-experience) .customer-order-container{padding:16px;max-width:500px}:where(.customer-order-experience) .order-card{padding:16px;border-radius:10px}.customer-order-experience h2{font-size:16px;margin-bottom:14px}.customer-order-experience h3{font-size:14px}
+ :where(.customer-order-experience) .order-greeting{margin:14px auto 24px;gap:8px}:where(.customer-order-experience) .order-motif{width:64px;height:64px;margin-bottom:6px}:where(.customer-order-experience) .order-greeting h1{font-size:25px;max-width:350px}:where(.customer-order-experience) .order-greeting h2{font-size:18px;color:#805719;margin:0}:where(.customer-order-experience) .order-greeting .order-label{display:none}:where(.customer-order-experience) .order-greeting .order-greeting-quote{font-size:13px;max-width:325px;margin-top:4px}:where(.customer-order-experience) .order-greeting>p:last-child{display:none}
+ .customer-order-experience.order-confirmation>.customer-order-container>.order-payment-notice{margin:0 0 18px;padding:16px 14px;border-left-width:1px;border-color:#b88a44;border-radius:5px;gap:12px}:where(.customer-order-experience) .order-payment-notice p{font-size:15px}:where(.customer-order-experience) .order-payment-notice small{font-size:11px}:where(.customer-order-experience) .order-payment-notice .order-label{font-size:10px}:where(.customer-order-experience) .order-confirm-actions{order:0;display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;margin:0 0 16px;width:100%;gap:10px}:where(.customer-order-experience) .order-confirm-actions button{width:100%;min-height:45px;font-size:13px}:where(.customer-order-experience) .order-confirm-actions .order-text-button{grid-row:3;font-size:12px;min-height:32px}:where(.customer-order-experience) .order-confirm-grid{display:block;order:1}:where(.customer-order-experience) .order-confirm-side{gap:0;margin-top:0}:where(.customer-order-experience) .order-confirm-items{border-radius:4px 4px 0 0}:where(.customer-order-experience) .order-confirm-side>.order-address{border-radius:0;border-top:0}:where(.customer-order-experience) .order-confirm-side>.order-payment{border-top:0;border-radius:0 0 4px 4px;background:#fffafa}
+ :where(.customer-order-experience) .order-reference-heading{margin-bottom:16px;padding-bottom:16px;gap:8px;display:block}:where(.customer-order-experience) .order-reference-heading>div:last-child{text-align:left;margin-top:8px}:where(.customer-order-experience) .order-reference-heading>div:last-child>.order-label{display:none}:where(.customer-order-experience) .order-reference-heading time{font-size:11px;margin-top:0}:where(.customer-order-experience) .order-reference strong{font-size:14px;color:#231919;font-weight:600}:where(.customer-order-experience) .order-reference .order-copy{font-size:11px;padding:6px 9px}:where(.customer-order-experience) .order-label{font-size:9px}
+ :where(.customer-order-experience) .order-item{gap:12px;padding:13px 0}:where(.customer-order-experience) .order-item-photo{width:65px;height:86px;flex-basis:65px}.customer-order-experience .order-item-text h3{font-size:13px;line-height:1.45;font-weight:500}:where(.customer-order-experience) .order-item-text>p{font-size:11px;margin-top:3px}:where(.customer-order-experience) .order-item-amount{margin-top:8px;align-items:center}:where(.customer-order-experience) .order-item-amount strong{font-size:14px}:where(.customer-order-experience) .order-item-amount small{font-size:11px}:where(.customer-order-experience) .order-address p{font-size:12px}:where(.customer-order-experience) .order-payment dt{font-size:12px}:where(.customer-order-experience) .order-payment dd{font-size:12px}:where(.customer-order-experience) .order-total dt{font-size:14px}:where(.customer-order-experience) .order-total dd{font-size:23px}:where(.customer-order-experience) .order-payment .order-total{gap:8px;margin-top:16px;padding-top:12px}:where(.customer-order-experience) .order-payment-status,:where(.customer-order-experience) .order-loyalty{font-size:11px}
+ :where(.customer-order-experience) .order-detail-heading{display:block;margin:6px 0 14px;padding:15px}:where(.customer-order-experience) .order-detail-heading h1{display:none}:where(.customer-order-experience) .order-detail-heading .order-status{margin-bottom:12px}:where(.customer-order-experience) .order-detail-heading time{font-size:11px;margin-top:9px}:where(.customer-order-experience) .order-detail-heading .order-payment-notice{max-width:none;border:0;border-top:1px solid var(--order-line);margin-top:14px;padding:12px 0 0;gap:8px;align-items:center}:where(.customer-order-experience) .order-detail-heading .order-payment-notice .order-label{font-size:10px;padding:0;background:none}:where(.customer-order-experience) .order-detail-heading .order-payment-notice p{font-size:12px;margin-top:2px}:where(.customer-order-experience) .order-detail-heading .order-payment-notice small{display:none}:where(.customer-order-experience) .order-detail-heading .order-payment-notice>svg{width:16px;margin:0}
+ :where(.customer-order-experience) .order-detail-grid{display:flex;flex-direction:column;gap:14px}:where(.customer-order-experience) .order-detail-grid>.order-card{width:100%}:where(.customer-order-experience) .order-progress ol{display:block;margin:20px 0 0;padding:0 0 0 12px}:where(.customer-order-experience) .order-progress li{display:flex;flex-direction:row;text-align:left;gap:16px;padding-bottom:20px;align-items:flex-start}:where(.customer-order-experience) .order-progress li:last-child{padding-bottom:0}:where(.customer-order-experience) .order-progress li:not(:last-child):before{left:10px;top:20px;width:1px;height:calc(100% - 10px)}:where(.customer-order-experience) .order-step-marker{width:22px;height:22px;flex:0 0 22px;font-size:10px}:where(.customer-order-experience) .order-progress li strong{font-size:12px}:where(.customer-order-experience) .order-progress li small{font-size:10px;line-height:1.5}:where(.customer-order-experience) .order-tracking{font-size:11px;padding:9px 10px}:where(.customer-order-experience) .order-tracking>p:only-child{font-size:11px}:where(.customer-order-experience) .order-assistance h2{font-size:15px}:where(.customer-order-experience) .order-support-actions a{font-size:11px;padding:8px}:where(.customer-order-experience) .order-assistance .order-refresh{margin-top:4px;min-height:35px}
+ :where(.customer-order-experience) .order-footer{margin-top:14px;padding:16px;gap:14px;flex-wrap:wrap;font-size:10px}:where(.customer-order-experience) .order-footer>span{width:100%;text-align:center;margin:0}:where(.customer-order-experience) .order-bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;justify-content:space-around;gap:4px;border-top:1px solid var(--order-line);background:white;padding:8px 4px max(8px,env(safe-area-inset-bottom))}:where(.customer-order-experience) .order-bottom-nav a{color:#6f6262;display:flex;align-items:center;justify-content:center;gap:4px;flex-direction:column;text-decoration:none;font-size:10px;min-height:44px;flex:1}:where(.customer-order-experience) .order-bottom-nav a[aria-current=page]{color:#780d24}
+ :where(.customer-order-experience) .customer-order-dialog{position:fixed;top:auto;bottom:0;margin:0;width:100%;max-width:100%;max-height:90dvh;border-radius:18px 18px 0 0}:where(.customer-order-experience) .customer-order-dialog form{max-height:90dvh}:where(.customer-order-experience) .customer-order-dialog header{padding-top:20px}:where(.customer-order-experience) .customer-order-dialog h2{font-size:19px}
+}
+@media(max-width:359px){:where(.customer-order-experience) .order-brand{font-size:14px}:where(.customer-order-experience) .customer-order-container{padding:12px}:where(.customer-order-experience) .order-card{padding:13px}:where(.customer-order-experience) .order-reference strong{font-size:12px}:where(.customer-order-experience) .order-greeting h1{font-size:22px}:where(.customer-order-experience) .order-item-photo{width:55px;height:74px;flex-basis:55px}:where(.customer-order-experience) .order-total dd{font-size:20px}:where(.customer-order-experience) .order-support-actions{gap:6px}:where(.customer-order-experience) .order-support-actions a{flex-basis:100%}:where(.customer-order-experience) .order-payment-notice p{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.customer-order-experience *{animation:none!important;scroll-behavior:auto!important}:where(.customer-order-experience) .order-ring,:where(.customer-order-experience) .order-check{stroke-dashoffset:0}}

@@ -44,11 +44,11 @@ try:
      print('Journey overflow:',stage,width,page.locator('body *').evaluate_all('(nodes)=>nodes.map(el=>({tag:el.tagName,classes:el.className,right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width})).filter(el=>el.right>innerWidth+1).slice(-12)'),flush=True);raise AssertionError((stage,width))
    if forward:page.get_by_role('button',name=forward,exact=True).click()
   expect(page.get_by_role('button',name=re.compile(r'^Place Order'))).to_be_enabled();page.go_back();page.get_by_role('button',name='Continue to Payment',exact=True).click();page.get_by_role('button',name=re.compile(r'^Place Order')).dblclick()
-  page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();order_id=page.url.rsplit('/',1)[1];fixture('assert-buy-now')
-  page.reload();page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();fixture('assert-buy-now')
-  confirmation=page.url;page.go_back();page.get_by_role('heading',name=re.compile('Review your order|Where should we deliver|Complete your order')).wait_for();assert writes.count('orders:place')==1;page.goto(confirmation);page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for()
-  page.get_by_role('button',name='Track Order',exact=True).click();page.wait_for_url('**/order-tracking/'+order_id);page.get_by_text('Payment due',exact=False).first.wait_for()
-  page.goto(origin+'/order-confirmed/'+'0'*32);page.get_by_role('alert').wait_for();expect(page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True)).to_have_count(0)
+  page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for();order_id=page.url.rsplit('/',1)[1];fixture('assert-buy-now')
+  page.reload();page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for();fixture('assert-buy-now')
+  confirmation=page.url;page.go_back();page.get_by_role('heading',name=re.compile('Review your order|Where should we deliver|Complete your order')).wait_for();assert writes.count('orders:place')==1;page.goto(confirmation);page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for()
+  page.get_by_role('button',name='View Order & Updates',exact=True).click();page.wait_for_url('**/order-tracking/'+order_id);page.get_by_text('Payment due',exact=False).first.wait_for()
+  page.goto(origin+'/order-confirmed/'+'0'*32);page.get_by_role('alert').wait_for();expect(page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True)).to_have_count(0)
   page.goto(origin+'/checkout/payment');page.wait_for_url('**/checkout');page.get_by_role('button',name='Continue to Review',exact=True).wait_for();assert writes.count('orders:place')==1
   page.goto(origin+'/checkout/payment?buyNow='+'0'*32);page.get_by_role('heading',name='Checkout selection expired',exact=True).wait_for();assert writes.count('orders:place')==1
   # Registration restores the same selected source, without replaying a Bag action.

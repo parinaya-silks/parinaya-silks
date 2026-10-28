@@ -22,6 +22,6 @@ try:
   assert held;page.evaluate("history.pushState(null,'','/bag');dispatchEvent(new PopStateEvent('popstate'))")
   page.wait_for_url('**/bag');held[0][0].fulfill(response=held[0][1]);page.wait_for_timeout(400);assert page.url.endswith('/bag'),'Late acknowledgement redirected an unmounted checkout'
   assert page.evaluate('localStorage.getItem("parinaya:cod-pending:test-customer")') is not None
-  page.goto(origin+'/checkout');page.wait_for_url('**/order-confirmed/*');expect(page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True)).to_be_visible();assert len(writes)==1;fixture('assert-single');browser.close()
+  page.goto(origin+'/checkout');page.wait_for_url('**/order-confirmed/*');expect(page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True)).to_be_visible();assert len(writes)==1;fixture('assert-single');browser.close()
  print('Checkout context browser passed: late accepted response ignored after unmount, durable recovery confirmed the same order without resubmission, exactly one stock deduction.')
 finally:fixture('cleanup');fixture('cleanup','shopping')

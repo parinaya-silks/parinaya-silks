@@ -19,3 +19,7 @@ test('password help follows the configured Firebase policy rather than an invent
   const status={isValid:false,meetsMinPasswordLength:false,containsUppercaseLetter:false,containsNumericCharacter:false,passwordPolicy:{customStrengthOptions:{minPasswordLength:12}}} as PasswordValidationStatus;
   assert.equal(passwordPolicyMessage(status),'Use at least 12 characters, an uppercase letter, a number.');
 });
+
+test('permanent customer order links survive sign-in without allowing arbitrary destinations',()=>{
+ for(const prefix of ['/account/orders/','/order-tracking/','/order-confirmed/','/order-result/']){const value=prefix+'a'.repeat(32);assert.equal(safeCustomerReturn(value),value);assert.equal(safeCustomerReturn(prefix+'../admin'),'/account');}
+});

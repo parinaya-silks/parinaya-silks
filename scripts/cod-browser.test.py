@@ -34,11 +34,11 @@ try:
     if lost['once']:
      lost['once']=False;response=route.fetch();assert response.status==200;route.abort();return
    route.continue_()
-  page.route('**/api/catalog',lose_response);place.click();retry=page.get_by_role('button',name='Check order status',exact=True);expect(retry).to_be_enabled();retry.click();page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();assert len(operations)==2 and operations[0]==operations[1];fixture('assert-single')
-  order_id=page.url.rsplit('/',1)[1];page.reload();page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();fixture('assert-single')
+  page.route('**/api/catalog',lose_response);place.click();retry=page.get_by_role('button',name='Check order status',exact=True);expect(retry).to_be_enabled();retry.click();page.wait_for_url('**/order-confirmed/*');page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for();assert len(operations)==2 and operations[0]==operations[1];fixture('assert-single')
+  order_id=page.url.rsplit('/',1)[1];page.reload();page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for();fixture('assert-single')
   # Recreate the durable state left by a response lost before navigation. Mount
   # recovery must read the accepted operation, without submitting it again.
-  page.evaluate('(body)=>localStorage.setItem("parinaya:cod-pending:test-customer",JSON.stringify(body))',requests[0]);page.goto(origin+'/checkout');page.wait_for_url('**/order-confirmed/'+order_id);page.get_by_role('heading',name='Thank you! Your order has been placed.',exact=True).wait_for();assert len(operations)==2;fixture('assert-single')
+  page.evaluate('(body)=>localStorage.setItem("parinaya:cod-pending:test-customer",JSON.stringify(body))',requests[0]);page.goto(origin+'/checkout');page.wait_for_url('**/order-confirmed/'+order_id);page.get_by_role('heading',name='Thank you for choosing Parinaya.',exact=True).wait_for();assert len(operations)==2;fixture('assert-single')
   a=context();admin=a.new_page();calls=[];admin.on('response',lambda response:calls.append((response.request.post_data_json.get('action'),response.status)) if '/api/catalog' in response.url and response.request.method=='POST' else None);admin.on('pageerror',lambda error:errors.append(str(error)));admin.goto(origin+'/admin/orders/'+order_id);login(admin,True);admin.get_by_role('heading',name='Order details',exact=True).wait_for();action=admin.get_by_label('Action',exact=True)
   try:admin.get_by_role('heading',name='Order actions',exact=True).wait_for()
   except Exception:
