@@ -1,3 +1,4 @@
+import "./shop-cards.css";
 import {usePublicCatalog} from '../products/hooks.ts';
 import {storefrontProduct} from '../products/adapter.ts';
 import { demoEnabled } from '../config/runtime.ts';
@@ -315,7 +316,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 >
                   {/* 3:4 Image Box with Badges */}
                   <div
-                    className="relative w-full aspect-[3/4] bg-[#F4EEE5] overflow-hidden cursor-pointer"
+                    className="shop-product-art relative w-full aspect-[3/4] bg-[#F4EEE5] overflow-hidden cursor-pointer"
                     onClick={() => onNavigate(`/product/${product.slug || product.id}`)}
                   >
                     <img
@@ -323,11 +324,6 @@ export const ShopView: React.FC<ShopViewProps> = ({
                       alt={product.gallery?.find(image=>image.url===product.images.full)?.alt || product.name}
                       className="w-full h-full object-contain"
                     />
-
-                    {/* Saree Weave Tag */}
-                    <span className="absolute top-2 left-2 bg-[#FBF7F0]/90 backdrop-blur-xs text-[#231919] border border-[#B88A44]/50 text-[9px] font-semibold px-2 py-0.5 rounded uppercase font-sans tracking-wider">
-                      {product.categoryLabel}
-                    </span>
 
                     {/* Wishlist Heart Button */}
                     <button
@@ -378,9 +374,9 @@ export const ShopView: React.FC<ShopViewProps> = ({
                       >
                         {product.name}
                       </h3>
-                      <p className="font-sans text-[11px] text-[#5F5552] mt-1 line-clamp-1">
-                        {product.subtitle}
-                      </p>
+                      {product.category?.trim()&&<p className="shop-product-category font-sans text-[11px] text-[#5F5552] mt-1" title={product.category}>
+                        {product.category}
+                      </p>}
                     </div>
 
                     <div className="mt-3 pt-2 border-t border-[#F4EEE5]">

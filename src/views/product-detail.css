@@ -1,0 +1,22 @@
+.product-detail-page{min-width:0;padding-bottom:calc(140px + env(safe-area-inset-bottom))}
+.product-detail-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.product-gallery{width:100%;max-width:342px;min-width:0;margin-inline:auto}
+.product-gallery-frame{width:100%;aspect-ratio:3/4}
+.product-gallery-frame>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.product-information,.product-recommendations{min-width:0}
+.recommendation-heading>div{min-width:0}
+.recommendation-heading>span{flex-shrink:0}
+.product-recommendation-track{display:flex;gap:12px;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:12px;scroll-snap-type:x proximity}
+/* A minimum width alone allows intrinsic image width to size a flex slide. */
+.product-recommendation-card{display:block;flex:0 0 calc((100% - 12px)/2);width:calc((100% - 12px)/2);min-width:0;scroll-snap-align:start;color:inherit;text-decoration:none;overflow-wrap:anywhere}
+.recommendation-art{position:relative;aspect-ratio:3/4;overflow:hidden}
+.recommendation-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.recommendation-category{font-size:11px;line-height:1.5;color:#5F5552;margin-top:4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+@media(min-width:768px){
+ .product-detail-page{padding-bottom:80px}
+ .product-detail-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
+ .product-gallery{max-width:480px}
+ .product-recommendation-card{flex-basis:240px;width:240px}
+}
+@media(min-width:1024px){.product-detail-layout{grid-template-columns:minmax(0,480px) minmax(0,1fr)}}
+@media(max-width:359px){.recommendation-heading>span{max-width:85px;text-align:right}}

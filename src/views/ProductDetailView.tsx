@@ -1,3 +1,4 @@
+import './product-detail.css';
 import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
 import { Product } from '../types/index.ts';
@@ -68,7 +69,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const wishlisted = isWishlisted(product.id);
 
   return (
-    <div className="pb-44 md:pb-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4" style={{overflowWrap:'anywhere'}}>
+    <div className="product-detail-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4" style={{overflowWrap:'anywhere'}}>
       {Boolean(product.variants?.length)&&!selectedColor&&<p className="mb-4 p-3 rounded bg-[#F4EEE5] text-sm text-[#780D24]" role="note">Please select a colour before adding to your bag or buying now.</p>}
       {purchaseError&&<p role="alert" className="mb-4 text-[#780D24]">{purchaseError}</p>}
       {/* Breadcrumb strip */}
@@ -88,10 +89,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <span className="text-[#231919] font-medium truncate max-w-[200px]">{product.name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
+      <div className="product-detail-layout">
         {/* LEFT COLUMN: Gallery & Lightbox */}
-        <div className="space-y-3.5 md:sticky md:top-20">
-          <div className="relative w-full aspect-[4/5] bg-[#F4EEE5] rounded-xl overflow-hidden border border-[#E8DDD6] shadow-sm group">
+        <div className="product-gallery space-y-3.5 md:sticky md:top-20">
+          <div className="product-gallery-frame relative bg-[#F4EEE5] rounded-xl overflow-hidden border border-[#E8DDD6] shadow-sm group">
             <img
               src={currentImageUrl}
               alt={imagesList.find(image=>image.key===activeImageKey)?.label || product.name}
@@ -169,7 +170,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Product Information & Controls */}
-        <div className="space-y-4">
+        <div className="product-information space-y-4">
 
           {/* Summary Card */}
           <div className="bg-white p-5 sm:p-6 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
@@ -453,8 +454,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       </div>
 
       {/* Related Sarees Rail */}
-      {relatedProducts.length > 0 && <section className="mt-12 pt-8 border-t border-[#E8DDD6]">
-        <div className="flex items-center justify-between mb-4">
+      {relatedProducts.length > 0 && <section className="product-recommendations mt-8 pt-6 border-t border-[#E8DDD6]">
+        <div className="recommendation-heading flex items-center justify-between gap-3 mb-4">
           <div>
             <span className="font-sans text-[11px] text-[#B88A44] uppercase tracking-wider font-bold">
               Curated Complements
@@ -464,29 +465,28 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <span className="font-sans text-[10px] text-[#5F5552] uppercase">Scroll to explore →</span>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3">
+        <div className="product-recommendation-track no-scrollbar">
           {relatedProducts.map((rel) => (
-            <div
+            <a
               key={rel.id}
-              onClick={() => onNavigate(`/product/${rel.slug || rel.id}`)}
-              className="min-w-[200px] sm:min-w-[230px] bg-white rounded-xl border border-[#E8DDD6] overflow-hidden hover:shadow-md transition-shadow cursor-pointer shrink-0"
+              href={`/product/${rel.slug || rel.id}`}
+              onClick={event => {if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();onNavigate(`/product/${rel.slug || rel.id}`);}}}
+              className="product-recommendation-card bg-white rounded-xl border border-[#E8DDD6] overflow-hidden hover:shadow-md transition-shadow"
             >
-              <div className="relative aspect-[3/4] bg-[#F4EEE5] overflow-hidden">
+              <div className="recommendation-art bg-[#F4EEE5]">
                 <img src={rel.images.full} alt={rel.name} className="w-full h-full object-contain" />
-                <span className="absolute top-2 left-2 bg-[#780D24] text-white text-[9px] font-sans px-2 py-0.5 rounded font-medium">
-                  {rel.category}
-                </span>
               </div>
               <div className="p-3">
                 <h4 className="font-serif text-[14px] text-[#231919] font-semibold line-clamp-1">
                   {rel.name}
                 </h4>
+                {rel.category?.trim()&&<p className="recommendation-category" title={rel.category}>{rel.category}</p>}
                 <p className="font-sans text-[15px] text-[#780D24] font-bold mt-1">
                   {formatINR(rel.price)}
                 </p>
-                <span className="font-sans text-[11px] text-[#5F5552]">{rel.categoryLabel}</span>
+
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </section>}
