@@ -10,7 +10,7 @@ Submission accepts only `action`, `enquiry`, `operationId` and the empty honeypo
 
 The server creates `enquiries/{operationId}` with `schemaVersion:1`, validated name/email/normalized phone/message, derived `searchPrefixes`, initial `status:New`, trusted `createdAt`/`updatedAt`, and `revision:1`. No visitor-supplied UID, status, timestamp, owner or internal metadata is accepted. Signed-in submitters also use the same general form; account identity is not asserted or linked automatically. No customer profile, Auth account, marketing subscription, order, business contact, notification or outgoing message is created.
 
-Only `{received:true}` is returned. The UI clears the form only after this confirmed receipt and displays “Your enquiry has been sent.” followed by the approved team-contact sentence. Unknown responses retain inputs and the same operation ID for safe retry. Duplicate clicks are locked; changing to a different normalized submission generates a new operation. No response deadline or notification promise is shown.
+Only `{received:true}` is returned. The UI clears the form only after this confirmed receipt and displays a persistent inline “Your message has been received.” panel with truthful follow-up guidance and Send Another Message. See `ABOUT_CONTACT_STOREFRONT_DESIGN.md`. Unknown responses retain inputs and the same operation ID for safe retry. Duplicate clicks are locked; changing to a different normalized submission generates a new operation. No response deadline or notification promise is shown.
 
 ## Abuse bounds and retries
 
