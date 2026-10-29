@@ -99,3 +99,8 @@ test('report query context and original index URL survive wrapping without leaki
  assert.equal((diagnostic.errors[0] as any).reportQuery,'status-aggregate-date-range');assert.equal((diagnostic.errors[1] as any).indexCreationUrl,evidence.required[1].indexCreationUrl);
  assert.ok(!JSON.stringify(failure).includes('reportQuery'));assert.ok(!JSON.stringify(failure).includes('console.firebase'));
 });
+
+
+test('customer card filters use existing UID/status indexes and lookahead without whole-history counts',async()=>{
+ for(const filter of ['all','progress','delivered','cancelled']){const {db,queries}=database();await ordersService(db,async()=>{},async()=>{throw Error('Unused');}).customer('verified','customer@example.test',{action:'orders:list',view:'cards',filter});assert.equal(queries.length,1);assert.deepEqual(queries[0].filters[0],{field:'uid',operator:'==',value:'verified'});assert.deepEqual(queries[0].orders,[{field:'createdAt',direction:'desc'},{field:'__name__',direction:'desc'}]);covered('orders',[asc('uid'),...(filter==='all'?[]:[asc('status')]),desc('createdAt')]);}
+});

@@ -1,3 +1,4 @@
+import {CustomerOrderHistory} from './CustomerOrderHistory.tsx';
 import {CustomerOrderPage} from './CustomerOrderPage.tsx';
 import {OrderPoints} from '../loyalty/OrderPoints.tsx';
 import React,{useEffect,useRef,useState} from 'react';
@@ -32,9 +33,5 @@ export function OrderSummary({order,admin=false}:{order:OrderRecord;admin?:boole
  {order.refunds.length>0&&<section><h2 className="font-serif text-xl">Administrator-recorded manual refunds</h2><p className="text-sm">These records describe an external refund. The website did not transfer money.</p>{order.refunds.map((item,index)=><p key={index}>{money(item.amountPaise)} · {new Date(item.at).toLocaleString('en-IN')}{admin?' · '+item.method+' · '+item.reference:''}</p>)}</section>}
  </div>;}
 export function CustomerOrders({id,confirmed=false,onNavigate}:{id?:string;confirmed?:boolean;onNavigate:(path:string)=>void}){
- return id?<CustomerOrderPage key={(getAuthClients().auth.currentUser?.uid||'')+':'+id+':'+confirmed} id={id} confirmed={confirmed} onNavigate={onNavigate}/>:<CustomerOrderHistory onNavigate={onNavigate}/>;
-}
-function CustomerOrderHistory({onNavigate}:{onNavigate:(path:string)=>void}){
- const [cursor,setCursor]=useState<string|null>(null),resource=useBusinessData<{items:OrderRecord[];nextCursor:string|null}>({action:'orders:list',...(cursor?{cursor}:{})},true),order=resource.data;
- return <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-28 space-y-5 min-w-0"><div className="flex flex-wrap gap-3"><button className={button} onClick={()=>onNavigate('/account')}>Account</button><button className={button} onClick={()=>onNavigate('/account/orders')}>My orders</button><button className={button} onClick={()=>onNavigate('/shop')}>Browse sarees</button></div><DataState {...resource}/>{order&&<><h1 className="font-serif text-3xl">My orders</h1>{!order.items.length&&<p>You have no orders yet.</p>}{order.items.map(item=><button key={item.id} className="block text-left w-full rounded-xl border bg-white p-4 space-y-2" onClick={()=>onNavigate('/order-tracking/'+item.id)}><strong className="break-all">{item.reference}</strong><p>{item.status} · COD {item.paymentStatus} · {money(BigInt(item.totalPaise))}</p><p className="text-sm">{new Date(item.createdAt).toLocaleDateString('en-IN')}</p></button>)}<div className="flex gap-3">{cursor&&<button className={button} onClick={()=>setCursor(null)}>First page</button>}{order.nextCursor&&<button className={button} onClick={()=>setCursor(order.nextCursor)}>Next page</button>}</div></>}</div>;
+ return id?<CustomerOrderPage key={(getAuthClients().auth.currentUser?.uid||'')+':'+id+':'+confirmed} id={id} confirmed={confirmed} onNavigate={onNavigate}/>:<CustomerOrderHistory key={(getAuthClients().auth.currentUser?.uid||'')+window.location.search} onNavigate={onNavigate}/>;
 }
