@@ -1,3 +1,5 @@
+import {RemovalDialog} from './shopping/ShoppingDialogs.tsx';
+import {CustomerNotice} from './shopping/CustomerNotice.tsx';
 import {CampaignStorefront} from './campaigns/CampaignStorefront.tsx';
 /**
  * @license
@@ -205,14 +207,14 @@ function StorefrontContent() {
     );
   } else if (currentPath.startsWith('/product/')) {
     const slug = currentPath.replace('/product/', '').split('?')[0];
-    customerView = <PublicProduct key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
+    customerView = <PublicProduct isShoppingBusy={shopping.isBusy} key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
   } else if (currentPath === '/wishlist') {
     customerView = (
-      <WishlistView shopping={shopping} onNavigate={navigate}/>
+      <WishlistView key={session.user?.uid||'signed-out'} shopping={shopping} onNavigate={navigate}/>
     );
   } else if (currentPath === '/bag') {
     customerView = (
-      <BagView shopping={shopping} onNavigate={navigate}/>
+      <BagView key={session.user?.uid||'signed-out'} shopping={shopping} onNavigate={navigate}/>
     );
   } else if (authRoute === '/checkout'||/^\/checkout\/(delivery|summary|payment)$/.test(authRoute)) {
     customerView = <CustomerGate path={currentPath} onNavigate={navigate}><CheckoutView key={new URLSearchParams(currentPath.split('?')[1]||'').get('buyNow')||'bag'} currentPath={currentPath} shopping={shopping} onNavigate={navigate}/></CustomerGate>;
@@ -298,9 +300,8 @@ function StorefrontContent() {
         wishlistCount={wishlistCount}
       />}
 
-      {!focusedExperience&&shopping.notice&&<div className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:w-96 z-50 bg-white border border-[#B88A44] rounded-xl shadow-lg p-4 text-sm" role={shopping.notice.error?'alert':'status'}>
-        <p>{shopping.notice.message}</p><div className="flex flex-wrap gap-4 mt-2">{shopping.notice.error&&<button className="min-h-11 underline text-[#780D24]" onClick={shopping.retryChange}>Retry change</button>}{shopping.signedIn&&<button className="min-h-11 underline text-[#780D24]" onClick={()=>navigate('/bag')}>View bag</button>}<button className="min-h-11 underline" onClick={shopping.dismiss}>Dismiss</button></div>
-      </div>}
+      {!focusedExperience&&shopping.notice&&<CustomerNotice key={shopping.notice.id} notice={shopping.notice} path={currentPath} onDismiss={shopping.dismiss} onRetry={()=>shopping.retryChange()} onNavigate={navigate}/>}
+      {!focusedExperience&&shopping.removal&&<RemovalDialog key={shopping.uid+shopping.removal.id} kind="wishlist" id={shopping.removal.id} variant={null} name={shopping.removal.name} shopping={shopping} onClose={shopping.cancelRemoval}/>}
       {/* Main Page View */}
       <main className="flex-1 w-full">
         {customerView}

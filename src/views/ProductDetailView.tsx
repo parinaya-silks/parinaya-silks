@@ -1,6 +1,7 @@
 import './product-detail.css';
 import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
+import {LoaderCircle} from 'lucide-react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 
@@ -12,6 +13,7 @@ interface ProductDetailViewProps {
   onBuyNow: (product: Product, quantity:number, selectedColor?:string)=>void;
   onToggleWishlist: (product: Product) => void;
   isWishlisted: (productId: string) => boolean;
+  isShoppingBusy?: (productId:string)=>boolean;
 }
 
 export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
@@ -22,7 +24,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onBuyNow,
   onToggleWishlist,
   isWishlisted,
+  isShoppingBusy,
 }) => {
+  const shoppingBusy=!!isShoppingBusy?.(product.id);
   const [activeImageKey, setActiveImageKey] = useState<string>(product.gallery?.find(image=>image.url===product.images.full)?.mediaId || 'full');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [purchaseError,setPurchaseError]=useState('');
@@ -115,13 +119,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <button
               aria-label="Save to Wishlist"
               aria-pressed={wishlisted}
+              disabled={shoppingBusy}
+              aria-busy={shoppingBusy}
               onClick={() => onToggleWishlist(product)}
               className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/85 backdrop-blur-md border border-[#E8DDD6] flex items-center justify-center text-[#231919] hover:text-[#780D24] shadow-sm active:scale-95 transition-all"
               type="button"
             >
-              <span className={`material-symbols-outlined text-[22px] ${wishlisted ? 'fill text-[#780D24]' : ''}`}>
+              {shoppingBusy?<LoaderCircle size={19} className="animate-spin motion-reduce:animate-none"/>:<span className={`material-symbols-outlined text-[22px] ${wishlisted ? 'fill text-[#780D24]' : ''}`}>
                 favorite
-              </span>
+              </span>}
             </button>
 
             {/* Image Counter Badge */}
@@ -518,14 +524,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           <button
             aria-label="Add to Bag"
             onClick={handleAdd}
-            disabled={selectedStock<1||quantity>selectedStock}
+            disabled={shoppingBusy||selectedStock<1||quantity>selectedStock}
+            aria-busy={shoppingBusy}
             className={`flex-1 h-12 border-2 border-[#780D24] text-[#780D24] font-sans font-semibold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
               product.inStock ? 'hover:bg-[#780D24]/5 bg-white' : 'opacity-50 cursor-not-allowed'
             }`}
             type="button"
           >
             <span className="material-symbols-outlined text-[20px]">shopping_bag</span>
-            <span>Add to Bag</span>
+            <span>{shoppingBusy?'Saving…':'Add to Bag'}</span>
           </button>
           <button
             onClick={handleBuyNow}

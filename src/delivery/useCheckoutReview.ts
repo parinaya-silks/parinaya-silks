@@ -21,10 +21,10 @@ export function useCheckoutReview(shopping:Shopping,book:AddressBookState,select
   const baseline=useRef<{uid:string;prices:Map<string,number>}>({uid,prices:new Map(shopping.bag.filter(item=>item.product).map(item=>[item.id,item.product!.pricePaise]))});
   if(baseline.current.uid!==uid)baseline.current={uid,prices:new Map()};
   const bagKey=source.kind==='buy-now'?JSON.stringify(source):JSON.stringify(shopping.bag.map(item=>[item.id,item.quantity,item.product?.pricePaise,item.product?.status,item.stock,item.reason]));
-  const key=JSON.stringify([uid,selected,couponCode,points,book.addresses.find(address=>address.id===selected)?.revision,book.status,source.kind==='bag'?shopping.status:'ready',bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading',attempt]);
+  const key=JSON.stringify([uid,selected,couponCode,points,book.addresses.find(address=>address.id===selected)?.revision,book.status,source.kind==='bag'?[shopping.status,shopping.pendingBag]:'ready',bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading',attempt]);
   const latest=useRef(key);latest.current=key;
   useEffect(()=>{
-    if(!uid||book.status!=='ready'||source.kind==='bag'&&shopping.status!=='ready')return;
+    if(!uid||book.status!=='ready'||source.kind==='bag'&&(shopping.status!=='ready'||shopping.pendingBag))return;
     let live=true;const controller=new AbortController();
     void customerAction<CheckoutReview>(uid,{action:'orders:review',addressId:selected||null,couponCode,source,points},controller.signal).then(value=>{
       if(!live||latest.current!==key)return;

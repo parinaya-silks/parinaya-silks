@@ -25,7 +25,7 @@ export function CheckoutView({shopping,onNavigate,currentPath='/checkout'}:{shop
  useEffect(()=>{if(draft&&!saveCheckoutDraft({...draft,addressId:selected,couponCode,points}))setStorageError('Enable site storage to preserve your checkout selections, then refresh this page.');},[draft,selected,couponCode,points]);
  const checkout=useCheckoutReview(shopping,book,selected,couponCode,source,points),review=checkout.review;
  const cod=useCodOrder(review,value=>{checkout.applyReview(value);setDraft(old=>old?{...old,approvedFingerprint:''}:old);},onNavigate,id);
- const usable=!!review?.valid&&review.shipping.state==='ready'&&checkout.status==='ready'&&checkout.changes.length===0&&!storageError;
+ const usable=(buyNow||!shopping.pendingBag)&&!!review?.valid&&review.shipping.state==='ready'&&checkout.status==='ready'&&checkout.changes.length===0&&!storageError;
  useEffect(()=>{
   if(!draft||cod.pending||cod.busy||book.status!=='ready')return;
   if(stage!=='delivery'&&(!draft.deliveryConfirmed||!selected)){onNavigate(checkoutPath('delivery',id));return;}
