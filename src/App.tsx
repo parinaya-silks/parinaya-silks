@@ -42,6 +42,7 @@ import { ForgotPasswordView } from './views/ForgotPasswordView.tsx';
 import { VerifyEmailView } from './views/VerifyEmailView.tsx';
 import { ContactView } from './views/ContactView.tsx';
 import { AboutView } from './views/AboutView.tsx';
+import {policyFromPath} from './policies/model.ts';
 import { PoliciesView } from './views/PoliciesView.tsx';
 import {CustomerAuthProvider,useCustomerAuth} from './customer/CustomerAuth.tsx';
 import {useShopping} from './shopping/useShopping.ts';
@@ -242,34 +243,8 @@ function StorefrontContent() {
         onNavigate={navigate}
       />
     );
-  } else if (currentPath === '/shipping-policy') {
-    customerView = (
-      <PoliciesView
-        initialTab="shipping"
-        onNavigate={navigate}
-      />
-    );
-  } else if (currentPath === '/returns-policy') {
-    customerView = (
-      <PoliciesView
-        initialTab="returns"
-        onNavigate={navigate}
-      />
-    );
-  } else if (currentPath === '/privacy-policy') {
-    customerView = (
-      <PoliciesView
-        initialTab="privacy"
-        onNavigate={navigate}
-      />
-    );
-  } else if (currentPath === '/terms-conditions') {
-    customerView = (
-      <PoliciesView
-        initialTab="terms"
-        onNavigate={navigate}
-      />
-    );
+  } else if (policyFromPath(currentPath)) {
+    customerView = <PoliciesView key={policyFromPath(currentPath)} initialTab={policyFromPath(currentPath)} onNavigate={navigate}/>;
   } else {
     customerView = <MissingRecord label="Page" onNavigate={navigate} />;
   }

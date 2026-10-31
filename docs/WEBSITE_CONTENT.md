@@ -50,3 +50,5 @@ Focused tests are `src/content/sections.test.tsx`, `scripts/website-content-emul
 No new dependencies, serverless functions, Firestore indexes, rule publication or production migration are required. The existing rules deny direct access to the shared private settings document. Local/emulator/build evidence does not establish hosted acceptance. The owner must use the normal commit/push/application deployment process and then check saved copy, public refresh and existing authorized access on the hosted site.
 
 Implementation and tests modify local source and emulator fixtures only. No production content, users, business records, media, rules or indexes are changed.
+
+The responsive customer policy layout, canonical route mapping, explicit local sample preview and production missing-content behavior are documented in [POLICY_PAGE_DESIGN.md](POLICY_PAGE_DESIGN.md). Real policy bodies remain plain text; their presentation does not infer section headings or change approval.
