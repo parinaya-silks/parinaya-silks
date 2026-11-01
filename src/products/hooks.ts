@@ -1,10 +1,12 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
+import type {DiscoveryFacets} from './discovery.ts';
 import {publicCatalog,publicProduct} from './client.ts';
 import {ProductError,type PublicProductRecord} from './model.ts';
 
 export function usePublicCatalog(options:Record<string,string>={},enabled=true) {
   const optionsKey=JSON.stringify(options);const [dataKey,setDataKey]=useState(optionsKey);
   const [items,setItems]=useState<PublicProductRecord[]>([]),[state,setState]=useState<'loading'|'ready'|'error'>('loading'),[cursor,setCursor]=useState<string|null>(null),[busy,setBusy]=useState(false);
+  const [total,setTotal]=useState<number>(),[facets,setFacets]=useState<DiscoveryFacets>();
   const generation=useRef(0),lock=useRef(false),ready=useRef(false),cursorRef=useRef<string|null>(null);
   const load=useCallback(async(more=false)=>{
     if(!enabled||lock.current)return;
@@ -15,7 +17,7 @@ export function usePublicCatalog(options:Record<string,string>={},enabled=true) 
       const result=await publicCatalog(more?cursorRef.current||undefined:undefined,options);
       if(current!==generation.current)return;
       setItems(previous=>more?[...previous,...result.items.filter(item=>!previous.some(old=>old.id===item.id))]:result.items);
-      cursorRef.current=result.nextCursor;setCursor(result.nextCursor);ready.current=true;setDataKey(optionsKey);setState('ready');
+      setTotal(Number.isSafeInteger(result.total)?result.total:undefined);setFacets(result.facets);cursorRef.current=result.nextCursor;setCursor(result.nextCursor);ready.current=true;setDataKey(optionsKey);setState('ready');
     } catch {if(current===generation.current){ready.current=false;setDataKey(optionsKey);setState('error');}}
     finally{if(current===generation.current){lock.current=false;setBusy(false);}}
   },[optionsKey,enabled]);
@@ -27,7 +29,7 @@ export function usePublicCatalog(options:Record<string,string>={},enabled=true) 
     const interval=setInterval(refresh,30000);
     return()=>{generation.current++;lock.current=false;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);clearInterval(interval);};
   },[load]);
-  return {items:state==='ready'&&dataKey===optionsKey?items:[],state:dataKey===optionsKey?state:'loading' as const,busy,hasMore:state==='ready'&&dataKey===optionsKey&&Boolean(cursor),retry:()=>load(),loadMore:()=>load(true)};
+  return {total:dataKey===optionsKey?total:undefined,facets:dataKey===optionsKey?facets:undefined,items:state==='ready'&&dataKey===optionsKey?items:[],state:dataKey===optionsKey?state:'loading' as const,busy,hasMore:state==='ready'&&dataKey===optionsKey&&Boolean(cursor),retry:()=>load(),loadMore:()=>load(true)};
 }
 
 export function usePublicProduct(slug:string) {

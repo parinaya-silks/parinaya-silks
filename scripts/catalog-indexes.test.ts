@@ -19,7 +19,7 @@ function database(){
    where(field:any,operator:any,value:any){return collection(name,[...filters,{field,operator,value}],orders);},
    orderBy(field:any,direction='asc'){orders.push({field:typeof field==='string'?field:'__name__',direction});return query;},
    limit(n:number){assert.ok(n<=200);return query;},
-   async get(){queries.push(query);return name==='categories'?{empty:false,docs:[{id:'c'.repeat(20)}]}:{size:0,docs:[]};},
+   async get(){queries.push(query);return name==='categories'?{empty:false,size:1,docs:[{id:'c'.repeat(20)}]}:{size:0,docs:[]};},
    count(){return {async get(){queries.push({...query,countOnly:true,filters:[...filters]});return {data:()=>({count:0})};}};},
    aggregate(fields:any){assert.deepEqual(Object.keys(fields),['count','valuePaise','collectedPaise','refundPaise']);assert.ok(fields.valuePaise.isEqual(AggregateField.sum('reportingPaise')));assert.ok(fields.collectedPaise.isEqual(AggregateField.sum('collectedPaise')));assert.ok(fields.refundPaise.isEqual(AggregateField.sum('refundPaise')));return {async get(){queries.push({...query,aggregate:true,filters:[...filters]});return {data:()=>({count:0,valuePaise:0,collectedPaise:0,refundPaise:0})};}};}
   };return query;
@@ -54,7 +54,7 @@ test('orders summary queries use existing indexes for exact reference, multi-sta
 test('actual browse sorts, category and combined filters match prepared collection indexes and descending ID tie-break',async()=>{
  for(const sort of [undefined,'featured','newest','price-asc','price-desc'])for(const category of [undefined,'fixture']){
   const {db,queries}=database();await browseService(db,async()=>{throw new Error('No rows expected');})({browse:'1',...(sort?{sort}:{}),...(category?{category}:{}),q:'saree',colors:'red|gold',maxPrice:'100000',inStock:'true',sale:'true'});
-  for(const query of queries){const fields=query.filters.map((f:any)=>asc(f.field));if(query.name==='products'){
+  for(const query of queries){const fields=(query.name==='products'?[...query.filters].sort((a:any,b:any)=>a.field.localeCompare(b.field)):query.filters).map((f:any)=>asc(f.field));if(query.name==='products'){
     assert.deepEqual(query.orders.at(-1),{field:'__name__',direction:'desc'});
     fields.push(...query.orders.filter((o:any)=>o.field!=='__name__').map((o:any)=>o.direction==='asc'?asc(o.field):desc(o.field)));
   }covered(query.name,fields);}
@@ -104,3 +104,5 @@ test('report query context and original index URL survive wrapping without leaki
 test('customer card filters use existing UID/status indexes and lookahead without whole-history counts',async()=>{
  for(const filter of ['all','progress','delivered','cancelled']){const {db,queries}=database();await ordersService(db,async()=>{},async()=>{throw Error('Unused');}).customer('verified','customer@example.test',{action:'orders:list',view:'cards',filter});assert.equal(queries.length,1);assert.deepEqual(queries[0].filters[0],{field:'uid',operator:'==',value:'verified'});assert.deepEqual(queries[0].orders,[{field:'createdAt',direction:'desc'},{field:'__name__',direction:'desc'}]);covered('orders',[asc('uid'),...(filter==='all'?[]:[asc('status')]),desc('createdAt')]);}
 });
+
+test('read-only live discovery missing-index links match exact prepared fields; two READY product indexes are retained',()=>{const data=JSON.parse(readFileSync('scripts/fixtures/discovery-index-evidence.json','utf8'));assert.equal(data.ready.length,2);assert.ok(data.ready.every((r:any)=>r.state==='READY'));assert.equal(data.missing.length,6);for(const row of data.missing){assert.equal(row.missingIndex,true);covered('products',row.index.fields.filter((f:any)=>f.fieldPath!=='__name__'));assert.equal(row.index.queryScope,'COLLECTION');assert.deepEqual(row.index.fields.at(-1),{fieldPath:'__name__',order:'DESCENDING'});}});

@@ -1,18 +1,22 @@
 import {FieldPath,type Firestore,type Query,type DocumentSnapshot} from 'firebase-admin/firestore';
-import {ProductError,type PublicProductRecord,quantity} from '../src/products/model.ts';
-import {text} from '../src/orders/model.ts';
+import {ProductError,type PublicProductRecord} from '../src/products/model.ts';
+import {discoveryFilters} from '../src/products/discovery.ts';
+import {discoveryPage} from './discovery.ts';
+export const MAX_DISCOVERY_PRODUCTS=5000;
 export function browseService(db:Firestore,present:(doc:DocumentSnapshot,categoryName?:string)=>Promise<PublicProductRecord>){return async(parameters:Record<string,string>)=>{
- const allowed=['browse','cursor','q','category','sort','maxPrice','colors','inStock','sale'];if(Object.keys(parameters).some(key=>!allowed.includes(key)))throw new ProductError('invalid','Unsupported browse filter.');
- const q=text(parameters.q||'',100).toLocaleLowerCase(),colors=text(parameters.colors||'',500).toLowerCase().split('|').filter(Boolean),sort=parameters.sort||'featured';if(!['featured','newest','price-asc','price-desc'].includes(sort)||colors.length>20)throw new ProductError('invalid','Invalid sort or colour filter.');
- const maxPrice=parameters.maxPrice===undefined?null:Number(parameters.maxPrice);if(maxPrice!==null&&(!Number.isSafeInteger(maxPrice)||maxPrice<0||maxPrice>100000000))throw new ProductError('invalid','Invalid price filter.');
- let query:Query=db.collection('products').where('status','==','Published');
- if(parameters.category){const slug=text(parameters.category,100,true);if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new ProductError('invalid','Invalid category.');const category=await db.collection('categories').where('slug','==',slug).where('enabled','==',true).limit(1).get();if(category.empty)return {items:[],nextCursor:null};query=query.where('categoryId','==',category.docs[0].id);}
- if(sort.startsWith('price-'))query=query.orderBy('pricePaise',sort==='price-asc'?'asc':'desc');else if(sort==='featured')query=query.orderBy('featured','desc');
+ const filters=discoveryFilters(parameters);let query:Query=db.collection('products').where('status','==','Published');
+ if(filters.category){const categories=await db.collection('categories').where('slug','==',filters.category).where('enabled','==',true).limit(2).get();if(categories.size!==1)throw new ProductError('not-found','Category unavailable.');query=query.where('categoryId','==',categories.docs[0].id);}
+ if(filters.sort.startsWith('price-'))query=query.orderBy('pricePaise',filters.sort==='price-asc'?'asc':'desc');else if(filters.sort==='featured')query=query.orderBy('featured','desc');
  query=query.orderBy('createdAt','desc').orderBy(FieldPath.documentId(),'desc');
- if(parameters.cursor){if(!/^[A-Za-z0-9]{20}$/.test(parameters.cursor))throw new ProductError('invalid','Invalid product cursor.');const cursor=await db.doc('products/'+parameters.cursor).get();if(!cursor.exists)throw new ProductError('invalid','Invalid product cursor.');query=query.startAfter(cursor);}
- // Bounded scan supports substring/colour filters without an external search
- // service. A next cursor can accompany an empty page; never claim exhaustion.
- const page=await query.limit(200).get(),ids=[...new Set(page.docs.map(doc=>doc.data().categoryId).filter(id=>typeof id==='string'&&/^[A-Za-z0-9]{20}$/.test(id)))],categories=ids.length?await db.getAll(...ids.map(id=>db.doc('categories/'+id))):[],byId=new Map(categories.map(doc=>[doc.id,doc.data()])),items:PublicProductRecord[]=[];
- let consumed=0,last:string|null=null;for(const doc of page.docs){consumed++;last=doc.id;const raw=doc.data(),category=byId.get(raw.categoryId);if(category?.enabled!==true)continue;const item=await present(doc,category.name);if(q&&![item.name,item.description,item.sku,item.categoryName,item.fabric,item.weaveType,item.colorName].join(' ').toLocaleLowerCase().includes(q))continue;if(maxPrice!==null&&item.pricePaise>maxPrice)continue;if(parameters.sale==='true'&&(!item.originalPricePaise||item.originalPricePaise<=item.pricePaise))continue;if(parameters.inStock==='true'&&quantity(item)<=0)continue;if(colors.length&&!colors.some(color=>[item.colorName,...(item.inventory.variants||[]).map(variant=>variant.name)].some(name=>name.toLowerCase()===color)))continue;items.push(item);if(items.length===50)break;}
- return {items,nextCursor:consumed<page.size||page.size===200?last:null};
+ // Bounded server-only scan: never return a partial page/count as a complete result.
+ // A readonly transaction pins source/category eligibility across scan batches.
+ const docs:DocumentSnapshot[]=[],categoryMap=new Map<string,FirebaseFirestore.DocumentData>();
+ await db.runTransaction(async tx=>{docs.length=0;categoryMap.clear();let after:DocumentSnapshot|undefined;
+  for(;;){const page=await tx.get((after?query.startAfter(after):query).limit(200));docs.push(...page.docs);if(docs.length>MAX_DISCOVERY_PRODUCTS)throw new ProductError('unavailable','Catalog discovery exceeds its supported scope. Contact the store owner.');if(page.size<200)break;after=page.docs.at(-1);}
+  const ids=[...new Set(docs.map(d=>d.get('categoryId')).filter(id=>typeof id==='string'&&/^[A-Za-z0-9]{20}$/.test(id)))];
+  for(let i=0;i<ids.length;i+=200){const categories=await tx.getAll(...ids.slice(i,i+200).map(id=>db.doc('categories/'+id)));for(const c of categories)if(c.data()?.enabled===true)categoryMap.set(c.id,c.data()!);}
+ },{readOnly:true});
+ const rows=docs.filter(doc=>categoryMap.has(doc.get('categoryId'))).map(doc=>({...doc.data(),id:doc.id,categoryName:categoryMap.get(doc.get('categoryId'))!.name,updatedAt:doc.get('updatedAt')?.toMillis?.()??null}) as unknown as PublicProductRecord);
+ const result=discoveryPage(rows,filters,parameters.cursor,filters.category||'catalog');const byId=new Map(docs.map(d=>[d.id,d]));
+ return {...result,items:await Promise.all(result.items.map(p=>present(byId.get(p.id)!,p.categoryName)))};
  };}

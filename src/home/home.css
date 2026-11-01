@@ -8,3 +8,6 @@
 .home-page .home-banner-overlay.bottom{justify-content:safe flex-end}.home-page .home-banner-overlay.center,.home-page .home-banner-overlay.left{justify-content:safe center}
 
 .home-page .home-banner-controls button[aria-label^="Show banner"]{font-size:0;display:grid;place-items:center}.home-page .home-banner-controls button[aria-label^="Show banner"]:after{content:"";width:6px;height:6px;border-radius:100%;background:#ffffff88}.home-page .home-banner-controls button[aria-current=true]:after{background:#F2BE72}
+
+/* Scoped native-scrollbar suppression retains swipe, keyboard and programmatic scrolling. */
+.home-category-rail{scrollbar-width:none;-ms-overflow-style:none}.home-category-rail::-webkit-scrollbar{display:none}.home-rail-guidance{display:flex;gap:8px;align-items:center;color:#877563;font-size:11px}.home-desktop-guidance{display:none}.home-rail-arrows{display:none}.home-swipe-guidance{display:flex;align-items:center;gap:4px}@media(min-width:768px){.home-desktop-guidance{display:inline}.home-swipe-guidance{display:none}.home-rail-arrows{display:flex;gap:4px}.home-rail-arrows button{display:flex;justify-content:center;align-items:center;min-width:44px;min-height:44px;border:1px solid #dccab7;border-radius:50%;color:#780D24;background:#fff}.home-rail-arrows button:disabled{opacity:.35}}

@@ -703,11 +703,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "status",
+          "fieldPath": "categoryId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "categoryId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -725,11 +725,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "status",
+          "fieldPath": "categoryId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "categoryId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -747,11 +747,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "status",
+          "fieldPath": "categoryId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "categoryId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -769,11 +769,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "status",
+          "fieldPath": "categoryId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "categoryId",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
