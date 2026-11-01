@@ -1,3 +1,4 @@
+import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
 import React,{useState} from 'react';
 import {ArrowRight,BookOpen,MessageCircle} from 'lucide-react';
 import {useStoreContent} from '../content/public.tsx';
@@ -8,12 +9,12 @@ import '../about/about.css';
 import '../content/editorial.css';
 
 export const AboutView=({onNavigate}:{onNavigate:(path:string)=>void})=>{
- const {content,status,retry,hasLoaded}=useStoreContent(),[failed,setFailed]=useState(false);
+ const {content,status,retry,hasLoaded,busy}=useStoreContent(),[failed,setFailed]=useState(false);
  const value=content.about??publicAbout(fallbackAbout()),sections=aboutSections(value.story,value.storyHeading);
  return <div className="editorial-page about-storefront">
   <nav aria-label="Breadcrumb"><a href="/" onClick={e=>{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();onNavigate('/');}}}>Home</a><span>/</span>About Us</nav>
-  {status==='error'&&<div className="editorial-error" role="alert">{hasLoaded?'Unable to refresh About Us. Showing the last loaded content.':'Unable to load About Us.'} <button onClick={retry}>Retry About Us</button></div>}
-  {!hasLoaded&&status==='loading'&&<div className="editorial-loading" role="status">Loading About Us...</div>}
+  {hasLoaded?<Updating busy={busy} error={status==='error'} retry={retry}/>:status==='error'?<Recovery retry={retry} label="Retry About Us"/>:null}
+  {!hasLoaded&&status==='loading'&&<Loading kind="text" label="Loading About Us..." retry={retry}/>}
   {hasLoaded&&<>
    <section className={'about-editorial-hero'+(failed?' without-image':'')} aria-labelledby="about-title">
     <header><span className="editorial-eyebrow">Our story</span><h1 id="about-title">{value.heading}</h1><i className="editorial-rule"/>{value.intro&&<p className="about-editorial-intro">{value.intro}</p>}{sections.length>0&&<div className="about-editorial-opening">{sections[0].heading&&<h2>{sections[0].heading}</h2>}<p>{sections[0].text}</p></div>}</header>

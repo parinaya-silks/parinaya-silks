@@ -1,3 +1,4 @@
+import './loading/loading.css';
 import { removeRetiredDemoItems } from './services/legacyDemoCleanup.ts';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';

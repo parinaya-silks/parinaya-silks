@@ -1,3 +1,4 @@
+import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
 import React from 'react';
 import {useCustomerAuth} from '../customer/CustomerAuth.tsx';
 import {beginBuyNow,checkoutPath} from '../checkout/source.ts';
@@ -15,6 +16,8 @@ export function PublicProduct({slug,products,onNavigate,onAddToCart,onToggleWish
     const id=beginBuyNow(uid,{kind:'buy-now',productId:product.id,variantId:product.variants?.length?color||null:null,quantity},product.slug||slug),path=checkoutPath('delivery',id);
     onNavigate(uid?path:'/login?returnTo='+encodeURIComponent(path));
   };
-  if(state.status==='ready'&&state.product)return <><Seo path={'/product/'+slug} product={state.product}/><ProductDetailView key={state.product.id} product={storefrontProduct(state.product)} allProducts={products} onNavigate={onNavigate} onAddToCart={onAddToCart} onBuyNow={buyNow} onToggleWishlist={onToggleWishlist} isWishlisted={isWishlisted} isShoppingBusy={isShoppingBusy}/></>;
-  return <section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">{state.status==='loading'?'Loading product…':state.status==='not-found'?'Product not found':'Product unavailable'}</h1>{state.status==='error'?<button className="min-h-11 px-5 underline" onClick={state.retry}>Retry product</button>:state.status==='not-found'&&<button className="min-h-11 px-5 underline" onClick={()=>onNavigate('/shop')}>Continue shopping</button>}</section>;
+  if(state.status==='ready'&&state.product)return <><Updating busy={state.busy} error={state.error} retry={state.retry}/><Seo path={'/product/'+slug} product={state.product}/><ProductDetailView key={state.product.id} product={storefrontProduct(state.product)} allProducts={products} onNavigate={onNavigate} onAddToCart={onAddToCart} onBuyNow={buyNow} onToggleWishlist={onToggleWishlist} isWishlisted={isWishlisted} isShoppingBusy={isShoppingBusy}/></>;
+  if(state.status==='loading')return <Loading kind="product" label="Loading product" retry={state.retry}/>;
+  if(state.status==='error')return <Recovery retry={state.retry} label="Retry product"/>;
+  return <section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">Product not found</h1><button className="min-h-11 px-5 underline" onClick={()=>onNavigate('/shop')}>Continue shopping</button></section>;
 }

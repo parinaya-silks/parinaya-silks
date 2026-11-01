@@ -2,7 +2,7 @@ import { collection, doc, onSnapshot, query, where, runTransaction, serverTimest
 import { getDatabaseClient } from '../services/firebase/database.ts';
 import { orderCategories, validateCategory, type Category, type CategoryInput } from './model.ts';
 
-export type CategoryState = { status: 'loading' } | { status: 'ready'; items: Category[] } | { status: 'error'; message: string };
+export type CategoryState = { status: 'loading' } | { status: 'ready'; items: Category[]; stale?: boolean } | { status: 'error'; message: string };
 export function categoryError(error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : '';
   if (code === 'permission-denied') return 'Permission denied. Refresh your permissions or contact the store owner.';
@@ -21,15 +21,15 @@ function decode(id: string, data: Record<string, unknown>): Category {
 }
 export function watchCategories(admin: boolean, publish: (state: CategoryState) => void) {
   publish({ status: 'loading' });
-  let active = true;
+  let active = true;let previous:Category[]|undefined;
   let unsubscribe = () => {};
-  let timeout: ReturnType<typeof setTimeout>;
+  let timeout: ReturnType<typeof setTimeout>|undefined;
   const fail = (error: unknown) => {
     if (!active) return;
-    clearTimeout(timeout); unsubscribe(); publish({ status: 'error', message: categoryError(error) });
+    clearTimeout(timeout); unsubscribe(); publish(!admin&&previous?{status:'ready',items:previous,stale:true}:{ status: 'error', message: categoryError(error) });
   };
   const waitForServer = () => {
-    clearTimeout(timeout);
+    if(timeout)return;
     timeout = setTimeout(() => fail(new Error('Server check timed out')), 10000);
   };
   try {
@@ -37,9 +37,9 @@ export function watchCategories(admin: boolean, publish: (state: CategoryState) 
     waitForServer();
     unsubscribe = onSnapshot(admin ? ref : query(ref, where('enabled', '==', true)), { includeMetadataChanges: true }, snapshot => {
       if (!active) return;
-      if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) { publish({ status: 'loading' }); waitForServer(); return; }
-      clearTimeout(timeout);
-      try { publish({ status: 'ready', items: orderCategories(snapshot.docs.map(item => decode(item.id, item.data()))) }); }
+      if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) { if(!previous)publish({ status: 'loading' });waitForServer();return; }
+      clearTimeout(timeout);timeout=undefined;
+      try { previous=orderCategories(snapshot.docs.map(item => decode(item.id, item.data())));publish({ status: 'ready', items:previous }); }
       catch (error) { fail(error); }
     }, fail);
   } catch (error) { fail(error); }

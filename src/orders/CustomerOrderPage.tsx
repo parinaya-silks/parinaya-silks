@@ -1,3 +1,5 @@
+import {useRead} from '../loading/useRead.ts';
+import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {ArrowRight,Mail,Phone,MessageCircle,RefreshCw,X} from 'lucide-react';
 import {useCustomerAuth} from '../customer/CustomerAuth.tsx';
@@ -14,18 +16,10 @@ import {canCelebrate,cancellationEligible,ConfirmationMotif,CopyReference,ist,Or
 import './customerOrders.css';
 
 function useOwnedOrder(uid:string,id:string) {
- const [attempt,setAttempt]=useState(0),[state,setState]=useState<{key:string;order?:OrderRecord;loading:boolean;error?:string}>();
- const key=uid+':'+id,latest=useRef(key);latest.current=key;
- useEffect(()=>{let live=true,request=0;const controller=new AbortController();
-  async function load(){const sequence=++request;setState(old=>({key,order:old?.key===key?old.order:undefined,loading:true}));
-   try{const order=await customerAction<OrderRecord>(uid,{action:'orders:get',id},controller.signal);if(order.uid!==uid||(order.id!==id&&order.reference!==id))throw new Error('Order identity mismatch');if(live&&latest.current===key&&sequence===request)setState({key,order,loading:false});}
-   catch(failure){if(live&&latest.current===key&&sequence===request)setState(old=>({key,order:old?.key===key?old.order:undefined,loading:false,error:failure instanceof ProductError&&failure.code==='not-found'?'Order not found.':failure instanceof ProductError&&failure.code==='unauthorized'?'Sign in again to view this order.':'We couldn’t load this order. Please try again.'}));}
-  }
-  void load();const refresh=()=>{if(document.visibilityState==='visible')void load();};const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);
-  return()=>{live=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',refresh);};
- },[key,attempt]);
- return {order:state?.key===key?state.order:undefined,loading:state?.key!==key||state.loading,error:state?.key===key?state.error:undefined,retry:()=>setAttempt(n=>n+1)};
+ const r=useRead(uid+':'+id,async signal=>{const order=await customerAction<OrderRecord>(uid,{action:'orders:get',id},signal);if(order.uid!==uid||(order.id!==id&&order.reference!==id))throw Error('Order identity mismatch');return order;},{interval:30000});
+ return {order:r.data,loading:r.busy,error:r.error?(r.error instanceof ProductError&&r.error.code==='not-found'?'Order not found.':r.error instanceof ProductError&&r.error.code==='unauthorized'?'Sign in again to view this order.':'We couldn’t load this order. Please try again.'):undefined,retry:r.retry};
 }
+
 function AssistanceSheet({order,onClose,onSaved}:{order:OrderRecord;onClose:()=>void;onSaved:()=>void}) {
  const {content}=useStoreContent(),uid=getAuthClients().auth.currentUser?.uid||'';
  const dialog=useRef<HTMLDialogElement>(null),alive=useRef(true),lock=useRef(false),pending=useRef<Record<string,unknown>|null>(null);
@@ -50,8 +44,9 @@ export function CustomerOrderPage({id,confirmed,onNavigate}:{id:string;confirmed
  const requestAllowed=order&&(cancellationEligible(order)||(['Shipped','Delivered'].includes(order.status)&&content.returnsEnabled&&content.returnKinds.length>0&&(!order.request||order.request.status==='rejected')));
  const requestLabel=order&&['Placed','Confirmed','Processing'].includes(order.status)?'Request Cancellation':'Request Assistance';
  return <div className={'customer-order-experience '+(confirmed?'order-confirmation':'customer-order-detail-screen')}><OrderHeader confirmed={confirmed} onNavigate={onNavigate}/><div className="customer-order-container">
- {!order&&<section className="order-card order-load-state" aria-busy={resource.loading}>{resource.loading?<p role="status">Loading your order…</p>:<><h1>Order unavailable</h1><p role="alert">{resource.error}</p><button onClick={resource.retry}>Retry</button><button onClick={()=>onNavigate('/account/orders')}>View My Orders</button></>}</section>}
- {order&&<>{resource.error&&<div className="order-notice" role="alert"><p>{resource.error} Showing the last loaded details.</p><button onClick={resource.retry}>Retry</button></div>}
+ {!order&&(resource.loading?<Loading kind="order" label="Loading your order" retry={resource.retry}/>:<Recovery retry={resource.retry} message={resource.error}/>)}
+ {order&&<Updating busy={resource.loading} error={resource.error} retry={resource.retry}/>}
+ {order&&<>
  {confirmedOrder?<><section className={'order-greeting'+(animate?' order-greeting-animate':'')} data-animated={animate}><ConfirmationMotif animate={animate}/><span className="order-label">Order Confirmation</span><h1>Thank you for choosing Parinaya.</h1><h2>Your order has been placed.</h2><p className="order-greeting-quote">“Your next beautiful drape is on its way to becoming part of your story.”</p><p>You can follow your order updates from your account anytime.</p></section><PaymentNotice order={order}/><div className="order-confirm-actions"><button className="order-primary" onClick={()=>onNavigate('/order-tracking/'+order.id)}>View Order & Updates <ArrowRight size={17}/></button><button onClick={()=>onNavigate('/shop')}>Continue Shopping</button><button className="order-text-button" onClick={()=>onNavigate('/account/orders')}>View My Orders</button></div><div className="order-confirm-grid"><div className="order-card order-confirm-items"><div className="order-reference-heading"><div><span className="order-label">Order Reference</span><CopyReference reference={order.reference}/></div><div><span className="order-label">Placed on</span><time>{ist(order.createdAt)}</time></div></div><PurchasedItems order={order}/></div><div className="order-confirm-side"><OrderAddress order={order}/><PaymentSummary order={order}/></div></div></>:<>
  {confirmed&&<div className="order-notice" role="status">This order is currently {order.status.toLowerCase()}. See its current details below.</div>}
  <section className="order-card order-detail-heading"><div><span className="order-status" data-status={order.status}>{order.status}</span><h1>Order Details</h1><span className="order-label">Order Reference</span><CopyReference reference={order.reference}/><time>Placed on {ist(order.createdAt)}</time></div><PaymentNotice order={order}/></section>

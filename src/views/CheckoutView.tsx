@@ -1,3 +1,4 @@
+import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
 import {CheckoutHeader} from '../checkout/CheckoutHeader.tsx';
 import {CheckoutPoints} from '../loyalty/CheckoutPoints.tsx';
 import React,{useEffect,useRef,useState} from 'react';
@@ -40,15 +41,17 @@ export function CheckoutView({shopping,onNavigate,currentPath='/checkout'}:{shop
  const back=()=>stage==='delivery'?editItems():onNavigate(checkoutPath(stage==='summary'?'delivery':'summary',id));
  const shell=(body:React.ReactNode)=><div className="checkout-screen"><CheckoutHeader stage={stage} buyNow={buyNow} locked={locked} onBack={()=>stage==='delivery'?onNavigate('/bag'):back()} onNavigate={onNavigate} onStep={step=>onNavigate(checkoutPath(step,id))}/>{body}<CheckoutFooter onNavigate={onNavigate}/></div>;
  if(!draft)return shell(<section className="checkout-container checkout-recovery"><h1>Checkout selection expired</h1><p>Open the product and choose Buy Now again, or checkout your current Bag. Selections from another account are not restored.</p><button className={button} onClick={()=>onNavigate('/shop')}>Browse sarees</button><button className={button} onClick={()=>onNavigate('/bag')}>View Bag</button></section>);
- if(!buyNow&&shopping.status==='error')return shell(<section className="checkout-container checkout-recovery"><h1>Checkout review</h1><p role="alert">Unable to load your bag.</p><button onClick={shopping.retry} className={button}>Retry bag</button></section>);
+ if(!review&&checkout.status==='loading')return shell(<section className="checkout-container"><h1 className="font-serif text-2xl">Checkout</h1><Loading kind="checkout" label="Loading checkout details" retry={checkout.retry}/></section>);
+ if(!buyNow&&shopping.status==='error'&&!shopping.hasLoaded)return shell(<section className="checkout-container checkout-recovery"><h1>Checkout review</h1><Recovery message="Unable to load your bag. Please try again." retry={shopping.retry} label="Retry bag"/></section>);
  if(!buyNow&&shopping.status==='ready'&&!shopping.bag.length&&!cod.pending&&!cod.busy)return shell(<section className="checkout-container checkout-recovery"><h1>Your bag is empty</h1><button onClick={()=>onNavigate('/shop')} className={button}>Continue shopping</button></section>);
  const total=review?.shipping.state==='ready'&&review.totalPaise?money(BigInt(review.totalPaise)):null;
  const placeLabel=cod.busy?'Confirming order...':cod.pending?'Check order status':'Place Order'+(total?' · '+total:'');
  const canContinue=usable&&!locked;
  const feedback=<div className="checkout-feedback" aria-live="polite">
   {addressNotice&&<p role="status">{addressNotice}</p>}{storageError&&<p role="alert">{storageError}</p>}{cod.error&&<p role="alert">{cod.error}</p>}
-  {checkout.status==='loading'&&<p role="status"><LoaderCircle size={16} className="checkout-spinning"/>Checking current products, prices and stock...</p>}
-  {checkout.status==='error'&&<div role="alert"><p>{checkout.error}</p><button className="checkout-link" onClick={checkout.retry}>Retry checkout review</button></div>}
+  {!review&&checkout.status==='loading'&&<Loading kind="checkout" label="Checking current products, prices and stock" retry={checkout.retry}/>}
+  {checkout.status==='error'&&<Recovery compact={!!review} message={checkout.error} retry={checkout.retry}/>}
+  {review&&<Updating busy={checkout.status==='loading'} retry={checkout.retry}/>}
   {checkout.changes.length>0&&<div role="alert"><p>Prices have changed. Please review the updated prices.</p>{checkout.changes.map(change=><p key={change.id}>{change.name}: {money(change.previous)} to {money(change.current)}</p>)}<button className="checkout-link" onClick={checkout.acceptPrices}>I have reviewed the updated prices</button></div>}
   {review?.issues.map(issue=><p key={issue} role="alert">{issue}</p>)}
   {review&&review.shipping.state!=='ready'&&<p role="alert">{review.shipping.state==='missing'?'Delivery charges are not available yet. Please contact us before ordering.':review.shipping.state==='invalid'?'We cannot confirm delivery charges right now. Please contact us before ordering.':review.shipping.state==='blocked'?'Confirm your delivery address and resolve the item issues to continue.':'Unable to confirm delivery charges. Please retry your review.'}</p>}

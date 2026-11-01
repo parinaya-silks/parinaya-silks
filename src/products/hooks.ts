@@ -1,53 +1,26 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
+import {useRead} from '../loading/useRead.ts';
+import {boundedRead} from '../loading/request.ts';
 import type {DiscoveryFacets} from './discovery.ts';
 import {publicCatalog,publicProduct} from './client.ts';
-import {ProductError,type PublicProductRecord} from './model.ts';
-
-export function usePublicCatalog(options:Record<string,string>={},enabled=true) {
-  const optionsKey=JSON.stringify(options);const [dataKey,setDataKey]=useState(optionsKey);
-  const [items,setItems]=useState<PublicProductRecord[]>([]),[state,setState]=useState<'loading'|'ready'|'error'>('loading'),[cursor,setCursor]=useState<string|null>(null),[busy,setBusy]=useState(false);
-  const [total,setTotal]=useState<number>(),[facets,setFacets]=useState<DiscoveryFacets>();
-  const generation=useRef(0),lock=useRef(false),ready=useRef(false),cursorRef=useRef<string|null>(null);
-  const load=useCallback(async(more=false)=>{
-    if(!enabled||lock.current)return;
-    lock.current=true;setBusy(true);
-    const current=++generation.current;
-    if(!more&&!ready.current)setState('loading');
-    try {
-      const result=await publicCatalog(more?cursorRef.current||undefined:undefined,options);
-      if(current!==generation.current)return;
-      setItems(previous=>more?[...previous,...result.items.filter(item=>!previous.some(old=>old.id===item.id))]:result.items);
-      setTotal(Number.isSafeInteger(result.total)?result.total:undefined);setFacets(result.facets);cursorRef.current=result.nextCursor;setCursor(result.nextCursor);ready.current=true;setDataKey(optionsKey);setState('ready');
-    } catch {if(current===generation.current){ready.current=false;setDataKey(optionsKey);setState('error');}}
-    finally{if(current===generation.current){lock.current=false;setBusy(false);}}
-  },[optionsKey,enabled]);
-  useEffect(()=>{
-    if(!enabled)return;
-    ready.current=false;cursorRef.current=null;setCursor(null);setState('loading');void load();
-    const refresh=()=>{if(ready.current&&document.visibilityState==='visible')void load();};
-    window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
-    const interval=setInterval(refresh,30000);
-    return()=>{generation.current++;lock.current=false;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);clearInterval(interval);};
-  },[load]);
-  return {total:dataKey===optionsKey?total:undefined,facets:dataKey===optionsKey?facets:undefined,items:state==='ready'&&dataKey===optionsKey?items:[],state:dataKey===optionsKey?state:'loading' as const,busy,hasMore:state==='ready'&&dataKey===optionsKey&&Boolean(cursor),retry:()=>load(),loadMore:()=>load(true)};
+import {type PublicProductRecord,ProductError} from './model.ts';
+export function usePublicCatalog(options:Record<string,string>={},enabled=true){
+ const key=JSON.stringify(options),[state,setState]=useState<{key:string;items:PublicProductRecord[];cursor:string|null;total?:number;facets?:DiscoveryFacets;busy:boolean;loaded:boolean;error?:unknown}>({key,items:[],cursor:null,busy:true,loaded:false});
+ const run=useRef<(more?:boolean)=>void>(()=>{}),failedMore=useRef(false);
+ useEffect(()=>{let live=true,busy=false,queued=false,controller:AbortController;let saved={items:[] as PublicProductRecord[],cursor:null as string|null,loaded:false,total:undefined as number|undefined,facets:undefined as DiscoveryFacets|undefined};
+  async function load(more=false){if(!enabled||busy||!live)return;busy=true;controller=new AbortController();setState({key,...saved,busy:true});
+   try{const next=await boundedRead(async signal=>{let page=await publicCatalog(more?saved.cursor||undefined:undefined,options,signal),items=page.items;
+     // A background read restores the already loaded extent using fresh cursors.
+     if(!more)while(page.nextCursor&&items.length<saved.items.length){page=await publicCatalog(page.nextCursor,options,signal);items=[...items,...page.items];}
+     return {...page,items};},controller.signal,15000);
+    if(live){saved={items:more?[...new Map([...saved.items,...next.items].map(p=>[p.id,p])).values()]:next.items,cursor:next.nextCursor,total:next.total,facets:next.facets,loaded:true};failedMore.current=false;setState({key,...saved,busy:false});}}
+   catch(error){if(live){failedMore.current=more;setState({key,...saved,busy:false,error});}}
+   finally{busy=false;if(queued&&live){queued=false;void load();}}
+  }
+  run.current=load;if(enabled)void load();const refresh=()=>{if(document.visibilityState==='visible'){if(busy)queued=true;else void load();}};const interval=setInterval(refresh,30000);window.addEventListener('focus',refresh);window.addEventListener('online',refresh);document.addEventListener('visibilitychange',refresh);
+  return()=>{live=false;controller?.abort();clearInterval(interval);window.removeEventListener('focus',refresh);window.removeEventListener('online',refresh);document.removeEventListener('visibilitychange',refresh);};
+ },[key,enabled]);
+ const current=state.key===key?state:undefined;
+ return {items:current?.items||[],total:current?.total,facets:current?.facets,hasLoaded:!!current?.loaded,error:current?.error,state:(!current||!current.loaded&&current.busy?'loading':current.loaded?'ready':'error') as 'loading'|'ready'|'error',busy:current?.busy??true,hasMore:!!current?.cursor,retry:useCallback(()=>run.current(failedMore.current),[]),loadMore:()=>run.current(true)};
 }
-
-export function usePublicProduct(slug:string) {
-  const [state,setState]=useState<{status:'loading'|'error'|'not-found'|'ready';product?:PublicProductRecord}>({status:'loading'}),[attempt,setAttempt]=useState(0);
-  useEffect(()=>{
-    let active=true,busy=false;
-    setState({status:'loading'});
-    async function load(){
-      if(busy)return;busy=true;
-      try {const product=await publicProduct(slug);if(active)setState({status:'ready',product});}
-      catch(error){if(active)setState({status:error instanceof ProductError&&error.code==='not-found'?'not-found':'error'});}
-      finally{busy=false;}
-    }
-    void load();
-    const focus=()=>{if(document.visibilityState==='visible')void load();};
-    const interval=setInterval(focus,30000);
-    window.addEventListener('focus',focus);document.addEventListener('visibilitychange',focus);
-    return()=>{active=false;clearInterval(interval);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',focus);};
-  },[slug,attempt]);
-  return {...state,retry:()=>setAttempt(value=>value+1)};
-}
+export function usePublicProduct(slug:string){const r=useRead('product:'+slug,signal=>publicProduct(slug,signal),{interval:30000});return {...r,product:r.error instanceof ProductError&&r.error.code==='not-found'?undefined:r.data,status:(r.error instanceof ProductError&&r.error.code==='not-found'?'not-found':r.data?'ready':r.status) as 'loading'|'error'|'not-found'|'ready'};}

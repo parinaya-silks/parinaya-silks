@@ -1,3 +1,4 @@
+import {ConnectionNotice} from './loading/Loading.tsx';
 import {RemovalDialog} from './shopping/ShoppingDialogs.tsx';
 import {CustomerNotice} from './shopping/CustomerNotice.tsx';
 import {CampaignStorefront} from './campaigns/CampaignStorefront.tsx';
@@ -182,6 +183,7 @@ function StorefrontContent() {
         isWishlisted={isWishlisted}
         isBusy={shopping.isBusy}
         catalogState={catalog.state}
+          catalogBusy={catalog.busy} catalogError={!!catalog.error}
         onRetry={catalog.retry}
       />
     );
@@ -278,7 +280,7 @@ function StorefrontContent() {
       {!focusedExperience&&shopping.notice&&<CustomerNotice key={shopping.notice.id} notice={shopping.notice} path={currentPath} onDismiss={shopping.dismiss} onRetry={()=>shopping.retryChange()} onNavigate={navigate}/>}
       {!focusedExperience&&shopping.removal&&<RemovalDialog key={shopping.uid+shopping.removal.id} kind="wishlist" id={shopping.removal.id} variant={null} name={shopping.removal.name} shopping={shopping} onClose={shopping.cancelRemoval}/>}
       {/* Main Page View */}
-      <main className="flex-1 w-full">
+      <ConnectionNotice/><main className="flex-1 w-full">
         {customerView}
 
       </main>

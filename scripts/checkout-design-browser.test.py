@@ -14,10 +14,27 @@ try:
   ctx.route('https://res.cloudinary.com/parinaya-emulator/**',image)
   page=ctx.new_page();errors=[];reviews=[];places=[]
   page.on('pageerror',lambda e:errors.append(str(e)))
+  network={'mode':'hold'};held=[]
+  def read_network(route):
+   body=route.request.post_data_json if route.request.method=='POST' else {}
+   if body.get('action')=='orders:review':
+    if network['mode']=='hold':held.append(route);return
+    if network['mode']=='fail':route.fulfill(status=503,json={'code':'unavailable','message':'Private diagnostics omitted'});return
+   route.continue_()
+  page.route('**/api/catalog',read_network)
   def response(r):
    if '/api/catalog' in r.url and r.request.method=='POST' and r.request.post_data_json.get('action')=='orders:review' and r.status==200:reviews.append(r.json())
   page.on('response',response);page.on('request',lambda r:places.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='orders:place' else None)
   page.goto(origin+'/login?returnTo=%2Fcheckout');page.get_by_label('Email address',exact=True).fill('customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();page.wait_for_url('**/checkout')
+  expect(page.locator('.store-loading-checkout')).to_be_visible()
+  for width in [320,390,768,1440,1920]:
+   page.set_viewport_size({'width':width,'height':900});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1');page.screenshot(path=str(screens/f'loading-{width}.png'))
+  network['mode']='fail'
+  for route in held:
+   try:route.fulfill(status=503,json={'code':'unavailable'})
+   except:pass
+  held.clear();expect(page.locator('.checkout-feedback .store-recovery')).to_be_visible();assert page.get_by_role('heading',name='Your bag is empty',exact=True).count()==0;assert not places
+  network['mode']='live';page.locator('.checkout-feedback .store-recovery').get_by_role('button',name='Retry',exact=True).click();page.set_viewport_size({'width':390,'height':900})
   expect(page.locator('[data-address-id]')).to_have_count(2);expect(page.get_by_role('button',name='Continue to Review',exact=True)).to_be_enabled()
   expect(page.locator('.storefront-header,.storefront-bottom-nav,.public-floating-contact')).to_have_count(0)
   # Native dialog focus, validation, typed values, cancelled and confirmed saves.
@@ -39,7 +56,10 @@ try:
     if width<1024:assert page.locator('.checkout-actions').bounding_box()['y']+page.locator('.checkout-actions').bounding_box()['height']<=901
     page.evaluate('scrollTo(0,0)');page.screenshot(path=str(screens/f'{stage}-{width}.png'),full_page=True)
    assert not places
-  page.get_by_role('navigation',name='Checkout steps').get_by_role('button').nth(1).click();page.wait_for_url('**/checkout/summary');page.get_by_label('Coupon code',exact=True).fill('INVALID');page.get_by_role('button',name='Apply coupon',exact=True).click();expect(page.locator('.checkout-feedback')).to_contain_text(re.compile('coupon',re.I));expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();page.get_by_role('button',name='Remove coupon',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_enabled()
+  page.get_by_role('navigation',name='Checkout steps').get_by_role('button').nth(1).click();page.wait_for_url('**/checkout/summary');
+  page.get_by_label('Coupon code',exact=True).fill('PRESERVE DRAFT');network['mode']='fail';page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.locator('.checkout-feedback .store-recovery')).to_be_visible();expect(page.get_by_label('Coupon code')).to_have_value('PRESERVE DRAFT');expect(page.locator('[data-checkout-line]').first).to_be_visible();expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled()
+  ctx.set_offline(True);expect(page.locator('.store-connection-notice')).to_be_visible();assert not places;network['mode']='live';ctx.set_offline(False);expect(page.get_by_role('button',name='Continue to Payment')).to_be_enabled(timeout=15000);expect(page.get_by_label('Coupon code')).to_have_value('PRESERVE DRAFT')
+  page.get_by_label('Coupon code',exact=True).fill('INVALID');page.get_by_role('button',name='Apply coupon',exact=True).click();expect(page.locator('.checkout-feedback')).to_contain_text(re.compile('coupon',re.I));expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();page.get_by_role('button',name='Remove coupon',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_enabled()
   page.get_by_label('Coupon code',exact=True).fill('DESIGN10');page.get_by_role('button',name='Apply coupon',exact=True).click();expect(page.locator('.checkout-applied')).to_contain_text('Applied savings:')
   points=page.get_by_role('region',name='Loyalty points',exact=True);points.locator('summary').click();points.get_by_label('Points to use',exact=True).fill('20');points.get_by_role('button',name='Apply Points',exact=True).click();expect(points).to_contain_text('(20 points)');expect(points).to_contain_text('25 pending earnings');expect(page.get_by_label('Price review',exact=True)).to_contain_text('Loyalty savings')
   points.get_by_role('button',name='Remove Points',exact=True).click();expect(page.get_by_label('Price review',exact=True)).not_to_contain_text('Loyalty savings');points.locator('summary').click() if not points.locator('details').evaluate('el=>el.open') else None;points.get_by_label('Points to use',exact=True).fill('20');points.get_by_role('button',name='Apply Points',exact=True).click();expect(points).to_contain_text('(20 points)')

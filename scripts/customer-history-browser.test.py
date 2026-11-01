@@ -50,7 +50,7 @@ try:
   root.get_by_role('link',name='Cancelled',exact=True).click();expect(cards).to_have_count(18);assert set(card.get_attribute('data-status') for card in cards.all())=={'Cancelled','Rejected'}
   # Initial loading/failure/empty are distinct. Technical diagnostics stay server-side.
   mode['value']='failure';root.get_by_role('link',name='All Orders',exact=True).click();expect(root.get_by_role('alert')).to_contain_text('We couldn’t load your orders');expect(root.locator('.history-empty')).to_have_count(0);assert 'PRIVATE-TECHNICAL' not in root.inner_text()
-  mode['value']='hold';root.get_by_role('button',name='Retry',exact=True).click();expect(root.get_by_role('status')).to_have_text('Loading your orders…');expect(root.locator('.history-skeleton')).to_have_count(3);page.screenshot(path=str(out/'loading-390.png'),full_page=True)
+  mode['value']='hold';root.get_by_role('button',name='Retry',exact=True).click();expect(root.get_by_role('status')).to_have_text('Loading your orders');expect(root.locator('.store-orders-skeleton>.sk-panel')).to_have_count(3);page.screenshot(path=str(out/'loading-390.png'),full_page=True)
   # Ignore delayed response from an earlier filter.
   for _ in range(80):
    if mode['held']:break

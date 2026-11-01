@@ -1,3 +1,5 @@
+import {boundedRead} from '../loading/request.ts';
+import {useReconnect} from '../loading/useRead.ts';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {collection,limit,onSnapshot,query} from 'firebase/firestore';
 import {useCustomerAuth} from '../customer/CustomerAuth.tsx';
@@ -17,21 +19,25 @@ export function useShopping(path:string,navigate:(path:string)=>void){
  const [removal,setRemoval]=useState<{uid:string;id:string;name:string}|null>(null);
  const [state,setState]=useState<State>({...empty,uid:'',status:'loading',hasLoaded:false}),[notice,setNotice]=useState<ShoppingNotice|null>(null),[busy,setBusy]=useState<Set<string>>(new Set()),[issues,setIssues]=useState<Record<string,Issue>>({});
  const locks=useRef(new Set<string>()),pending=useRef<Record<string,Issue>>({}),generation=useRef(0),request=useRef(0),serial=useRef(0),mounted=useRef(true),controllers=useRef(new Set<AbortController>());
+ const readLock=useRef<Promise<boolean>|null>(null),[refreshing,setRefreshing]=useState(false);
  const publish=useCallback((value:Omit<ShoppingNotice,'id'>)=>setNotice({...value,id:++serial.current}),[]);
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;for(const controller of controllers.current)controller.abort();};},[]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;readLock.current=null;generation.current++;for(const controller of controllers.current)controller.abort();};},[]);
  useEffect(()=>{setNotice(null);setRemoval(null);},[path]);
  const api=useCallback(async<T,>(body:Record<string,unknown>,owner=uid):Promise<T>=>{
-  const epoch=generation.current,user=getAuthClients().auth.currentUser;if(!owner||user?.uid!==owner)throw new Error('Sign in again to continue.');const token=await user.getIdToken();if(active.current!==owner||!mounted.current||epoch!==generation.current||getAuthClients().auth.currentUser!==user)throw new Error('Your account changed.');
+  const epoch=generation.current,user=getAuthClients().auth.currentUser;if(!owner||user?.uid!==owner)throw new Error('Sign in again to continue.');const token=await boundedRead(()=>user.getIdToken());if(active.current!==owner||!mounted.current||epoch!==generation.current||getAuthClients().auth.currentUser!==user)throw new Error('Your account changed.');
   const controller=new AbortController();controllers.current.add(controller);const timeout=setTimeout(()=>controller.abort(),20000);
   try{return await catalogResponse(await fetch('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body),signal:controller.signal}),false);}finally{clearTimeout(timeout);controllers.current.delete(controller);}
  },[uid]);
- const refresh=useCallback(async()=>{
-  if(!uid)return false;const attempt=++request.current,epoch=generation.current;
+ const refresh=useCallback(()=>{
+  if(readLock.current)return readLock.current;
+  const task=(async()=>{if(!uid)return false;setRefreshing(true);const attempt=++request.current,epoch=generation.current;
   try{const data=await api<ShoppingData>({action:'shopping:get'},uid);if(mounted.current&&active.current===uid&&epoch===generation.current&&attempt===request.current)setState({...data,uid,status:'ready',hasLoaded:true});return true;}
   catch{if(mounted.current&&active.current===uid&&epoch===generation.current&&attempt===request.current)setState(old=>({...old,...(old.uid!==uid?empty:{}),uid,status:'error'}));return false;}
+ })();readLock.current=task;void task.finally(()=>{if(readLock.current===task){readLock.current=null;if(mounted.current)setRefreshing(false);}});return task;
  },[uid,api]);
+ useReconnect(()=>{const owner=uid;if(readLock.current)void readLock.current.then(()=>{if(mounted.current&&active.current===owner)void refresh();});else void refresh();},!!uid);
  useEffect(()=>{
-  generation.current++;for(const controller of controllers.current)controller.abort();locks.current.clear();pending.current={};setIssues({});setBusy(new Set());setNotice(null);setRemoval(null);setState({...empty,uid,status:'loading',hasLoaded:false});if(!uid)return;
+  readLock.current=null;setRefreshing(false);generation.current++;for(const controller of controllers.current)controller.abort();locks.current.clear();pending.current={};setIssues({});setBusy(new Set());setNotice(null);setRemoval(null);setState({...empty,uid,status:'loading',hasLoaded:false});if(!uid)return;
   let live=true,timer:ReturnType<typeof setTimeout>|undefined;const changed=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(live)void refresh();},60);};
   const failed=()=>{if(live&&active.current===uid)setState(old=>({...old,uid,status:'error'}));};const stops:(()=>void)[]=[];
   try{const {database}=getAuthClients();for(const kind of ['bag','wishlist'])stops.push(onSnapshot(query(collection(database,'customerShopping',uid,kind),limit(SHOPPING_LIMIT+1)),changed,failed));}catch{failed();}
@@ -70,7 +76,7 @@ export function useShopping(path:string,navigate:(path:string)=>void){
  },[uid,path,navigate,perform,publish]);
  const mutate=(action:string,productId:string,fields:Record<string,unknown>={},key=productId)=>perform({action,productId,...fields,operationId:crypto.randomUUID().replaceAll('-','')},key);
  const matching=(key:string)=>[...busy].some(value=>value===uid+':'+key),isBusy=(id:string)=>session.status==='checking'||!!uid&&current.status==='loading'||matching('bag:'+id)||matching('wishlist:'+id);
- return {...current,signedIn:!!uid,uid,checking:session.status==='checking',removal:removal?.uid===uid?removal:null,cancelRemoval:()=>setRemoval(null),notice:notice?.uid===uid?notice:null,dismiss:()=>setNotice(null),retryChange,retry:refresh,isBusy,
+ return {...current,refreshing,signedIn:!!uid,uid,checking:session.status==='checking',removal:removal?.uid===uid?removal:null,cancelRemoval:()=>setRemoval(null),notice:notice?.uid===uid?notice:null,dismiss:()=>setNotice(null),retryChange,retry:refresh,isBusy,
   pendingBag:[...busy].some(key=>key.startsWith(uid+':bag:'))||Object.values(issues).some(issue=>issue.uid===uid&&issue.key.startsWith('bag:')),
   issueFor:(key:string)=>issues[key]?.uid===uid?issues[key]:undefined,isBlocked:(id:string)=>isBusy(id)||issues['bag:'+id]?.uid===uid||issues['wishlist:'+id]?.uid===uid,
   isWishlisted:(id:string)=>current.wishlist.some(item=>item.productId===id),isInCart:(id:string,variant:string|null=null)=>current.bag.some(item=>item.productId===id&&item.variantId===variant),

@@ -1,3 +1,4 @@
+import {ImageState} from '../loading/Loading.tsx';
 import './product-detail.css';
 import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
@@ -97,7 +98,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         {/* LEFT COLUMN: Gallery & Lightbox */}
         <div className="product-gallery space-y-3.5 md:sticky md:top-20">
           <div className="product-gallery-frame relative bg-[#F4EEE5] rounded-xl overflow-hidden border border-[#E8DDD6] shadow-sm group">
-            <img
+            <ImageState
               src={currentImageUrl}
               alt={imagesList.find(image=>image.key===activeImageKey)?.label || product.name}
               className="w-full h-full object-contain transition-all duration-300"
@@ -480,7 +481,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               className="product-recommendation-card bg-white rounded-xl border border-[#E8DDD6] overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="recommendation-art bg-[#F4EEE5]">
-                <img src={rel.images.full} alt={rel.name} className="w-full h-full object-contain" />
+                <ImageState src={rel.images.full} alt={rel.name} className="w-full h-full object-contain" />
               </div>
               <div className="p-3">
                 <h4 className="font-serif text-[14px] text-[#231919] font-semibold line-clamp-1">
