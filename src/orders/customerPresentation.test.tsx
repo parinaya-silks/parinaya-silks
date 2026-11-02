@@ -1,3 +1,5 @@
+import {OrderPoints} from '../loyalty/OrderPoints.tsx';
+import type {LoyaltyOrder} from '../loyalty/model.ts';
 import React from 'react';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,3 +30,9 @@ test('placement animation hints are account scoped, consumed once and never crea
  markPlacementArrival('customer','order');assert.equal(consumePlacementArrival('other','order'),false);assert.equal(consumePlacementArrival('customer','order'),true);assert.equal(consumePlacementArrival('customer','order'),false);
 });
 
+
+test('pending historical Delivered awards say awaiting review, never promise another delivery',()=>{
+ const loyalty={redeemed:0,discountPaise:'0',expected:20,stage:'pending',earned:0,reversed:0,restored:0} as LoyaltyOrder;
+ for(const html of [renderToStaticMarkup(<PaymentSummary order={{...order,status:'Delivered',loyalty}}/>),renderToStaticMarkup(<OrderPoints value={loyalty} status="Delivered"/>)]){assert.match(html,/Delivery is recorded; 20 expected points await store review/);assert.doesNotMatch(html,/remain pending until delivery/);}
+ assert.match(renderToStaticMarkup(<PaymentSummary order={{...order,status:'Processing',loyalty}}/>),/pending until delivery/);
+});

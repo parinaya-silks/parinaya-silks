@@ -61,7 +61,7 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
   const account=!!session.user&&mode==='account';
   if(account&&session.user)return <>{session.status==='error'&&<Recovery compact retry={session.retry} label="Retry sign-in" message="Unable to refresh your session. Please retry."/>}<CustomerAccount key={session.user.uid} onNavigate={onNavigate}/></>;
   const title=account?'Your account':mode==='register'?'Create an account':mode==='reset'?'Forgot password?':'Welcome back';
-  const subtitle=account?'Welcome to Parinaya Silks.':mode==='register'?'Create your account to stay connected with Parinaya.':mode==='reset'?'Enter your email and we will send reset instructions.':'Sign in to view your orders and saved favourites.';
+  const subtitle=account?'Welcome to Parinaya Sarees.':mode==='register'?'Create your account to stay connected with Parinaya.':mode==='reset'?'Enter your email and we will send reset instructions.':'Sign in to view your orders and saved favourites.';
   if(session.status==='checking'&&mode==='account')return <section className="customer-profile"><Loading kind="profile" label="Restoring your account" retry={session.retry}/></section>;
   if(session.status==='checking')return <AuthFrame title="Your account" subtitle="Restoring your session…" onNavigate={onNavigate}><Loading kind="auth" label="Restoring your session" retry={session.retry}/></AuthFrame>;
   if(session.status==='error')return <AuthFrame title="Sign-in unavailable" subtitle="Please try again." onNavigate={onNavigate}><p role="alert" className="customer-auth-notice">{session.message}</p><div className="customer-auth-actions"><button type="button" onClick={session.retry}>Retry sign-in setup</button></div></AuthFrame>;

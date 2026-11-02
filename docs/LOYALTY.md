@@ -10,7 +10,7 @@ Local implementation. No production activation, balances, settings, rules or ind
 - `loyaltyAccounts/{uid}/ledger/{orderId}_{event}`: immutable order-linked entries with `kind`, signed available change `points`, `reservedDelta`, `pendingDelta`, reason and server timestamp. Kinds are Reserved, Redeemed, Earned, Released, Restored and Reversed. The acceptance entry also records pending earnings. No independently writable balance is exposed.
 - `orders/{id}.loyalty`: immutable commercial terms, config revision, redeemed points/paise, earning basis and expected points, per-line after-coupon basis and point discount. Mutable lifecycle fields track stage, actual earned/reversed/restored points, returned line bases and refunded shipping. Order history and operation receipts remain authoritative.
 
-After an eventual application release, the owner must explicitly save approved valid rates to enable new loyalty orders. No historical backfill, tiers, expiry, referrals, transfers or manual balance adjustments are provided. Existing orders without a loyalty snapshot remain unchanged.
+After an eventual application release, the owner must explicitly save approved valid rates to enable new loyalty orders. No automatic historical backfill, tiers, expiry, referrals, transfers or manual balance adjustments are provided. A separate explicit-ID repair is documented in CLIENT_CHANGES.md. Existing orders without a loyalty snapshot remain unchanged.
 
 ## Calculation and confirmation
 
@@ -27,7 +27,7 @@ Let M be merchandise subtotal minus the existing coupon discount. Shipping stays
 
 Order acceptance reads settings, balance, stock and customer data in one Firestore transaction. It deducts requested available points into `reserved`, adds pending earnings, writes ledger entries, snapshots the order, deducts stock and writes the existing operation receipt atomically. Two tabs cannot spend one balance. Failed transactions leave no reservation. Same-operation recovery returns the accepted order and does not deduct twice.
 
-Only **Delivered + trusted recorded COD collection** settles the snapshot: reserved points become redeemed, pending earnings become available. Delivery alone earns nothing. The existing dual-authorized administrator collection action is reused; no customer-facing success event awards points.
+**Delivered** settles an eligible saved snapshot: reserved points become redeemed and pending earnings become available, regardless of COD collection. Payment and delivery remain separate: delivery never marks an order collected, earlier collection never earns points, and later collection never duplicates the delivery award. The stable `{orderId}_earned` entry and transaction protect retries and concurrency. Current settings do not requalify a historical order.
 
 Whole-order pre-completion cancellation/rejection releases reserved points and removes pending earnings. Resolving an entire return before payment collection also cancels the entitlement and releases points. Existing orders settle/release/refund under their saved terms even while the global program is disabled. Fulfilled cash refunds use the existing external-refund record, not a new money-transfer mechanism.
 
@@ -47,7 +47,7 @@ Ledger changes are differences from saved cumulative targets, capped by the orig
 
 If earnings were already spent, reversals remain in the ledger and can make `net` negative. Availability remains zero until new earnings or legitimate releases/restorations offset the debt. Other order snapshots are not rewritten.
 
-The original request approval/resolution prerequisite is retained. The existing domain provides whole-order cancellations; no partial-cancellation endpoint is introduced. This adds line-value allocation to **financial refund recording**, not a partial stock return engine. Existing Receive and Restock still returns the entire order inventory. For a partial financial return, resolve the approved request without restocking, then record the allocated external refund. There is no automated courier synchronization, exchange replacement engine, online refund processor or new policy promise. A resolution note alone does not prove a cash refund or reverse already-earned points: the trusted allocated refund record does.
+The original request approval/resolution prerequisite is retained. The existing domain provides whole-order cancellations; no partial-cancellation endpoint is introduced. This adds line-value allocation to **financial refund recording**, not a partial stock return engine. Existing Receive and Restock still returns the entire order inventory. For a partial financial return, resolve the approved request without restocking, then record the allocated external refund. There is no automated courier synchronization, exchange replacement engine, online refund processor or new policy promise. For a collected order, a resolution note alone does not prove a cash refund or reverse earned points: the trusted allocated refund record does. For an unpaid delivered order, resolving its return reverses the delivery earnings and restores any redeemed points atomically, without claiming a cash refund. Stable unpaid-return ledger entries prevent repetition and preserve debt handling.
 
 ## Screens and security
 
@@ -71,3 +71,7 @@ Ledger history is a per-account collection query ordered by `createdAt DESC, __n
 `scripts/loyalty-browser.test.py` uses loopback authentication, catalog API and Firestore for settings, Account retry, Apply/Remove, staged checkout, accepted order and refund UI, administrator/customer summaries, sign-out cleanup and widths 320–1920. Its fixture tool refuses non-loopback environments and creates only local orders through the trusted service.
 
 These checks do not establish production activation or hosted acceptance. Any future release should first verify the existing production deny rules, then save owner-approved settings and review the feature through authorized sessions. No production test orders are needed for local validation.
+
+## Delivery earning change and historical review
+
+See [CLIENT_CHANGES.md](CLIENT_CHANGES.md) for the explicit-ID, default-dry-run repair, exclusion criteria and local-only evidence. Already delivered pending orders are not credited by unrelated edits or a later collection event. Production historical repair requires a separate explicit instruction.

@@ -99,7 +99,7 @@ export const OrderResultView: React.FC<OrderResultViewProps> = ({ order, onNavig
                 Your order is confirmed!
               </h1>
               <p className="font-sans text-[14px] text-[#5F5552] mt-1">
-                Thank you for shopping with Parinaya Silks.
+                Thank you for shopping with Parinaya Sarees.
               </p>
             </div>
 

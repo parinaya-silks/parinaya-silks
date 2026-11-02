@@ -1,7 +1,7 @@
 import {ProductError} from '../products/model.ts';
 import {exact,noteText,text} from '../orders/model.ts';
 export const contentSections=[
- {id:'home-new-arrivals',group:'Homepage',name:'New Arrivals Section',explanation:'Text above the four newest eligible public products. View All opens Shop.',kind:'home',path:'/'},
+ {id:'home-new-arrivals',group:'Homepage',name:'Recent Unveiled Section',explanation:'Text above the four newest eligible public products. View All opens Shop.',kind:'home',path:'/'},
  {id:'home-campaigns',group:'Homepage',name:'Occasion Curations Section',explanation:'Text above current public sale campaigns. Campaigns retain their saved order and prices.',kind:'home',path:'/'},
  {id:'home-featured',group:'Homepage',name:'Featured Sarees Section',explanation:'Heading, introduction and description for the featured-product spotlight. The first eligible homepage assignment is highlighted.',kind:'home',path:'/'},
  {id:'home-categories',group:'Homepage',name:'Shop by Category Section',explanation:'Text above the existing featured-category navigation. Product/category assignments are unchanged.',kind:'home',path:'/'},

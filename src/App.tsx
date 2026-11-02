@@ -26,6 +26,7 @@ import {
 import {Seo} from './content/Seo.tsx';
 import {StoreContentProvider} from './content/public.tsx';
 import { Header } from './components/Header.tsx';
+import {FloatingSocial} from './contact/FloatingSocial.tsx';
 import {FloatingContact} from './contact/ContactLinks.tsx';
 import { Footer } from './components/Footer.tsx';
 import { MobileBottomNav } from './components/MobileBottomNav.tsx';
@@ -279,6 +280,7 @@ function StorefrontContent() {
 
       {!focusedExperience&&shopping.notice&&<CustomerNotice key={shopping.notice.id} notice={shopping.notice} path={currentPath} onDismiss={shopping.dismiss} onRetry={()=>shopping.retryChange()} onNavigate={navigate}/>}
       {!focusedExperience&&shopping.removal&&<RemovalDialog key={shopping.uid+shopping.removal.id} kind="wishlist" id={shopping.removal.id} variant={null} name={shopping.removal.name} shopping={shopping} onClose={shopping.cancelRemoval}/>}
+      {!focusedExperience&&!authExperience&&<FloatingSocial path={currentPath}/>}
       {/* Main Page View */}
       <ConnectionNotice/><main className="flex-1 w-full">
         {customerView}

@@ -96,6 +96,14 @@ test('trusted product CRUD, stock races, media ownership and public visibility',
     const variants=[{id:'wine',name:'Wine',hex:'#780D24',sku:'WINE',quantity:2},{id:'gold',name:'Gold',hex:'#B88A44',sku:'GOLD',quantity:3}];
     saved=await save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants}},saved.revision);assert.equal(quantity(saved),5);
     assert.equal('quantity' in saved.inventory,false);
+    const presentationBefore=structuredClone(saved.inventory);
+    saved=await save({...productInput(saved),videoUrl:'https://www.instagram.com/reel/local-fixture/',colorHex:'',inventory:{...saved.inventory,variants:saved.inventory.variants!.map((v,i)=>({...v,hex:i?'#b88a44':'#70a'}))}},saved.revision);
+    assert.equal(saved.videoUrl,'https://www.instagram.com/reel/local-fixture/');assert.equal(saved.colorHex,'');
+    assert.deepEqual(saved.inventory.variants!.map(({hex,...v})=>v),presentationBefore.variants!.map(({hex,...v})=>v));assert.equal(saved.inventory.variants![0].hex,'#7700AA');
+    assert.equal((await service.publicGet(draft.slug)).videoUrl,saved.videoUrl);assert.deepEqual((await db.doc(`products/${id}`).get()).get('unrelatedLegacyField'),{keep:true});
+    await assert.rejects(save({...productInput(saved),videoUrl:'https://youtube.com.attacker.test/watch?v=1'},saved.revision),{code:'invalid'});
+    saved=await save({...productInput(saved),videoUrl:''},saved.revision);assert.equal((await service.publicGet(draft.slug)).videoUrl,'');
+
     response=await fetch(api+'?slug='+draft.slug);publicDetail=await response.json();assert.equal('sku' in publicDetail.inventory.variants[0],false);
     await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:5,variants}},saved.revision),{code:'invalid'});
     await assert.rejects(save({...productInput(saved),inventory:{mode:'variants',quantity:0,variants:[variants[0],variants[0]]}},saved.revision),{code:'invalid'});

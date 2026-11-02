@@ -11,7 +11,7 @@ import {formatINR} from '../utils/pricing.ts';
 import {useCategories} from '../categories/useCategories.ts';
 import {discoveryFilters,discoveryUrl,discoverySorts,type DiscoveryFilters} from '../products/discovery.ts';
 interface ShopViewProps {products:Product[];initialCategory?:string;initialSearch?:string;categorySlug?:string;saleOnly?:boolean;campaignSlug?:string;campaignTitle?:string;onNavigate:(p:string)=>void;onAddToCart:(p:Product)=>void;onToggleWishlist:(p:Product)=>void;isWishlisted:(id:string)=>boolean}
-const labels={featured:'Featured',newest:'Newest Arrivals','price-asc':'Price: Low to High','price-desc':'Price: High to Low'};
+const labels={featured:'Featured',newest:'Recent Unveiled','price-asc':'Price: Low to High','price-desc':'Price: High to Low'};
 const paise=(s:string)=>{if(!s.trim())return null;if(!/^\d+(?:\.\d{1,2})?$/.test(s))throw Error('Enter prices with up to two decimal places.');const [a,b='']=s.split('.'),n=BigInt(a)*100n+BigInt(b.padEnd(2,'0'));if(n>100000000n)throw Error('Price is too large.');return Number(n);};
 export const ShopView:React.FC<ShopViewProps>=({initialCategory,initialSearch='',categorySlug:requestedSlug,saleOnly=false,campaignSlug,campaignTitle,onNavigate,onAddToCart,onToggleWishlist,isWishlisted})=>{
  const path=window.location.pathname+window.location.search,params=new URLSearchParams(window.location.search),{state:categoryState,retry:retryCategories}=useCategories();
@@ -58,6 +58,7 @@ export const ShopView:React.FC<ShopViewProps>=({initialCategory,initialSearch=''
                       className="w-full h-full object-contain"
                     />
 
+                    {(product.discountPercent||0)>0&&<span className="shop-discount-badge">{product.discountPercent}% OFF</span>}
                     {/* Wishlist Heart Button */}
                     <button
 

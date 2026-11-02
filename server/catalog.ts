@@ -66,7 +66,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     const data=document.data()!;
     if(data.schemaVersion!==1) throw new ProductError('schema','This product needs an owner-reviewed schema migration.');
     const optionalDefaults=emptyProduct();
-    const optional=new Set(['originalPricePaise','fabric','weaveType','zariType','colorName','colorHex','sareeLength','blouseIncluded','blouseDetails','careInstructions','weightGrams','featured','newArrival']);
+    const optional=new Set(['originalPricePaise','fabric','weaveType','zariType','colorName','colorHex','sareeLength','blouseIncluded','blouseDetails','careInstructions','weightGrams','featured','newArrival','videoUrl']);
     const input=Object.fromEntries(productFields.map(key=>[key,data[key]===undefined&&optional.has(key)?optionalDefaults[key]:data[key]]));
     input.images=(data.images||[]).map(({mediaId,alt}:ProductImage)=>({mediaId,alt}));
     const clean=validateProduct(input);

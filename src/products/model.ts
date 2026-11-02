@@ -10,7 +10,7 @@ export interface ProductInput {
   lowStockThreshold: number; fabric: string; weaveType: string; zariType: string;
   colorName: string; colorHex: string; sareeLength: string; blouseIncluded: boolean;
   blouseDetails: string; careInstructions: string; weightGrams: number | null;
-  featured: boolean; newArrival: boolean; status: ProductStatus;
+  featured: boolean; newArrival: boolean; status: ProductStatus; videoUrl?: string;
 }
 export interface ProductRecord extends Omit<ProductInput, 'images'> {
   id: string; images: ProductImage[]; revision: number; createdAt: number; updatedAt: number; categoryName: string;
@@ -25,11 +25,14 @@ export class ProductError extends Error {
 }
 export const MAX_IMAGES = 8;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-export const productFields = ['name','slug','sku','description','categoryId','pricePaise','originalPricePaise','images','coverMediaId','inventory','lowStockThreshold','fabric','weaveType','zariType','colorName','colorHex','sareeLength','blouseIncluded','blouseDetails','careInstructions','weightGrams','featured','newArrival','status'] as const;
-export function emptyProduct(): ProductInput { return { name:'',slug:'',sku:'',description:'',categoryId:'',pricePaise:0,originalPricePaise:null,images:[],coverMediaId:'',inventory:{mode:'simple',quantity:0},lowStockThreshold:2,fabric:'',weaveType:'',zariType:'',colorName:'',colorHex:'#780D24',sareeLength:'',blouseIncluded:false,blouseDetails:'',careInstructions:'',weightGrams:null,featured:false,newArrival:false,status:'Draft' }; }
+export const productFields = ['name','slug','sku','description','categoryId','pricePaise','originalPricePaise','images','coverMediaId','inventory','lowStockThreshold','fabric','weaveType','zariType','colorName','colorHex','sareeLength','blouseIncluded','blouseDetails','careInstructions','weightGrams','featured','newArrival','status','videoUrl'] as const;
+export function emptyProduct(): ProductInput { return { name:'',slug:'',sku:'',description:'',categoryId:'',pricePaise:0,originalPricePaise:null,images:[],coverMediaId:'',inventory:{mode:'simple',quantity:0},lowStockThreshold:2,fabric:'',weaveType:'',zariType:'',colorName:'',colorHex:'#780D24',sareeLength:'',blouseIncluded:false,blouseDetails:'',careInstructions:'',weightGrams:null,featured:false,newArrival:false,status:'Draft',videoUrl:'' }; }
 export function productInput(record: ProductRecord): ProductInput { const input = Object.fromEntries(productFields.map(key=>[key,record[key]])) as unknown as ProductInput; return {...input,images:record.images.map(({mediaId,alt})=>({mediaId,alt}))}; }
 export function quantity(product: {inventory:{mode:'simple'|'variants';quantity?:number;variants?:{quantity:number}[]}}): number { return product.inventory.mode === 'simple' ? product.inventory.quantity||0 : (product.inventory.variants||[]).reduce((total,variant)=>total+variant.quantity,0); }
-export function discount(product: Pick<ProductInput,'pricePaise'|'originalPricePaise'>) { return product.originalPricePaise && product.originalPricePaise > product.pricePaise ? Math.floor((product.originalPricePaise-product.pricePaise)*100/product.originalPricePaise) : 0; }
+export function discount(product: Pick<ProductInput,'pricePaise'|'originalPricePaise'>) { const {pricePaise:price,originalPricePaise:mrp}=product;return Number.isSafeInteger(price)&&price>0&&Number.isSafeInteger(mrp)&&mrp!>price?Number((BigInt(mrp!)-BigInt(price))*100n/BigInt(mrp!)):0; }
+export function normalizeHex(value:string,required=false){const v=value.trim();if(!v&&!required)return '';if(/^#[a-f\d]{3}$/i.test(v))return '#'+v.slice(1).split('').map(c=>c+c).join('').toUpperCase();if(/^#[a-f\d]{6}$/i.test(v))return v.toUpperCase();throw new ProductError('invalid','Enter a hex colour such as #780D24 or #F0A.');}
+export function productVideoUrl(value:unknown){if(value===undefined||value==='')return '';if(typeof value!=='string'||value.length>1000||/[\x00-\x20\\]/.test(value))throw new ProductError('invalid','Use a supported HTTPS Instagram, Facebook or YouTube video link.');let u:URL;try{u=new URL(value);}catch{throw new ProductError('invalid','Enter a valid video URL.');}const host=u.hostname.toLowerCase();if(u.protocol!=='https:'||u.username||u.password||u.port||!['instagram.com','www.instagram.com','facebook.com','www.facebook.com','m.facebook.com','fb.watch','youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(host)||u.pathname==='/')throw new ProductError('invalid','Use a supported HTTPS Instagram, Facebook or YouTube video link.');return u.href;}
+export function safeProductVideo(value:unknown){try{return productVideoUrl(value);}catch{return '';}}
 export function rupeesToPaise(value: string) { if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return NaN; const [whole,fraction=''] = value.split('.'); return Number(whole)*100 + Number(fraction.padEnd(2,'0')); }
 function object(value: unknown): value is Record<string,unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 export function validateProduct(value: unknown): ProductInput {
@@ -42,7 +45,8 @@ export function validateProduct(value: unknown): ProductInput {
   if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(result.slug)) errors.slug='Choose a permanent lowercase URL slug.';
   if(result.categoryId && !/^[A-Za-z0-9]{20}$/.test(result.categoryId)) errors.categoryId='Select an existing category.';
   if(result.sku && !/^[A-Za-z0-9._-]{1,64}$/.test(result.sku)) errors.sku='Use up to 64 letters, numbers, dots, hyphens or underscores.';
-  if(!/^#[0-9a-fA-F]{6}$/.test(result.colorHex)) errors.colorHex='Choose a valid colour.';
+  try{result.colorHex=normalizeHex(result.colorHex);}catch{errors.colorHex='Enter a hex colour such as #780D24, or leave it blank.';}
+  try{result.videoUrl=productVideoUrl(typeof value.videoUrl==='string'?value.videoUrl.trim():value.videoUrl);}catch{errors.videoUrl='Use a valid HTTPS Instagram, Facebook or YouTube video link.';}
   result.pricePaise=integer('pricePaise',100000000);
   result.originalPricePaise=value.originalPricePaise===null?null:integer('originalPricePaise',100000000);
   if(result.originalPricePaise!==null && result.originalPricePaise<result.pricePaise) errors.originalPricePaise='Original price cannot be below the selling price; otherwise leave it empty.';
@@ -64,8 +68,9 @@ export function validateProduct(value: unknown): ProductInput {
     const variants:Variant[]=[],ids=new Set<string>(),skus=new Set<string>();
     if((inv.quantity!==undefined&&inv.quantity!==0) || !Array.isArray(inv.variants) || !inv.variants.length || inv.variants.length>20) errors.inventory='Add at least one colour and enter its stock. Do not enter a separate total.';
     else for(const variant of inv.variants) {
-      if(!object(variant) || Object.keys(variant).some(k=>!['id','sku','name','hex','quantity'].includes(k)) || typeof variant.id!=='string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(variant.id) || ids.has(variant.id) || typeof variant.sku!=='string' || !/^[A-Za-z0-9._-]{1,64}$/.test(variant.sku) || skus.has(variant.sku.toLowerCase()) || typeof variant.name!=='string' || !variant.name.trim() || variant.name.length>80 || typeof variant.hex!=='string' || !/^#[a-fA-F0-9]{6}$/.test(variant.hex) || !Number.isSafeInteger(variant.quantity) || (variant.quantity as number)<0 || (variant.quantity as number)>1000000) {errors.inventory='Each colour needs a different code, a name, a colour swatch and a whole stock quantity.';break;}
-      ids.add(variant.id);skus.add(variant.sku.toLowerCase());variants.push(variant as unknown as Variant);
+      if(!object(variant) || Object.keys(variant).some(k=>!['id','sku','name','hex','quantity'].includes(k)) || typeof variant.id!=='string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(variant.id) || ids.has(variant.id) || typeof variant.sku!=='string' || !/^[A-Za-z0-9._-]{1,64}$/.test(variant.sku) || skus.has(variant.sku.toLowerCase()) || typeof variant.name!=='string' || !variant.name.trim() || variant.name.length>80 || typeof variant.hex!=='string' || !Number.isSafeInteger(variant.quantity) || (variant.quantity as number)<0 || (variant.quantity as number)>1000000) {errors.inventory='Each colour needs a different code, a name, a valid hex colour and a whole stock quantity.';break;}
+      let hex:string;try{hex=normalizeHex(variant.hex,true);}catch{errors.inventory='Each colour needs a valid hex value such as #780D24.';break;}
+      ids.add(variant.id);skus.add(variant.sku.toLowerCase());variants.push({...variant,hex} as unknown as Variant);
     }
     result.inventory={mode:'variants',variants};
   }

@@ -1,6 +1,6 @@
 export const policyPages={
  privacy:{title:'Privacy Policy',path:'/privacy-policy',intro:'Information about privacy and your use of our website.'},
- terms:{title:'Terms & Conditions',path:'/terms-conditions',intro:'Terms and information for shopping with Parinaya Silks.'},
+ terms:{title:'Terms & Conditions',path:'/terms-conditions',intro:'Terms and information for shopping with Parinaya Sarees.'},
  shipping:{title:'Shipping Policy',path:'/shipping-policy',intro:'Information about shipping and delivery.'},
  returns:{title:'Returns & Exchanges',path:'/returns-policy',intro:'Information about returns, exchanges and related requests.'},
 } as const;

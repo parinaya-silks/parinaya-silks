@@ -1,0 +1,1 @@
+export function pendingEarnings(expected:number,status?:string){return status==='Delivered'?`Delivery is recorded; ${expected} expected points await store review.`:`${expected} expected points remain pending until delivery.`;}

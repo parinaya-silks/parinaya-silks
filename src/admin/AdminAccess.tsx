@@ -1,3 +1,4 @@
+import {BRAND_UPPER} from '../config/brand.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { AdminAccessFrame, AdminLogin } from './AdminLogin.tsx';
 import { AdminPanel } from './AdminPanel.tsx';
@@ -45,7 +46,7 @@ export default function AdminAccess({ requestedPath }: { requestedPath: string }
       <fieldset disabled={!writable} className="min-w-0 m-0 p-0 border-0"><AdminPanel key={session.user.uid} path={safeAdminDestination(requestedPath)} email={session.user.email||'Administrator'} onSignOut={()=>void leave()}/></fieldset>
     </AdminPermissionContext.Provider>;
   }
-  if (checking) return <AdminAccessFrame><h1 className="font-serif text-2xl text-[#780D24]">PARINAYA SILKS</h1><p role="status">{signingOut ? 'Signing out…' : 'Checking administrator access…'}</p></AdminAccessFrame>;
+  if (checking) return <AdminAccessFrame><h1 className="font-serif text-2xl text-[#780D24]">{BRAND_UPPER}</h1><p role="status">{signingOut ? 'Signing out…' : 'Checking administrator access…'}</p></AdminAccessFrame>;
   if (session.status === 'signed-out') return <AdminLogin />;
   if (session.status === 'restricted') return <AdminAccessFrame>
     <h1 className="font-serif text-2xl text-[#780D24]">Access Restricted</h1>

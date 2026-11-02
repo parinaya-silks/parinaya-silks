@@ -352,7 +352,7 @@ export const AdminOrderDetail: React.FC<AdminOrderDetailProps> = ({
               <div className="flex items-center gap-2">
                 <BrandLogo className="w-8 h-8" decorative/>
                 <div>
-                  <h3 className="font-serif text-[16px] font-bold text-[#780D24]">PARINAYA SILKS</h3>
+                  <h3 className="font-serif text-[16px] font-bold text-[#780D24]">PARINAYA SAREES</h3>
                   <span className="text-[10px] text-[#5F5552] uppercase tracking-wider">
                     Official Dispatch Slip &amp; Assay Manifest
                   </span>

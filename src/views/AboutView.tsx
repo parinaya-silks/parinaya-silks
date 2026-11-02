@@ -22,7 +22,7 @@ export const AboutView=({onNavigate}:{onNavigate:(path:string)=>void})=>{
    </section>
    {sections.length>1&&<section className="about-story-sections" aria-label="More about Parinaya"><span className="editorial-eyebrow">Discover Parinaya</span><div>{sections.slice(1).map((s,i)=><article key={i}><BookOpen size={18}/><h2>{s.heading}</h2><p>{s.text}</p></article>)}</div></section>}
    {value.founder&&<div className="about-public-founder"><AboutCopy value={value} founderOnly/></div>}
-   <section className="about-editorial-actions"><MessageCircle size={23}/><div><h2>Explore Parinaya Silks</h2><p>Browse the collection or contact our team for assistance.</p></div><div><a className="editorial-button primary" href="/shop">Explore sarees <ArrowRight size={16}/></a><a className="editorial-button" href="/contact">Contact Us</a></div></section>
+   <section className="about-editorial-actions"><MessageCircle size={23}/><div><h2>Explore Parinaya Sarees</h2><p>Browse the collection or contact our team for assistance.</p></div><div><a className="editorial-button primary" href="/shop">Explore sarees <ArrowRight size={16}/></a><a className="editorial-button" href="/contact">Contact Us</a></div></section>
   </>}
  </div>;
 };

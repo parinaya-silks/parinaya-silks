@@ -9,6 +9,7 @@ export type FulfilmentStatus =
 export type PaymentStatus = 'Paid' | 'Pending' | 'Failed' | 'Refunded';
 
 export interface Product {
+  videoUrl?: string;
   // Future product persistence will use this stable reference, not a category name.
   categoryId?: string;
   id: string;

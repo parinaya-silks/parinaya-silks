@@ -46,7 +46,7 @@ try:
    if stage=='summary':page.get_by_role('button',name='Continue to Review',exact=True).click()
    if stage=='payment':page.get_by_role('button',name='Continue to Payment',exact=True).click()
    expect(page.get_by_role('heading',name=title,exact=True)).to_be_visible();expect(page.locator('.checkout-feedback')).not_to_contain_text('Checking current')
-   for width in [320,390,768,1440]:
+   for width in [320,390,768,1440,1920]:
     page.set_viewport_size({'width':width,'height':900});page.wait_for_timeout(80);assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(stage,width)
     expect(page.locator('.checkout-screen .material-symbols-outlined')).to_have_count(0)
     assert page.locator('.checkout-primary').bounding_box()['height']>=44
@@ -64,12 +64,13 @@ try:
   points=page.get_by_role('region',name='Loyalty points',exact=True);points.locator('summary').click();points.get_by_label('Points to use',exact=True).fill('20');points.get_by_role('button',name='Apply Points',exact=True).click();expect(points).to_contain_text('(20 points)');expect(points).to_contain_text('25 pending earnings');expect(page.get_by_label('Price review',exact=True)).to_contain_text('Loyalty savings')
   points.get_by_role('button',name='Remove Points',exact=True).click();expect(page.get_by_label('Price review',exact=True)).not_to_contain_text('Loyalty savings');points.locator('summary').click() if not points.locator('details').evaluate('el=>el.open') else None;points.get_by_label('Points to use',exact=True).fill('20');points.get_by_role('button',name='Apply Points',exact=True).click();expect(points).to_contain_text('(20 points)')
   quote=next(q for q in reversed(reviews) if q.get('loyalty',{}).get('appliedPoints')==20);expect(page.locator('[data-checkout-total]')).to_have_attribute('data-checkout-total',quote['totalPaise'])
-  for width in [390,1440]:
+  for width in [320,390,768,1440,1920]:
    page.set_viewport_size({'width':width,'height':900});page.evaluate('scrollTo(0,0)');page.screenshot(path=str(screens/f'summary-discounts-{width}.png'),full_page=True)
+   expect(points).to_contain_text('pending delivery.');assert 'recorded COD collection' not in points.inner_text();points.scroll_into_view_if_needed();page.screenshot(path=str(screens/f'delivery-points-{width}.png'))
   page.get_by_role('button',name='Continue to Payment',exact=True).click();page.wait_for_url('**/checkout/payment');expect(page.locator('input[name=payment]')).to_have_count(1);expect(page.locator('input[name=payment]')).to_be_checked();page.go_back();page.wait_for_url('**/checkout/summary');expect(page.get_by_label('Coupon code')).to_have_value('DESIGN10');page.reload();expect(page.get_by_label('Coupon code')).to_have_value('DESIGN10');expect(page.get_by_label('Price review')).to_contain_text('Loyalty savings')
   fixture('disable-loyalty');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.locator('.checkout-feedback')).to_contain_text('loyalty is disabled');expect(page.get_by_role('region',name='Loyalty points',exact=True)).to_have_count(0);expect(page.get_by_label('Price review')).not_to_contain_text('Loyalty savings');page.get_by_role('button',name='Remove Points',exact=True).click()
   fixture('price-change');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.get_by_role('button',name='I have reviewed the updated prices',exact=True)).to_be_visible();expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();page.get_by_role('button',name='I have reviewed the updated prices',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_enabled()
   fixture('stock-change');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();assert not places
   assert not errors,errors;browser.close()
- print('Checkout design browser passed: all three stages at four widths, address dialog/edit/focus/validation, authoritative totals, coupon and points Apply/Remove/disabled, stage and refresh recovery, price acknowledgement, stock blocking, local Lora/SVGs and no order creation on reads.')
+ print('Checkout design browser passed: all three stages at five widths, address dialog/edit/focus/validation, authoritative totals, coupon and points Apply/Remove/disabled, stage and refresh recovery, price acknowledgement, stock blocking, local Lora/SVGs and no order creation on reads.')
 finally:fixture('cleanup');fixture('cleanup','cod');fixture('cleanup','shopping')

@@ -1,3 +1,4 @@
+import {BRAND_UPPER} from '../config/brand.ts';
 import {FooterContactBlock} from '../contact/ContactPresentation.tsx';
 import {BrandLogo} from './BrandLogo.tsx';
 import {FooterTextCopy} from '../content/TextCopy.tsx';
@@ -19,7 +20,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="flex items-center gap-2.5">
               <BrandLogo className="w-8 h-8" decorative/>
               <span className="font-serif text-[17px] tracking-wider uppercase text-white font-medium">
-                PARINAYA SILKS
+                PARINAYA SAREES
               </span>
             </div>
             <FooterTextCopy value={content.textSections?.['footer-brand']}/><FooterContactBlock contact={contact}/>
@@ -126,7 +127,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         <div className="pt-6 flex flex-col sm:flex-row justify-between items-center text-[12px] text-[#9E9086] gap-3">
           <div>
-            © {new Date().getFullYear()} PARINAYA SILKS. All rights reserved.
+            © {new Date().getFullYear()} PARINAYA SAREES. All rights reserved.
           </div>
           <div className="flex items-center space-x-4">
             <button

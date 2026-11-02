@@ -5,7 +5,7 @@ import {Info} from 'lucide-react';
 import {PolicyLayout} from './PolicyLayout.tsx';
 import {policyPages,type PolicyKey,type PolicySection} from './model.ts';
 
-const paragraph='This local design sample demonstrates the reading layout. Parinaya Silks will supply and approve the final wording before this policy is published.';
+const paragraph='This local design sample demonstrates the reading layout. Parinaya Sarees will supply and approve the final wording before this policy is published.';
 const review='The topics below are placeholders for content review. They do not establish a service, deadline, entitlement, charge or business commitment.';
 const section=(heading:string,topic:string,extra?:Partial<PolicySection>):PolicySection=>({heading,paragraphs:[topic,paragraph],...extra});
 export const policySamples:Record<PolicyKey,PolicySection[]>={
@@ -23,12 +23,12 @@ export const policySamples:Record<PolicyKey,PolicySection[]>={
   section('Product Information','The owner will provide the applicable product-information terms.',{note:review}),
   section('Prices & Availability','Final wording must reflect the store\u2019s actual pricing and availability practices.'),
   section('Orders & Payments','The owner will provide applicable order and payment wording. This sample does not describe available payment methods.'),
-  section('Customer Accounts','Final account terms will be provided by Parinaya Silks.'),
+  section('Customer Accounts','Final account terms will be provided by Parinaya Sarees.'),
   section('Related Policies','The other policy pages can be reached through the Policy Centre.',{cards:[{heading:'Privacy Policy',text:'Read the available privacy wording.'},{heading:'Shipping Policy',text:'Read the available shipping wording.'},{heading:'Returns & Exchanges',text:'Read the available return and exchange wording.'}]}),
   section('Questions & Contact','Use Contact Us for questions. No special legal office, address or response time is established by this sample.'),
  ],
  shipping:[
-  section('Delivery Coverage','Parinaya Silks will provide the actual delivery coverage in the final policy.',{note:'This sample does not promise domestic or international coverage.'}),
+  section('Delivery Coverage','Parinaya Sarees will provide the actual delivery coverage in the final policy.',{note:'This sample does not promise domestic or international coverage.'}),
   section('Processing & Dispatch','Final processing and dispatch information will be supplied by the owner.'),
   section('Shipping Charges','The final policy wording will describe applicable shipping charges. This page does not change checkout calculations.',{note:review}),
   section('Delivery Estimates','Any delivery estimates must be supplied and approved by the owner. No estimate is specified in this local sample.'),
@@ -38,15 +38,15 @@ export const policySamples:Record<PolicyKey,PolicySection[]>={
  returns:[
   section('Overview','This local page demonstrates the return and exchange policy layout.',{paragraphs:[paragraph,review]}),
   section('Requesting a Cancellation','The owner will provide the applicable cancellation process and conditions.',{note:'No cancellation cutoff, fee or guarantee is established by this sample.'}),
-  section('Return Eligibility','Applicable eligibility wording will be provided and approved by Parinaya Silks.',{list:['Conditions and exclusions: final wording pending.','Required item information: final wording pending.','Request channels: final wording pending.']}),
+  section('Return Eligibility','Applicable eligibility wording will be provided and approved by Parinaya Sarees.',{list:['Conditions and exclusions: final wording pending.','Required item information: final wording pending.','Request channels: final wording pending.']}),
   section('Raising a Return Request','Final request instructions will be supplied by the owner. This presentation does not enable or alter return requests.'),
   section('Refund Information','The owner will provide any applicable refund process and terms. This sample promises no refund deadline or payment channel.'),
-  section('Damaged or Incorrect Items','Final guidance for reporting item concerns will be provided by Parinaya Silks.',{note:review}),
+  section('Damaged or Incorrect Items','Final guidance for reporting item concerns will be provided by Parinaya Sarees.',{note:review}),
   section('Contacting Support','Use the existing Contact Us page for questions about the available policy wording.'),
  ],
 };
 export default function PolicySample({policyKey,onNavigate,support}:{policyKey:PolicyKey;support?:React.ReactNode;onNavigate:(path:string)=>void}){
- return <PolicyLayout support={support} policyKey={policyKey} heading={policyPages[policyKey].title} preview sections={policySamples[policyKey]} onNavigate={onNavigate} notice={<div className="policy-sample-notice" role="note" data-policy-state="sample" data-fixture="LOCAL_POLICY_SAMPLE_ONLY"><Info size={23}/><div><strong>Local design preview</strong><p>Sample content for design review. Final policy wording will be provided by Parinaya Silks.</p></div></div>}>
+ return <PolicyLayout support={support} policyKey={policyKey} heading={policyPages[policyKey].title} preview sections={policySamples[policyKey]} onNavigate={onNavigate} notice={<div className="policy-sample-notice" role="note" data-policy-state="sample" data-fixture="LOCAL_POLICY_SAMPLE_ONLY"><Info size={23}/><div><strong>Local design preview</strong><p>Sample content for design review. Final policy wording will be provided by Parinaya Sarees.</p></div></div>}>
   {policyKey!=='shipping'&&<aside className="policy-intro-card"><Info size={23}/><div><h2>{policyKey==='privacy'?'Privacy policy preview':policyKey==='terms'?'Reading these terms':'Policy review note'}</h2><p>The sections below demonstrate the page layout. They do not replace approved policy wording.</p></div></aside>}
  </PolicyLayout>;
 }

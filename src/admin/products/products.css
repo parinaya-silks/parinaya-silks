@@ -311,3 +311,11 @@
 .product-qty-stepper input::-webkit-inner-spin-button,.product-qty-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 @media(max-width:767px){.product-variant-fields{grid-template-columns:34px minmax(0,1fr) 104px;gap:7px}.product-qty-stepper button{min-width:25px}.product-stock-modes button{font-size:12px}}
 .product-photo-tools input[type=file]{display:block;position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+.product-hex-field{display:flex;align-items:center;gap:8px;min-width:0}.product-hex-field i{display:block;flex:0 0 23px;height:23px;border:1px solid #cbbca9;border-radius:4px;pointer-events:none}.product-hex-field i[data-empty=true]{background:linear-gradient(135deg,#f6f0e7 45%,#bba98d 46%,#bba98d 52%,#f6f0e7 53%)}.product-hex-field input{min-width:0;width:100%}
+
+/* Hex text needs a real input column, rather than the former picker width. */
+.product-variant-fields{grid-template-columns:minmax(160px,.8fr) minmax(0,1fr) 116px;align-items:start}
+.product-variant-fields .product-hex-field input{min-width:110px;flex:1}
+.product-variant-fields small{font-size:11px;overflow-wrap:normal}
+@media(max-width:767px){.product-variant-fields{grid-template-columns:minmax(0,1fr) 104px;gap:12px}.product-variant-fields>.product-label:first-child{grid-column:1/-1}}

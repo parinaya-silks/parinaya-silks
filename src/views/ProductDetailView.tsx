@@ -2,7 +2,8 @@ import {ImageState} from '../loading/Loading.tsx';
 import './product-detail.css';
 import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
-import {LoaderCircle} from 'lucide-react';
+import {safeProductVideo} from '../products/model.ts';
+import {Play,LoaderCircle} from 'lucide-react';
 import { Product } from '../types/index.ts';
 import { formatINR } from '../utils/pricing.ts';
 
@@ -296,6 +297,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
           </div>
 
+          {safeProductVideo(product.videoUrl)&&<a className="product-reel-link" href={safeProductVideo(product.videoUrl)} target="_blank" rel="noopener noreferrer"><Play size={17}/>Watch Product Reel</a>}
           {/* Delivery Checker Card */}
           <div className="bg-white p-5 rounded-xl border border-[#E8DDD6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">

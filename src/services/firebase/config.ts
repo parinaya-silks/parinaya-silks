@@ -36,7 +36,7 @@ export function validateFirebaseConfiguration(environment: FirebaseEnvironment):
     if (values[option] && !valid) issues.push({ variable: FIREBASE_ENVIRONMENT_KEYS[option], reason });
   };
   check('apiKey', /^AIza[\w-]{35}$/.test(values.apiKey || ''), 'Expected a Firebase browser API key.');
-  check('projectId', values.projectId === EXPECTED_FIREBASE_PROJECT_ID, 'Must target the approved PARINAYA SILKS project.');
+  check('projectId', values.projectId === EXPECTED_FIREBASE_PROJECT_ID, 'Must target the approved Parinaya Sarees project.');
   check('authDomain', values.authDomain === `${EXPECTED_FIREBASE_PROJECT_ID}.firebaseapp.com`, 'Must match the supplied Firebase authentication domain.');
   check('storageBucket', values.storageBucket === `${EXPECTED_FIREBASE_PROJECT_ID}.firebasestorage.app`, 'Must match the supplied Firebase storage bucket.');
   check('messagingSenderId', /^\d+$/.test(values.messagingSenderId || ''), 'Expected a numeric sender ID.');

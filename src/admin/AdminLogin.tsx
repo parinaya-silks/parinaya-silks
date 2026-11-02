@@ -1,3 +1,4 @@
+import {BRAND_UPPER} from '../config/brand.ts';
 import {BrandLogo} from '../components/BrandLogo.tsx';
 import React, { useRef, useState } from 'react';
 import { adminPasswordReset, adminSignIn } from '../services/firebase/adminAuth.ts';
@@ -29,7 +30,7 @@ export function AdminLogin() {
   };
   return <AdminAccessFrame>
     <header className="text-center space-y-2">
-      <p className="font-serif tracking-wider text-[#780D24]">PARINAYA SILKS</p>
+      <p className="font-serif tracking-wider text-[#780D24]">{BRAND_UPPER}</p>
       <h1 className="font-serif text-2xl">{reset ? 'Reset administrator password' : 'Administrator Sign In'}</h1>
       <p className="text-sm text-[#5F5552]">{reset ? 'Request a password reset for your existing account.' : 'Sign in with your approved store account.'}</p>
     </header>

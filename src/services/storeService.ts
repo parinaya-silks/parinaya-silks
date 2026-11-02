@@ -17,7 +17,7 @@ class StoreService {
     return { id: '', name: '', email: '', phone: '', addresses: [], lifetimeSpend: 0, totalOrdersCount: 0, pointsBalance: 0, vipTier: 'Club Member', registeredDate: '', whatsappOptIn: false };
   }
   public getSettings(): StoreSettings {
-    return { storeName: 'PARINAYA SILKS', whatsapp: '', email: '', instagram: '', location: '', complimentaryShippingThreshold: 0, standardShippingFee: 0, loyaltyPointsEarnRate: 0, loyaltyPointsRedeemRate: 0, announcementBarText: '', announcementBarActive: false };
+    return { storeName: 'PARINAYA SAREES', whatsapp: '', email: '', instagram: '', location: '', complimentaryShippingThreshold: 0, standardShippingFee: 0, loyaltyPointsEarnRate: 0, loyaltyPointsRedeemRate: 0, announcementBarText: '', announcementBarActive: false };
   }
   public createOrder(_data: unknown): Order { throw new Error('Live checkout is not connected.'); }
   public updateCustomerProfile(_updates: Partial<Customer>): Customer { return unavailable(); }
