@@ -1,0 +1,174 @@
+/* Approved customer palette. Keep Admin's shared Tailwind/theme values intact.
+   Colours only: no sizing, opacity, image filters or layout rules belong here. */
+body:has(.customer-storefront),
+.customer-storefront {
+  --store-canvas: #BC8692;
+  --store-surface: #FFFFFF;
+  --store-primary: #780D24;
+  --store-heading: #3A0510;
+  --store-body: #2A0810;
+  --store-surface-text: #231919;
+}
+
+/* Body/root coverage includes short pages, outer gutters and mobile safe areas.
+   :has follows the mounted shell, so navigating to Admin restores its palette. */
+html:has(.customer-storefront),
+body:has(.customer-storefront),
+body:has(.customer-storefront) #root,
+.customer-storefront,
+.customer-storefront :is(.home-page, .home-curations, .discovery-page,
+  .discovery-heading, .shopping-page, .checkout-screen, .checkout-progress,
+  .customer-order-experience, .customer-order-history) {
+  background-color: var(--store-canvas, #BC8692);
+}
+.customer-storefront,
+.customer-storefront :is(.home-page, .discovery-page, .shopping-page,
+  .checkout-screen, .customer-order-experience, .customer-order-history,
+  .editorial-page, .policy-page, .customer-profile) {
+  color: var(--store-body);
+}
+
+/* Explicit surfaces, separate from the page canvas. Existing semantic notices,
+   image placeholders, swatches, artwork overlays and brand footer are retained. */
+.customer-storefront :is(.home-product-card, .home-product-body,
+  .shopping-wish-card, .shopping-bag-line:not([data-unavailable=true]),
+  .shopping-bag-summary) {
+  background-color: var(--store-surface);
+  color: #2A2020;
+}
+.customer-storefront :is(.checkout-card, .order-card, .history-card,
+  .profile-card, .profile-greeting, .customer-auth-panel,
+  .contact-direct-card, .contact-location-card, .contact-order-chat,
+  .contact-message-card, .about-editorial-opening, .about-editorial-hero figure,
+  .about-story-sections article, .about-founder, .about-editorial-actions,
+  .policy-real-copy, .policy-directory, .policy-desktop-index,
+  .policy-mobile-selector, .policy-mobile-index, .policy-info-cards>div,
+  .policy-intro-card, .policy-closing, .policy-side-support,
+  .storefront-drawer, .analytics-consent) {
+  background-color: var(--store-surface);
+  color: var(--store-surface-text);
+}
+.customer-storefront :is(.discovery-search, .discovery-toolbar>button,
+  .discovery-toolbar>label, .discovery-chips>*, .policy-mobile-selector select,
+  .shopping-quantity, .profile-address-card, .checkout-secondary,
+  .storefront-bottom-nav, .order-bottom-nav) {
+  background-color: var(--store-surface);
+}
+.customer-storefront .discovery-categories button:not([aria-current=page]),
+.customer-storefront .history-filters a:not([aria-current]) {
+  background-color: var(--store-surface);
+}
+.customer-storefront :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=submit]):not([type=button]), select, textarea) {
+  background-color: var(--store-surface);
+}
+.customer-storefront :is(input, textarea)::placeholder {
+  color: #6B6266;
+}
+
+/* Native modal/top-layer and any customer portal inherit the same surfaces.
+   The body guard prevents these rules reaching administrator dialogs. */
+body:has(.customer-storefront) :is(dialog, .discovery-dialog,
+  .delivery-address-editor, .address-editor-heading, .address-editor-actions,
+  .customer-shopping-dialog footer, .customer-order-dialog header,
+  .customer-order-dialog footer, .profile-dialog header, .profile-dialog footer) {
+  background-color: var(--store-surface);
+}
+body:has(.customer-storefront) dialog {
+  color: var(--store-surface-text);
+}
+body:has(.customer-storefront) dialog :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), select, textarea) {
+  background-color: var(--store-surface);
+}
+.customer-storefront .customer-profile .profile-dialog input[readonly] {
+  background-color: var(--store-surface);
+}
+
+/* Copy sitting directly on the canvas needs darker ink. Select the specific
+   page headings/support copy, not headings inside white cards or banner art. */
+.customer-storefront :is(.discovery-heading h1, .home-section-heading h2,
+  .home-categories>.home-copy h2, .shopping-page-heading h1,
+  .checkout-title h1, .history-introduction h1, .contact-editorial-heading h1,
+  .policy-heading h1, .about-story-sections>h2,
+  .order-greeting h1, .order-greeting h2) {
+  color: var(--store-heading);
+}
+.customer-storefront :is(.home-categories, .home-arrivals, .home-curations) :is(.home-copy p, .home-rail-heading>span, .home-collection-status),
+.customer-storefront :is(.discovery-heading>span, .shopping-breadcrumb,
+  .shopping-page-heading p, .shopping-bag-count, .history-navigation,
+  .history-introduction p, .history-pagination, .history-loading-more,
+  .history-skeletons>p, .history-support, .history-support p,
+  .checkout-title>small, .checkout-title>p, .checkout-progress small,
+  .checkout-address-list>header,
+  .checkout-address-list>header span, .checkout-footer,
+  .policy-heading>span, .policy-heading>p, .policy-breadcrumb,
+  .policy-breadcrumb>span, .editorial-page>nav, .editorial-eyebrow,
+  .contact-editorial-heading>p, .contact-no-methods,
+  .order-greeting>p, .order-greeting .order-label, .order-detail-heading>time,
+  .order-footer, .customer-profile .profile-breadcrumb, .store-slow,
+  .store-updating, .campaign-offers>p) {
+  color: var(--store-body);
+}
+.customer-storefront .policy-sections>section>h2,
+.customer-storefront .policy-sections>section>h2>span {
+  color: var(--store-heading);
+}
+.customer-storefront .policy-sections>section>p,
+.customer-storefront .policy-sections>section>ul>li {
+  color: var(--store-body);
+}
+.customer-storefront :is(.home-section-heading>a, .home-rail-heading button,
+  .home-collection-retry, .home-state, .shopping-page-heading>a,
+  .shopping-continue, .history-support a, .policy-back-top button,
+  .history-navigation>a, .discovery-more button,
+  .campaign-storefront>section button) {
+  color: var(--store-heading);
+}
+.customer-storefront :is(.home-categories, .home-arrivals, .home-curations) .home-copy h2,
+.customer-storefront .recommendation-heading h3 {
+  color: var(--store-heading);
+}
+.customer-storefront :is(.home-swipe-guidance, .editorial-page>nav span,
+  .recommendation-heading span) {
+  color: var(--store-body);
+}
+.customer-storefront main>div:has(>[aria-label="Saved delivery addresses"])>button,
+.customer-storefront [aria-label="Saved delivery addresses"]:not(.profile-card):not(.checkout-address-list)>p {
+  color: var(--store-body);
+}
+.customer-storefront [aria-label="Saved delivery addresses"]:not(.profile-card):not(.checkout-address-list)>div>button {
+  background-color: var(--store-surface);
+}
+.customer-storefront .product-detail-page>nav,
+.customer-storefront .product-detail-page>nav>span,
+.customer-storefront .history-support h2 {
+  color: var(--store-body);
+}
+/* Retain white input/card text and give keyboard focus a contrasting ring. */
+.customer-storefront :is(.home-product-card, .checkout-card, .order-card) {
+  color: var(--store-surface-text);
+}
+.customer-storefront .discovery-search button {
+  color: var(--store-primary);
+}
+.customer-storefront .checkout-progress [data-current=true] {
+  color: var(--store-heading);
+}
+.customer-storefront :is(.profile-breadcrumb a, .checkout-recovery-links .checkout-link,
+  .checkout-footer>span, .order-footer>span, .order-footer a) {
+  color: var(--store-body);
+}
+/* The action dock is white on small screens and transparent on desktop. */
+@media (min-width: 1024px) {
+  .customer-storefront .checkout-actions small,
+  .customer-storefront .checkout-actions small a {
+    color: var(--store-body);
+  }
+}
+.customer-storefront :focus-visible {
+  outline-color: var(--store-heading);
+}
+.customer-storefront .storefront-header :focus-visible,
+.customer-storefront :is(.home-spotlight, .home-campaign, .home-banner-carousel, .home-footer) :focus-visible,
+.customer-storefront>footer :focus-visible {
+  outline-color: #F2BE72;
+}

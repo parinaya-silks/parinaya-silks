@@ -4,6 +4,7 @@ import { removeRetiredDemoItems } from './services/legacyDemoCleanup.ts';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './components/storefront-colours.css';
 import { getFirestoreClient } from './services/firebase/firestore.ts';
 
 // Initialize the client without reading data or changing storefront/demo behavior.
