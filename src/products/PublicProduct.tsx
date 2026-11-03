@@ -8,7 +8,7 @@ import { usePublicProduct } from './hooks.ts';
 import { storefrontProduct } from './adapter.ts';
 import { ProductDetailView } from '../views/ProductDetailView.tsx';
 import type {Product} from '../types/index.ts';
-export function PublicProduct({slug,products,onNavigate,onAddToCart,onToggleWishlist,isWishlisted,isShoppingBusy}:{slug:string;products:Product[];onNavigate:(path:string)=>void;onAddToCart:(product:Product,quantity?:number,color?:string)=>void;onToggleWishlist:(product:Product)=>void;isWishlisted:(id:string)=>boolean;isShoppingBusy?:(id:string)=>boolean}) {
+export function PublicProduct({path,slug,products,onNavigate,onAddToCart,onToggleWishlist,isWishlisted,isShoppingBusy}:{path?:string;slug:string;products:Product[];onNavigate:(path:string)=>void;onAddToCart:(product:Product,quantity?:number,color?:string)=>void;onToggleWishlist:(product:Product)=>void;isWishlisted:(id:string)=>boolean;isShoppingBusy?:(id:string)=>boolean}) {
   const state=usePublicProduct(slug),session=useCustomerAuth();
   const buyNow=(product:Product,quantity:number,color?:string)=>{
     if(session.status==='checking')throw new Error('Please wait while your account is restored.');
@@ -16,8 +16,8 @@ export function PublicProduct({slug,products,onNavigate,onAddToCart,onToggleWish
     const id=beginBuyNow(uid,{kind:'buy-now',productId:product.id,variantId:product.variants?.length?color||null:null,quantity},product.slug||slug),path=checkoutPath('delivery',id);
     onNavigate(uid?path:'/login?returnTo='+encodeURIComponent(path));
   };
-  if(state.status==='ready'&&state.product)return <><Updating busy={state.busy} error={state.error} retry={state.retry}/><Seo path={'/product/'+slug} product={state.product}/><ProductDetailView key={state.product.id} product={storefrontProduct(state.product)} allProducts={products} onNavigate={onNavigate} onAddToCart={onAddToCart} onBuyNow={buyNow} onToggleWishlist={onToggleWishlist} isWishlisted={isWishlisted} isShoppingBusy={isShoppingBusy}/></>;
+  if(state.status==='ready'&&state.product)return <><Updating busy={state.busy} error={state.error} retry={state.retry}/><Seo path={path||'/product/'+slug} product={state.product}/><ProductDetailView key={state.product.id} product={storefrontProduct(state.product)} allProducts={products} onNavigate={onNavigate} onAddToCart={onAddToCart} onBuyNow={buyNow} onToggleWishlist={onToggleWishlist} isWishlisted={isWishlisted} isShoppingBusy={isShoppingBusy}/></>;
   if(state.status==='loading')return <Loading kind="product" label="Loading product" retry={state.retry}/>;
-  if(state.status==='error')return <Recovery retry={state.retry} label="Retry product"/>;
-  return <section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">Product not found</h1><button className="min-h-11 px-5 underline" onClick={()=>onNavigate('/shop')}>Continue shopping</button></section>;
+  if(state.status==='error')return <><Seo path={path||'/product/'+slug} analyticsReady/><Recovery retry={state.retry} label="Retry product"/></>;
+  return <><Seo path={path||'/product/'+slug} analyticsReady/><section className="p-8 text-center space-y-4"><h1 className="font-serif text-2xl">Product not found</h1><button className="min-h-11 px-5 underline" onClick={()=>onNavigate('/shop')}>Continue shopping</button></section></>;
 }

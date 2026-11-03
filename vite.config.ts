@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Vercel supplies this build-time system value. Preview/local builds fail closed.
+    define: {'import.meta.env.VITE_DEPLOYMENT_ENV': JSON.stringify(process.env.VERCEL_ENV || 'local')},
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

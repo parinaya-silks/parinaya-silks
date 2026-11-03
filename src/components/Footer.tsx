@@ -4,6 +4,7 @@ import {BrandLogo} from './BrandLogo.tsx';
 import {FooterTextCopy} from '../content/TextCopy.tsx';
 import {useStoreContent,usePublicContact} from '../content/public.tsx';
 import React from 'react';
+import {AnalyticsPreferencesButton} from '../analytics/Consent.tsx';
 
 interface FooterProps {
   onNavigate: (path: string) => void;
@@ -129,7 +130,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             © {new Date().getFullYear()} PARINAYA SAREES. All rights reserved.
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <AnalyticsPreferencesButton/>
             <button
               onClick={() => onNavigate('/policies?tab=privacy')}
               className="hover:text-white transition-colors"

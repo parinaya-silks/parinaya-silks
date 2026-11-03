@@ -1,4 +1,5 @@
 import {ConnectionNotice} from './loading/Loading.tsx';
+import {AnalyticsConsent} from './analytics/Consent.tsx';
 import {RemovalDialog} from './shopping/ShoppingDialogs.tsx';
 import {CustomerNotice} from './shopping/CustomerNotice.tsx';
 import {CampaignStorefront} from './campaigns/CampaignStorefront.tsx';
@@ -211,7 +212,7 @@ function StorefrontContent() {
     );
   } else if (currentPath.startsWith('/product/')) {
     const slug = currentPath.replace('/product/', '').split('?')[0];
-    customerView = <PublicProduct isShoppingBusy={shopping.isBusy} key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
+    customerView = <PublicProduct path={currentPath} isShoppingBusy={shopping.isBusy} key={slug} slug={slug} products={products} onNavigate={navigate} onAddToCart={handleAddToCart} onToggleWishlist={handleToggleWishlist} isWishlisted={isWishlisted} />;
   } else if (currentPath === '/wishlist') {
     customerView = (
       <WishlistView key={session.user?.uid||'signed-out'} shopping={shopping} onNavigate={navigate}/>
@@ -255,6 +256,7 @@ function StorefrontContent() {
   return (
     <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"customer-storefront min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")+(currentPath==='/'?" homepage-shell":"")}>
       <Seo path={currentPath}/>
+      <AnalyticsConsent path={currentPath}/>
       {/* Top Store Announcement Banner */}
       {!focusedExperience && settings.announcementBarActive && settings.announcementBarText && (
         <div className="bg-[#780D24] text-[#FBF7F0] text-[11px] sm:text-[12px] font-sans font-medium py-2 px-4 text-center tracking-wide border-b border-[#B88A44]/30 flex items-center justify-center gap-2">
