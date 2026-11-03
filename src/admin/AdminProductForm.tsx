@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import React,{useEffect,useRef,useState} from 'react';
 import {doc,collection} from 'firebase/firestore';
 import {getDatabaseClient} from '../services/firebase/database.ts';
@@ -18,7 +19,7 @@ const labels:Record<string,string>={videoUrl:'Product Reel / Video Link',name:'P
 function HexField({value,label,onChange,required=false}:{value:string;label:string;onChange:(v:string)=>void;required?:boolean}){let hex='',error='';try{hex=normalizeHex(value,required);}catch{error='Enter #RRGGBB (for example #780D24) or #RGB.';}return <><span className="product-hex-field"><i aria-hidden="true" data-empty={!hex} style={hex?{backgroundColor:hex}:undefined}/><input aria-label={label} type="text" inputMode="text" autoComplete="off" spellCheck={false} placeholder="#780D24" value={value} maxLength={32} aria-invalid={!!error} onChange={e=>onChange(e.target.value)} onBlur={()=>{if(!error)onChange(hex);}} className={field}/></span>{error&&<small className="product-field-error">{error}</small>}<small className="product-hint">Hex code{required?'':', optional'}. Names are entered separately.</small></>;}
 function CategoryDrawer({onClose}:{onClose:()=>void}) {
   const dialog=useRef<HTMLDialogElement>(null);
-  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;dialog.current?.showModal();return()=>previous?.focus();},[]);
+  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;openModal(dialog.current);return()=>{closeModal(dialog.current);previous?.focus({preventScroll:true});};},[]);
   return <dialog ref={dialog} aria-label="Manage product categories" onCancel={event=>{event.preventDefault();onClose();}} className="m-auto w-[calc(100%-1rem)] max-w-3xl max-h-[90dvh] overflow-y-auto rounded-xl border border-[#E8DDD6] bg-[#FBF7F0] p-4 sm:p-6 backdrop:bg-black/50"><button autoFocus type="button" className={button+' mb-4'} onClick={onClose}>Back to product</button><AdminCategories onNavigate={onClose}/></dialog>;
 }
 export function AdminProductForm({product,onNavigate,initialSuccess=''}:{product?:ProductRecord;initialSuccess?:string;onNavigate:(path:string)=>void}) {

@@ -1,0 +1,184 @@
+{
+  "project": "parinaya-silks",
+  "database": "(default)",
+  "checkedAt": "2026-11-03T06:21:59.191Z",
+  "readOnly": true,
+  "ready": [
+    {
+      "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/CICAgOjXh4EK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/CICAgJiUpoMK",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "featured",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "state": "READY",
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "categoryMatches": 1,
+  "missing": [
+    {
+      "sort": "featured",
+      "ok": false,
+      "code": 9,
+      "indexCreationUrl": "https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=Ck9wcm9qZWN0cy9wYXJpbmF5YS1zaWxrcy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvZHVjdHMvaW5kZXhlcy9fEAEaDgoKY2F0ZWdvcnlJZBABGgoKBnN0YXR1cxABGgwKCGZlYXR1cmVkEAIaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg",
+      "index": {
+        "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/_",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "featured",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    },
+    {
+      "sort": "newest",
+      "ok": false,
+      "code": 9,
+      "indexCreationUrl": "https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=Ck9wcm9qZWN0cy9wYXJpbmF5YS1zaWxrcy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvZHVjdHMvaW5kZXhlcy9fEAEaDgoKY2F0ZWdvcnlJZBABGgoKBnN0YXR1cxABGg0KCWNyZWF0ZWRBdBACGgwKCF9fbmFtZV9fEAI",
+      "index": {
+        "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/_",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    },
+    {
+      "sort": "price-asc",
+      "ok": false,
+      "code": 9,
+      "indexCreationUrl": "https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=Ck9wcm9qZWN0cy9wYXJpbmF5YS1zaWxrcy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvZHVjdHMvaW5kZXhlcy9fEAEaDgoKY2F0ZWdvcnlJZBABGgoKBnN0YXR1cxABGg4KCnByaWNlUGFpc2UQARoNCgljcmVhdGVkQXQQAhoMCghfX25hbWVfXxAC",
+      "index": {
+        "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/_",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "pricePaise",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    },
+    {
+      "sort": "price-desc",
+      "ok": false,
+      "code": 9,
+      "indexCreationUrl": "https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=Ck9wcm9qZWN0cy9wYXJpbmF5YS1zaWxrcy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvZHVjdHMvaW5kZXhlcy9fEAEaDgoKY2F0ZWdvcnlJZBABGgoKBnN0YXR1cxABGg4KCnByaWNlUGFpc2UQAhoNCgljcmVhdGVkQXQQAhoMCghfX25hbWVfXxAC",
+      "index": {
+        "name": "projects/parinaya-silks/databases/(default)/collectionGroups/products/indexes/_",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "pricePaise",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    }
+  ],
+  "bulkSourceQuery": {
+    "ok": false,
+    "code": 9,
+    "indexCreationUrl": "https://console.firebase.google.com/v1/r/project/parinaya-silks/firestore/indexes?create_composite=Ck1wcm9qZWN0cy9wYXJpbmF5YS1zaWxrcy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvb3JkZXJzL2luZGV4ZXMvXxABGgoKBnN0YXR1cxABGg0KCWNyZWF0ZWRBdBACGgwKCF9fbmFtZV9fEAI"
+  }
+}

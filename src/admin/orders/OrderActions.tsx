@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../../components/modalLayer.ts';
 import {loyaltyRefund} from '../../loyalty/model.ts';
 import {shippingAmount} from '../../shipping/model.ts';
 import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
@@ -18,7 +19,7 @@ export const OrderActions=forwardRef<OrderActionsHandle,{order:DetailOrder;refre
  const lock=useRef(false),active=useRef(true),select=useRef<HTMLSelectElement>(null),dialog=useRef<HTMLDialogElement>(null),cancel=useRef<HTMLButtonElement>(null),focus=useRef<HTMLElement|null>(null),section=useRef<HTMLElement>(null),finance=orderFinance(order);
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  useImperativeHandle(ref,()=>({choose(value){if(busy||uncertain)return;setCommand(value);setError('');setSuccess('');section.current?.scrollIntoView({block:'start',behavior:'instant'});select.current?.focus();}}),[busy,uncertain]);
- useEffect(()=>{if(!plan)return;focus.current=document.activeElement as HTMLElement;dialog.current?.showModal();cancel.current?.focus();const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{dialog.current?.close();document.body.style.overflow=previous;focus.current?.focus();};},[plan]);
+ useEffect(()=>{if(!plan)return;focus.current=document.activeElement as HTMLElement;openModal(dialog.current);cancel.current?.focus();return()=>{closeModal(dialog.current);focus.current?.focus();};},[plan]);
  useEffect(()=>{if(!command&&!note&&!courier&&!trackingNumber&&!trackingUrl&&!reference&&!amount&&!method&&!uncertain)return;const guard=(event:Event)=>{if(lock.current||!window.confirm('Leave this order action? Unsaved inputs will be discarded. An uncertain operation should be checked before submitting another action.'))event.preventDefault();};window.addEventListener('parinaya:before-admin-navigation',guard);return()=>window.removeEventListener('parinaya:before-admin-navigation',guard);},[command,note,courier,trackingNumber,trackingUrl,reference,amount,method,uncertain]);
  function prepare(event:React.FormEvent){event.preventDefault();if(lock.current||!allowed||refreshing||uncertain)return;setError('');setSuccess('');try{
   if(!commands.includes(command))throw new ProductError('conflict','This action is no longer available. Review the refreshed order.');

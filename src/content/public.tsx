@@ -10,7 +10,7 @@ import type {PublicWebsiteText} from './sections.ts';
 import type {PublicBanner} from './model.ts';
 import {safeLink} from '../orders/model.ts';
 import {catalogResponse} from '../products/response.ts';
-type PublicContent={bannerSeconds?:number}&Omit<StoreContent,'revision'|'banners'|'contact'>&{about?:PublicAbout;aboutSaved?:boolean;contact:PublicContact;banners:PublicBanner[];textSections?:PublicWebsiteText}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string}[]};
+type PublicContent={bannerSeconds?:number}&Omit<StoreContent,'revision'|'banners'|'contact'>&{about?:PublicAbout;aboutSaved?:boolean;contact:PublicContact;banners:PublicBanner[];textSections?:PublicWebsiteText}&{featuredProducts?:PublicProductRecord[];featuredCategories?:{id:string;name:string;slug:string;homepageImage?:import('../appearance/model.ts').LoginImage|null}[]};
 const emptyPublicContent=()=>({...blankContent(),contact:publicContact()});
 const Context=createContext<{content:PublicContent;status:'loading'|'ready'|'error';hasLoaded:boolean;busy:boolean;retry:()=>void}>({content:emptyPublicContent(),status:'loading',hasLoaded:false,busy:true,retry:()=>{}});
 export const useStoreContent=()=>useContext(Context);

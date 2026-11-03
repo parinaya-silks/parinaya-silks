@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../../components/modalLayer.ts';
 import {useEffect,useRef,useState} from 'react';
 import {SlidersHorizontal,X} from 'lucide-react';
 import {orderStatuses} from '../../orders/model.ts';
@@ -6,7 +7,7 @@ import {blankFilters,orderQuery,periods,type OrderFilters} from './model.ts';
 
 export function OrderFiltersControl({value,disabled,onApply}:{value:OrderFilters;disabled:boolean;onApply:(filters:OrderFilters)=>void}){
  const [open,setOpen]=useState(false),[draft,setDraft]=useState(value),[error,setError]=useState(''),dialog=useRef<HTMLDialogElement>(null),first=useRef<HTMLSelectElement>(null),trigger=useRef<HTMLButtonElement>(null),lastFocus=useRef<HTMLElement|null>(null);
- useEffect(()=>{if(!open)return;dialog.current?.showModal();first.current?.focus();const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{dialog.current?.close();document.body.style.overflow=previous;lastFocus.current?.focus();};},[open]);
+ useEffect(()=>{if(!open)return;openModal(dialog.current);first.current?.focus();return()=>{closeModal(dialog.current);lastFocus.current?.focus();};},[open]);
  function edit(){lastFocus.current=document.activeElement as HTMLElement;setDraft(value);setError('');setOpen(true);}
  function apply(event:React.FormEvent){event.preventDefault();try{orderQuery(draft);onApply(draft);setOpen(false);}catch(error){setError(error instanceof Error?error.message:'Choose valid filters.');}}
  const count=Number(value.statuses.length>0)+Number(!!value.paymentStatus)+Number(value.period!=='all');

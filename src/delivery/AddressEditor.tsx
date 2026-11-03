@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import {X} from 'lucide-react';
 import React,{useEffect,useRef,useState} from 'react';
 import {ProductError} from '../products/model.ts';
@@ -15,7 +16,7 @@ export function AddressEditor({book,address,onClose,onSaved,checkout=false,profi
   const identity=useRef({id:address?.id||deliveryOperation(),operationId:deliveryOperation(),signature:''});
   const revision=useRef(address?.revision||0);
   useEffect(()=>{if(!address)setValue(previous=>({...previous,...(!touched.current.has('recipientName')?{recipientName:book.prefill.name}:{}),...(!touched.current.has('mobileNumber')?{mobileNumber:book.prefill.mobile}:{})}));},[address,book.prefill.name,book.prefill.mobile]);
-  useEffect(()=>{mounted.current=true;const previous=document.activeElement as HTMLElement|null;dialog.current?.showModal();form.current?.querySelector<HTMLInputElement>('input')?.focus();return()=>{mounted.current=false;dialog.current?.close();if(previous?.isConnected)previous.focus();};},[]);
+  useEffect(()=>{mounted.current=true;const previous=document.activeElement as HTMLElement|null;openModal(dialog.current);form.current?.querySelector<HTMLInputElement>('input')?.focus();return()=>{mounted.current=false;closeModal(dialog.current);if(previous?.isConnected)previous.focus();};},[]);
   async function submit(event:React.FormEvent){
     event.preventDefault();if(lock.current)return;setError('');setFields({});
     let clean:AddressInput;

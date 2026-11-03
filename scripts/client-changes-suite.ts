@@ -8,7 +8,7 @@ if (process.env.FIREBASE_AUTH_EMULATOR_HOST !== '127.0.0.1:9099' || process.env.
 async function run(command: string, args: string[], environment = process.env) {
   await new Promise<void>((resolve, reject) => { const child = spawn(command, args, { stdio: 'inherit', env: environment }); child.on('error', reject); child.on('exit', code => code === 0 ? resolve() : reject(new Error(`Test command exited ${code}`))); });
 }
-for(const file of (process.env.PARINAYA_CLIENT_BROWSER_ONLY?[]:['admin-rules','customer-rules','category-rules','catalog-emulator','campaigns-emulator','loyalty-emulator','delivery-loyalty-emulator','contact-emulator']))await run(process.execPath,['--import','tsx','--test','scripts/'+file+'.test.ts']);
+for(const file of (process.env.PARINAYA_CLIENT_BROWSER_ONLY?[]:['admin-rules','customer-rules','category-rules','catalog-emulator','campaigns-emulator','loyalty-emulator','delivery-loyalty-emulator','contact-emulator','discovery-emulator','orders-list-emulator','four-fixes-emulator']))await run(process.execPath,['--import','tsx','--test','scripts/'+file+'.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -40,7 +40,7 @@ try {
   }
   if (!ready) throw new Error('Local test server unavailable.');
   
-  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','social-drawer','checkout-design','shopping-design','customer-order-states']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','social-drawer','checkout-design','shopping-design','customer-order-states','four-fixes']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
 
 
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

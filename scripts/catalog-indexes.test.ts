@@ -106,3 +106,15 @@ test('customer card filters use existing UID/status indexes and lookahead withou
 });
 
 test('read-only live discovery missing-index links match exact prepared fields; two READY product indexes are retained',()=>{const data=JSON.parse(readFileSync('scripts/fixtures/discovery-index-evidence.json','utf8'));assert.equal(data.ready.length,2);assert.ok(data.ready.every((r:any)=>r.state==='READY'));assert.equal(data.missing.length,6);for(const row of data.missing){assert.equal(row.missingIndex,true);covered('products',row.index.fields.filter((f:any)=>f.fieldPath!=='__name__'));assert.equal(row.index.queryScope,'COLLECTION');assert.deepEqual(row.index.fields.at(-1),{fieldPath:'__name__',order:'DESCENDING'});}});
+
+// The category-specific production 503 was reproduced separately from unfiltered browsing.
+test('current category navigation index failures match prepared indexes and preserve existing READY definitions',()=>{const e=JSON.parse(readFileSync('scripts/fixtures/category-navigation-index-evidence.json','utf8'));assert.equal(e.readOnly,true);assert.equal(e.categoryMatches,1);assert.equal(e.ready.length,2);assert.equal(e.missing.length,4);for(const row of e.missing){assert.equal(row.code,9);assert.equal(row.ok,false);assert.equal(row.index.queryScope,'COLLECTION');covered('products',row.index.fields.filter((f:any)=>f.fieldPath!=='__name__'));assert.ok(!e.ready.some((r:any)=>JSON.stringify(r.fields)===JSON.stringify(row.index.fields)));}});
+
+test('the minimal release index list contains only the four observed category queries and the observed bulk source query',()=>{
+ const e=JSON.parse(readFileSync('scripts/fixtures/category-navigation-index-evidence.json','utf8')),minimal=JSON.parse(readFileSync('docs/required-category-and-bulk-indexes.json','utf8'));
+ const require=createRequire(import.meta.url),root=dirname(require.resolve('@google-cloud/firestore/package.json')),Index=require(join(root,'build/protos/firestore_admin_v1_proto_api.js')).google.firestore.admin.v1.Index;
+ const link=firestoreIndexLink(e.bulkSourceQuery.indexCreationUrl);assert.ok(link);assert.equal(e.bulkSourceQuery.code,9);
+ const decoded=Index.toObject(Index.decode(Buffer.from(new URL(link!).searchParams.get('create_composite')!,'base64url')),{enums:String});
+ const expected=[...e.missing.map((row:any)=>({collectionGroup:'products',queryScope:row.index.queryScope,fields:row.index.fields.filter((f:any)=>f.fieldPath!=='__name__')})),{collectionGroup:'orders',queryScope:decoded.queryScope,fields:decoded.fields.filter((f:any)=>f.fieldPath!=='__name__')}];
+ assert.deepEqual(minimal,{indexes:expected,fieldOverrides:[]});for(const row of minimal.indexes)covered(row.collectionGroup,row.fields);
+});

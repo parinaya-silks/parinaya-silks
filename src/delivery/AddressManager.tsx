@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import {Loading,Recovery} from '../loading/Loading.tsx';
 import React,{useEffect,useRef,useState} from 'react';
 import type {DeliveryAddress} from './model.ts';
@@ -38,6 +39,6 @@ export function AddressManager({book,selected,onSelect,onSaved,checkout=false,pr
 }
 function DeleteAddress({address,busy,error,onCancel,onConfirm,profile=false}:{profile?:boolean;address:DeliveryAddress;busy:boolean;error:string;onCancel:()=>void;onConfirm:()=>void}){
   const dialog=useRef<HTMLDialogElement>(null),cancel=useRef<HTMLButtonElement>(null);
-  useEffect(()=>{const previous=document.activeElement as HTMLElement|null,root=dialog.current?.closest('.customer-profile');dialog.current?.showModal();cancel.current?.focus();return()=>{dialog.current?.close();if(previous?.isConnected)previous.focus();else if(root?.isConnected)root.querySelector<HTMLButtonElement>('.profile-addresses button')?.focus();};},[]);
+  useEffect(()=>{const previous=document.activeElement as HTMLElement|null,root=dialog.current?.closest('.customer-profile');openModal(dialog.current);cancel.current?.focus();return()=>{closeModal(dialog.current);if(previous?.isConnected)previous.focus();else if(root?.isConnected)root.querySelector<HTMLButtonElement>('.profile-addresses button')?.focus();};},[]);
   return <dialog ref={dialog} aria-labelledby="delete-address-title" onCancel={event=>{event.preventDefault();if(!busy)onCancel();}} className={(profile?"profile-dialog profile-delete-dialog ":"")+"m-auto max-w-md w-[calc(100%_-_2rem)] rounded-xl p-5 bg-[#FBF7F0] backdrop:bg-black/50"}><h2 id="delete-address-title" className="font-serif text-2xl">Delete this address?</h2><p className="my-4 text-sm">Remove the saved delivery address for {address.recipientName}? Your Bag will stay unchanged.</p>{error&&<p role="alert" className="text-sm text-[#780D24]">{error}</p>}<div className="flex flex-wrap gap-3"><button ref={cancel} disabled={busy} onClick={onCancel} className="min-h-12 px-5 border rounded">Cancel deletion</button><button disabled={busy} onClick={onConfirm} className="min-h-12 px-5 rounded bg-[#780D24] text-white">{busy?'Deleting…':'Confirm deletion'}</button></div></dialog>;
 }

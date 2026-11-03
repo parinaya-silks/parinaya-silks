@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import {useRead} from '../loading/useRead.ts';
 import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
 import React,{useEffect,useRef,useState} from 'react';
@@ -27,7 +28,7 @@ function AssistanceSheet({order,onClose,onSaved}:{order:OrderRecord;onClose:()=>
  // Keep the customer's original intent if fulfilment changes while open.
  const cancel=kind==='cancellation',eligible=cancel?cancellationEligible(order):(['Shipped','Delivered'].includes(order.status)&&content.returnsEnabled&&content.returnKinds.includes(kind as 'return'|'exchange')&&(!order.request||order.request.status==='rejected'));
  const actualKind=kind;
- useEffect(()=>{alive.current=true;const previous=document.activeElement as HTMLElement|null;dialog.current?.showModal();dialog.current?.querySelector('textarea')?.focus();return()=>{alive.current=false;dialog.current?.close();previous?.isConnected&&previous.focus();};},[]);
+ useEffect(()=>{alive.current=true;const previous=document.activeElement as HTMLElement|null;openModal(dialog.current);dialog.current?.querySelector('textarea')?.focus();return()=>{alive.current=false;closeModal(dialog.current);previous?.isConnected&&previous.focus();};},[]);
  async function submit(event:React.FormEvent){event.preventDefault();if(lock.current||!eligible||!reason.trim())return;lock.current=true;setBusy(true);setError('');
   const body=pending.current||{action:'orders:request',id:order.id,expectedRevision:order.revision,operationId:newOperation(),command:'request-'+actualKind,note:reason.trim()};pending.current=body;
   try{await customerAction(uid,body);if(!alive.current||getAuthClients().auth.currentUser?.uid!==uid)return;setReceived(true);setUncertain(false);pending.current=null;onSaved();}

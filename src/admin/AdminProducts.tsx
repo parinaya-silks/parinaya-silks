@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import React,{useEffect,useRef,useState} from 'react';
 import {Plus,Search,SlidersHorizontal,Download,X,MoreHorizontal,Pencil,Eye,Archive,ChevronLeft,ChevronRight,Package} from 'lucide-react';
 import {quantity,discount,type ProductRecord,type ProductStatus} from '../products/model.ts';
@@ -11,8 +12,8 @@ export function AdminProducts({products,filters:f,onFilters,onNavigate,onStatus,
  const filtered=filterProducts(products,f),pages=Math.max(1,Math.ceil(filtered.length/10)),page=Math.min(f.page,pages),visible=filtered.slice((page-1)*10,page*10),categoryMap=new Map(categories.status==='ready'?categories.items.map(c=>[c.id,c]):[]);
  const update=(change:Partial<ProductFilters>)=>{setSelection([]);onFilters({...f,...change,page:change.page??1});};
  useEffect(()=>{setSelection([]);},[products]);
- useEffect(()=>{if(!sheet)return;const previous=document.activeElement as HTMLElement;dialog.current?.showModal();return()=>{dialog.current?.close();previous?.focus();};},[sheet]);
- useEffect(()=>{if(!archive)return;const previous=document.activeElement as HTMLElement;confirm.current?.showModal();return()=>{confirm.current?.close();previous?.focus();};},[archive]);
+ useEffect(()=>{if(!sheet)return;const previous=document.activeElement as HTMLElement;openModal(dialog.current);return()=>{closeModal(dialog.current);previous?.focus();};},[sheet]);
+ useEffect(()=>{if(!archive)return;const previous=document.activeElement as HTMLElement;openModal(confirm.current);return()=>{closeModal(confirm.current);previous?.focus();};},[archive]);
  const count=[f.categories.length>0,f.status!=='All',f.stock!=='all'].filter(Boolean).length;
  function exportCsv(){const rows=selection.length?filtered.filter(p=>selection.includes(p.id)):filtered,url=URL.createObjectURL(new Blob([productsCsv(rows)],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='parinaya-products.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  function controls(){return <><label>Category<select aria-label="Category filter" value={f.categories[0]||''} onChange={e=>update({categories:e.target.value?[e.target.value]:[]})}><option value="">All categories</option>{categories.status==='ready'&&categories.items.map(c=><option key={c.id} value={c.id}>{c.name}{c.enabled?'':' (hidden)'}</option>)}</select></label><label>Status<select aria-label="Status filter" value={f.status} onChange={e=>update({status:e.target.value})}>{['All','Published','Draft','Archived'].map(s=><option key={s}>{s}</option>)}</select></label><label>Stock<select aria-label="Stock filter" value={f.stock} onChange={e=>update({stock:e.target.value})}><option value="all">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option></select></label></>;}

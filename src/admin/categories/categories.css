@@ -168,3 +168,5 @@
 .category-confirm footer button{white-space:normal;padding:8px;font-size:12px}
 }
 
+
+.category-photo-editor{display:grid;gap:12px}.category-photo-editor.settings-photo-editor>img.desktop{width:160px;height:160px;aspect-ratio:1;object-fit:cover;border-radius:4px}.category-photo-editor input[type=file]{max-width:100%;font-size:12px}.category-photo-editor .settings-photo-actions{display:flex;flex-wrap:wrap;gap:8px}.category-photo-editor button{border:1px solid #d8c3a5;padding:8px;min-height:40px}.category-photo-editor progress{max-width:100%}

@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import {BRAND_UPPER} from '../config/brand.ts';
 import {BrandLogo} from '../components/BrandLogo.tsx';
 import React,{useEffect,useRef,useState} from 'react';
@@ -12,7 +13,7 @@ export function AdminLayout({currentPath,onNavigate,children,email,onSignOut,hea
  const [open,setOpen]=useState(false),drawer=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),close=useRef<HTMLButtonElement>(null);
  const active=(route:string)=>route==='dashboard'?dashboardPath(currentPath):currentPath==='/admin/'+route||['products','orders','customers','marketing','website-content'].includes(route)&&currentPath.startsWith('/admin/'+route+'/');
  const title=items.find(([route])=>active(route))?.[1]||'Administration',isDashboard=dashboardPath(currentPath),initials=email.split('@')[0].split(/[._\s-]+/).filter(Boolean).map(part=>part[0]).join('').slice(0,2).toUpperCase();
- useEffect(()=>{if(!open)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';drawer.current?.showModal();close.current?.focus();const media=window.matchMedia('(min-width: 1024px)'),resize=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',resize);return()=>{drawer.current?.close();document.body.style.overflow=previous;media.removeEventListener('change',resize);trigger.current?.focus();};},[open]);
+ useEffect(()=>{if(!open)return;openModal(drawer.current);close.current?.focus();const media=window.matchMedia('(min-width: 1024px)'),resize=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',resize);return()=>{closeModal(drawer.current);media.removeEventListener('change',resize);trigger.current?.focus();};},[open]);
  const navigate=(path:string)=>{onNavigate(path);setOpen(false);};
  const brand=<div className="admin-brand"><BrandLogo className="admin-brand-logo" decorative/><div><strong>{BRAND_UPPER}</strong><span>Admin</span></div></div>;
  function navigation(mobile=false){return <><nav aria-label={mobile?'Mobile Admin Navigation':'Admin Navigation'} className="admin-navigation">{items.map(([route,label])=><button key={route} aria-current={active(route)?'page':undefined} onClick={()=>navigate('/admin/'+route)}><AdminIcon name={route}/><span title={label}>{label}</span></button>)}</nav><div className="admin-utilities"><button onClick={()=>navigate('/')}><AdminIcon name="external"/><span>View Website</span></button><button className="admin-sign-out" onClick={()=>{setOpen(false);onSignOut();}}><AdminIcon name="logout"/><span>Sign Out</span></button></div></>;}

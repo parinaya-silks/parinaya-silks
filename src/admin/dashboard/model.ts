@@ -21,7 +21,7 @@ export interface DashboardBacklog {toPack:number;processing:number;duePaise:numb
 export interface StockProduct {id:string;name:string;revision:number;imageUrl?:string;threshold:number;inventory:{mode:'simple'|'variants';quantity?:number;variants?:{id:string;name:string;quantity:number}[]}}
 export interface StockLine {id:string;productId:string;name:string;imageUrl?:string;variantName:string;quantity:number;threshold:number}
 export function lowStockLines(products:StockProduct[]):StockLine[]{return products.flatMap(product=>(product.inventory.mode==='simple'?[{id:'simple',name:'Standard',quantity:product.inventory.quantity??0}]:product.inventory.variants||[]).filter(variant=>variant.quantity<=product.threshold).map(variant=>({id:product.id+'-'+variant.id,productId:product.id,name:product.name,imageUrl:product.imageUrl,variantName:variant.name,quantity:variant.quantity,threshold:product.threshold})));}
-export const bulkCommands=['Confirmed','Processing'] as const;
+export const bulkCommands=['Confirmed','Processing','Shipped','Delivered'] as const;
 export function bulkEligible(order:Pick<DashboardOrder,'status'>){return bulkCommands.some(command=>transitions[order.status].includes(command));}
 export function commonCommands(orders:DashboardOrder[]){return bulkCommands.filter(command=>orders.length>0&&orders.every(order=>transitions[order.status].includes(command)));}
 export const statusLabel=(status:OrderStatus)=>status==='Placed'?'New':status==='Confirmed'?'To Pack':status;

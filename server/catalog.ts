@@ -1,3 +1,4 @@
+import {categoryService} from './categories.ts';
 import {loyaltyService} from './loyalty.ts';
 import {enquiriesService} from './enquiries.ts';
 import {storeSettingsService} from './storeSettings.ts';
@@ -62,6 +63,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   const customers=customerDirectoryService(db,auth);
   const shipping=shippingService(db,transactionAccess);
   const appearance=loginAppearanceService(db,media,transactionAccess);
+  const categoryMedia=loginAppearanceService(db,media,transactionAccess,'category'),saveCategory=categoryService(db,transactionAccess);
   async function present(document:FirebaseFirestore.DocumentSnapshot,categoryName?:string):Promise<ProductRecord> {
     const data=document.data()!;
     if(data.schemaVersion!==1) throw new ProductError('schema','This product needs an owner-reviewed schema migration.');
@@ -195,6 +197,8 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
+        case 'categories:save':return saveCategory(uid,body);
+        case 'categories:sign':case 'categories:verify':if(body.device!=='desktop')throw new ProductError('invalid','Choose the category thumbnail.');return body.action==='categories:sign'?categoryMedia.sign(uid,body):categoryMedia.verify(uid,body);
         case 'about:get':keys(body,['action']);return about.get();
         case 'about:save':return about.save(uid,body);
         case 'about:sign':case 'about:verify':if(body.device!=='desktop')throw new ProductError('invalid','Choose the founder portrait.');return body.action==='about:sign'?aboutMedia.sign(uid,body):aboutMedia.verify(uid,body);

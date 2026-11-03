@@ -6,6 +6,7 @@ assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
 assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
 origin='http://127.0.0.1:3100';screens=Path('.cache/categories-stitch');screens.mkdir(parents=True,exist_ok=True)
 def fixture(action):return subprocess.run(['node','--import','tsx','scripts/categories-fixture-control.ts',action],check=True,capture_output=True,text=True).stdout.strip()
+fixture('reset')
 with sync_playwright() as p:
  browser=p.chromium.launch();ctx=browser.new_context(viewport={'width':1440,'height':1000});ctx.grant_permissions(['clipboard-read','clipboard-write'],origin=origin)
  for pattern in ['https://firestore.googleapis.com/**','https://identitytoolkit.googleapis.com/**','https://securetoken.googleapis.com/**']:ctx.route(pattern,lambda route:route.abort())
@@ -41,11 +42,13 @@ with sync_playwright() as p:
  listing.get_by_role('button',name='Edit Browser Renamed',exact=True).click();d=page.get_by_role('dialog',name='Edit category',exact=True);d.get_by_label('Name',exact=True).fill('Kept local name');fixture('conflict');d.get_by_role('button',name='Save Changes',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('changed while you were editing');expect(d.get_by_label('Name',exact=True)).to_have_value('Kept local name');d.get_by_role('button',name='Cancel',exact=True).click()
  # Failed commits retain input and retry the same creation, never reporting success early.
  listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill('Browser Retry')
- def deny(route):route.fulfill(status=403,content_type='application/json',body='{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Synthetic denial"}}')
- page.route('**/documents:commit*',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('Permission denied');expect(d.get_by_label('Name',exact=True)).to_have_value('Browser Retry');page.unroute('**/documents:commit*',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d).not_to_be_visible();listing.get_by_role('heading',name='Browser Retry',exact=True).wait_for()
+ def deny(route):
+  if route.request.method=='POST' and route.request.post_data_json.get('action')=='categories:save':route.fulfill(status=403,json={'code':'permission','message':'Synthetic denial','fields':{}})
+  else:route.continue_()
+ page.route('**/api/catalog',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d.get_by_role('alert')).to_contain_text('Permission denied');expect(d.get_by_label('Name',exact=True)).to_have_value('Browser Retry');page.unroute('**/api/catalog',deny);d.get_by_role('button',name='Create Category',exact=True).click();expect(d).not_to_be_visible();listing.get_by_role('heading',name='Browser Retry',exact=True).wait_for()
  for width in [320,390,768,1024,1440,1920]:
   page.set_viewport_size({'width':width,'height':1000});page.screenshot(path=str(screens/f'list-{width}.png'),full_page=True);assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
- page.set_viewport_size({'width':390,'height':900});listing.get_by_role('button',name=re.compile('^Enabled \(')).click();assert listing.locator('.category-mobile-cards article').count()==2;listing.get_by_role('button',name='Clear Filters',exact=True).click()
+ page.set_viewport_size({'width':390,'height':900});listing.get_by_role('button',name=re.compile(r'^Enabled \(')).click();assert listing.locator('.category-mobile-cards article').count()==2;listing.get_by_role('button',name='Clear Filters',exact=True).click()
  listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).focus();page.keyboard.press('Shift+Tab');expect(d.get_by_role('button',name='Close category editor',exact=True)).to_be_focused();page.keyboard.press('Escape');expect(d).not_to_be_visible();expect(listing.get_by_role('button',name='Add category',exact=True)).to_be_focused();assert page.evaluate('document.body.style.overflow')!='hidden'
  listing.get_by_role('button',name='Add category',exact=True).click();d=page.get_by_role('dialog',name='Add category',exact=True);d.get_by_label('Name',exact=True).fill('Unsaved category');accept['value']=False;page.keyboard.press('Escape');expect(d).to_be_visible();accept['value']=True;page.keyboard.press('Escape');expect(d).not_to_be_visible()
  assert listing.get_by_role('button',name=re.compile('Delete')).count()==0;assert products==fixture('products-fingerprint');assert not errors,errors

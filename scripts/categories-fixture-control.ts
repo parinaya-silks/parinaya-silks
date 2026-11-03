@@ -6,7 +6,8 @@ if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_
 const app=initializeApp({projectId:'parinaya-silks'},'category-design-fixtures'),db=getFirestore(app,'(default)');
 try{
  const mode=process.argv[2];
- if(mode==='attach-products'){
+ if(mode==='reset'){for(const collection of ['categories','categorySlugs'])for(const doc of (await db.collection(collection).get()).docs)await doc.ref.delete();}
+ else if(mode==='attach-products'){
   const category=(await db.collection('categories').where('slug','==','browser-alpha').limit(1).get()).docs[0];if(!category)throw Error('Synthetic category missing');
   for(const [id,status]of [['e'.repeat(20),'Published'],['f'.repeat(20),'Draft']]){
    const image={mediaId:'a'.repeat(32),alt:'Synthetic category saree',url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/category-fixture.png',publicId:'category-fixture',assetId:'category-fixture',width:300,height:400,bytes:1000,format:'png',version:1};

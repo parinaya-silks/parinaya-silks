@@ -1,3 +1,4 @@
+import {catalogAction} from '../products/client.ts';
 import { collection, doc, onSnapshot, query, where, runTransaction, serverTimestamp, Timestamp, type Firestore } from 'firebase/firestore';
 import { getDatabaseClient } from '../services/firebase/database.ts';
 import { orderCategories, validateCategory, type Category, type CategoryInput } from './model.ts';
@@ -5,9 +6,9 @@ import { orderCategories, validateCategory, type Category, type CategoryInput } 
 export type CategoryState = { status: 'loading' } | { status: 'ready'; items: Category[]; stale?: boolean } | { status: 'error'; message: string };
 export function categoryError(error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : '';
-  if (code === 'permission-denied') return 'Permission denied. Refresh your permissions or contact the store owner.';
-  if (code === 'category/duplicate-slug') return 'That URL slug is already in use. Choose another slug.';
-  if (code === 'category/conflict') return 'This category changed while you were editing. Close this editor and reopen the latest category before saving again.';
+  if (code === 'permission-denied'||code==='forbidden'||code==='permission') return 'Permission denied. Refresh your permissions or contact the store owner.';
+  if (code === 'category/duplicate-slug'||code==='duplicate') return 'That URL slug is already in use. Choose another slug.';
+  if (code === 'category/conflict'||code==='conflict') return 'This category changed while you were editing. Close this editor and reopen the latest category before saving again.';
   if (code === 'category/missing') return 'This category is no longer available. Reload the list.';
   return 'Categories could not be saved or loaded. Check your connection and try again.';
 }
@@ -48,10 +49,11 @@ export function watchCategories(admin: boolean, publish: (state: CategoryState) 
 
 export function allocateCategoryId(database = getDatabaseClient()) { return doc(collection(database, 'categories')).id; }
 
-// Transactions plus deployed rules form the persistence boundary. Callers keep
-// one allocated ID per create dialog, making an uncertain successful retry safe.
-export async function createCategory(id: string, input: CategoryInput, database: Firestore = getDatabaseClient()) {
+// Production writes use the verified Admin API. Explicit database injection is
+// retained for isolated rules tests. One allocated ID makes create retries safe.
+export async function createCategory(id: string, input: CategoryInput, database?: Firestore) {
   const valid = validateCategory(input);
+  if(!database)return catalogAction({action:'categories:save',id,expectedUpdatedAt:0,category:valid});
   const reference = doc(database, 'categories', id);
   const slugReference = doc(database, 'categorySlugs', valid.slug);
   await runTransaction(database, async transaction => {
@@ -66,9 +68,10 @@ export async function createCategory(id: string, input: CategoryInput, database:
     transaction.set(slugReference, { categoryId: id, createdAt: serverTimestamp() });
   });
 }
-export async function editCategory(category: Category, input: CategoryInput, database: Firestore = getDatabaseClient()) {
+export async function editCategory(category: Category, input: CategoryInput, database?: Firestore) {
   const valid = validateCategory(input);
   if (valid.slug !== category.slug) throw new Error('The category URL slug cannot change.');
+  if(!database)return catalogAction({action:'categories:save',id:category.id,expectedUpdatedAt:category.updatedAt,category:valid});
   const reference = doc(database, 'categories', category.id);
   await runTransaction(database, async transaction => {
     const existing = await transaction.get(reference);

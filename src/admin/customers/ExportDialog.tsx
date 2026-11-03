@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../../components/modalLayer.ts';
 import {useEffect,useRef,useState} from 'react';
 import {Download,X,ShieldCheck} from 'lucide-react';
 import {catalogAction} from '../../products/client.ts';
@@ -10,7 +11,7 @@ type Chunk={rows:{uid:string;values:string[]}[];nextCursor:string|null;total:num
 export function CustomerExport({filters,selected=[],total,customerUid,onClose,initialScope}:{filters:Record<string,unknown>;selected?:string[];total?:number;customerUid?:string;onClose:()=>void;initialScope?:Scope}){
  const [scope,setScope]=useState<Scope>(customerUid?'customer':initialScope||(selected.length?'selected':'matching')),[fields,setFields]=useState<ExportField[]>([...defaultExportFields]),[busy,setBusy]=useState(false),[progress,setProgress]=useState(0),[expected,setExpected]=useState<number>(),[error,setError]=useState(''),[complete,setComplete]=useState(false),[started,setStarted]=useState(false);
  const allowed=useAdminWritePermission(),dialog=useRef<HTMLDialogElement>(null),cancel=useRef<HTMLButtonElement>(null),active=useRef(true),lock=useRef(false),controller=useRef<AbortController|null>(null),frozen=useRef({filters:structuredClone(filters),selected:[...selected],customerUid}),work=useRef<{body:Record<string,unknown>;rows:string[][];seen:Set<string>;cursor:string|null;total?:number}|null>(null),uid=getAdminClients().auth.currentUser?.uid,owner=useRef(uid);
- useEffect(()=>{active.current=true;const focus=document.activeElement as HTMLElement,overflow=document.body.style.overflow;dialog.current?.showModal();cancel.current?.focus();document.body.style.overflow='hidden';return()=>{active.current=false;controller.current?.abort();dialog.current?.close();document.body.style.overflow=overflow;if(focus?.isConnected)focus.focus({preventScroll:true});};},[]);
+ useEffect(()=>{active.current=true;const focus=document.activeElement as HTMLElement;openModal(dialog.current);cancel.current?.focus();return()=>{active.current=false;controller.current?.abort();closeModal(dialog.current);if(focus?.isConnected)focus.focus({preventScroll:true});};},[]);
  useEffect(()=>{if(owner.current!==uid){controller.current?.abort();work.current=null;onClose();}},[uid]);
  async function run(){if(lock.current||!allowed||!fields.length)return;lock.current=true;setBusy(true);setError('');setStarted(true);controller.current=new AbortController();
   const saved=frozen.current;if(!work.current)work.current={body:{action:'customers:export',scope,fields,filters:saved.filters,...(['selected','customer'].includes(scope)?{uids:scope==='customer'?[saved.customerUid]:saved.selected}:{})},rows:[],seen:new Set(),cursor:null};const w=work.current;

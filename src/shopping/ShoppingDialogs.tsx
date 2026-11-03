@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../components/modalLayer.ts';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {X,Heart,ShoppingBag,Trash2,Palette} from 'lucide-react';
 import type {PublicProductRecord} from '../products/model.ts';
@@ -6,7 +7,7 @@ import type {Shopping} from './useShopping.ts';
 import {money} from './model.ts';
 export function ShoppingDialog({title,onClose,busy,children}:{title:string;onClose:()=>void;busy:boolean;children:ReactNode}){
  const dialog=useRef<HTMLDialogElement>(null);
- useEffect(()=>{const previous=document.activeElement as HTMLElement|null,root=document.querySelector('.shopping-page');dialog.current?.showModal();dialog.current?.querySelector<HTMLButtonElement>('[data-initial-focus]')?.focus();return()=>{dialog.current?.close();if(previous?.isConnected)previous.focus();else root?.querySelector<HTMLElement>('h1')?.focus({preventScroll:true});};},[]);
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null,root=document.querySelector('.shopping-page');openModal(dialog.current);dialog.current?.querySelector<HTMLButtonElement>('[data-initial-focus]')?.focus();return()=>{closeModal(dialog.current);if(previous?.isConnected)previous.focus();else root?.querySelector<HTMLElement>('h1')?.focus({preventScroll:true});};},[]);
  return <dialog ref={dialog} className="customer-shopping-dialog" aria-label={title} onCancel={event=>{event.preventDefault();if(!busy)onClose();}}><header><h2>{title}</h2><button disabled={busy} onClick={onClose} aria-label={'Close '+title}><X size={19}/></button></header>{children}</dialog>;
 }
 export function ShoppingIssue({shopping,itemKey,onRecovered}:{shopping:Shopping;itemKey:string;onRecovered?:()=>void}){

@@ -89,7 +89,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
   function projection(order:OrderRecord,admin:boolean){if(admin)return order;const {internalNotes,history,...safe}=order;return {...safe,history:history.filter(item=>!['Note','Manual refund'].includes(item.action)).map(({action,at})=>({action,at})),refunds:order.refunds.map(({amountPaise,at})=>({amountPaise,at})),collection:order.collection?{at:order.collection.at}:null};}
   async function get(uid:string,body:Record<string,unknown>,admin=false){exact(body,['action','id']);const raw=typeof body.id==='string'&&/^PS-[A-F0-9]{32}$/.test(body.id)?body.id.slice(3).toLowerCase():referenceId(body.id),doc=await db.doc('orders/'+raw).get();if(!doc.exists||(!admin&&doc.data()?.uid!==uid))throw new ProductError('not-found','Order not found.');return projection(present(doc),admin);}
   async function mutate(uid:string,body:Record<string,unknown>,admin:boolean){
-    exact(body,['action','id','expectedRevision','operationId','command'],['note',...deliveryFields,'reference','amountPaise','method','loyaltyRefund']);
+    exact(body,['action','id','expectedRevision','operationId','command'],['expectedStatus','note',...deliveryFields,'reference','amountPaise','method','loyaltyRefund']);
     const id=referenceId(body.id),op=referenceId(body.operationId),command=text(body.command,40,true),note=noteText(body.note??'',1000),ref=db.doc('orders/'+id),receipt=db.doc('orderOperations/'+digest([uid,op])),hash=digest(body);
     if(!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<1)throw new ProductError('invalid','Invalid order revision.');
     return db.runTransaction(async tx=>{
@@ -99,6 +99,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       if(!doc.exists||(!admin&&doc.data()?.uid!==uid))throw new ProductError('not-found','Order not found.');const old=present(doc);
       if(body.loyaltyRefund!==undefined&&command!=='manual-refund')throw new ProductError('invalid','Loyalty refund allocations require a refund record.');
       if(command==='manual-refund'&&old.loyalty&&body.loyaltyRefund===undefined)throw new ProductError('invalid','Allocate the loyalty refund between merchandise lines and shipping.');
+      if(body.expectedStatus!==undefined&&(!admin||old.status!==body.expectedStatus||!['Confirmed','Processing','Shipped','Delivered'].includes(command)))throw new ProductError('conflict','Bulk source status changed or action is not eligible.');
       if(old.revision!==body.expectedRevision)throw new ProductError('conflict','This order changed. Reload before continuing.');
       const update:Record<string,unknown>={revision:old.revision+1,updatedAt:stamp()},history={action:command,actor:uid,at:now(),note};let restore=false;
       if(!admin){
@@ -110,7 +111,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       }else if(orderStatuses.includes(command as never)){
         if(!transitions[old.status].includes(command as never))throw new ProductError('conflict',`Cannot change ${old.status} to ${command}.`);
         if(['Cancelled','Rejected'].includes(command)){if(!note)throw new ProductError('invalid','A cancellation or rejection reason is required.');if(old.paymentStatus==='collected')throw new ProductError('conflict','Collected funds require owner resolution before pre-dispatch cancellation.');restore=!old.stockRestored;update.stockRestored=true;if(old.request?.status==='pending')update.request={...old.request,status:command==='Cancelled'&&old.request.kind==='cancellation'?'approved':'rejected'};}
-        if(deliveryFields.some(field=>field in body)||command==='Shipped'){
+        if(deliveryFields.some(field=>field in body)||['Shipped','Delivered'].includes(command)){
           if(!deliveryEditable(old.status)||['Cancelled','Rejected'].includes(command))throw new ProductError('invalid','Delivery fields are not permitted for this transition.');
           Object.assign(update,deliveryRecord(old,body,command as OrderRecord['status']));
         }update.status=command;

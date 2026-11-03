@@ -1,3 +1,4 @@
+import {openModal,closeModal} from '../../components/modalLayer.ts';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,X,Truck,MapPin,Package,ShieldCheck,Clipboard,Link as LinkIcon} from 'lucide-react';
 import {catalogAction,newOperation} from '../../products/client.ts';
@@ -18,7 +19,7 @@ export function DeliveryPanel({id,onClose,onSaved}:{id:string;onClose:()=>void;o
  const dialog=useRef<HTMLDialogElement>(null),closeButton=useRef<HTMLButtonElement>(null),lock=useRef(false),active=useRef(true),previousStep=useRef<'edit'|'review'>('edit'),reviewButton=useRef<HTMLButtonElement>(null),restoreReviewFocus=useRef(false);
  const dirty=!!base&&(deliveryChanged(base,values)||(mode==='status'&&!!next)),latest=resource.data,stale=!!base&&!!latest&&base.revision!==latest.revision,blocked=!allowed||busy||resource.refreshing||!!resource.error||stale||conflict;
  useEffect(()=>{if(latest&&!base){setBase(latest);setValues(deliveryValues(latest));setCustomCourier(!!latest.courier&&!couriers.includes(latest.courier));if(!deliveryTransitions(latest.status).length)setMode('details');}},[latest,base]);
- useEffect(()=>{active.current=true;const focus=document.activeElement as HTMLElement,previous=document.body.style.overflow;document.body.style.overflow='hidden';dialog.current?.showModal();closeButton.current?.focus();return()=>{active.current=false;dialog.current?.close();document.body.style.overflow=previous;if(focus?.isConnected)focus.focus({preventScroll:true});};},[]);
+ useEffect(()=>{active.current=true;const focus=document.activeElement as HTMLElement;openModal(dialog.current);closeButton.current?.focus();return()=>{active.current=false;closeModal(dialog.current);if(focus?.isConnected)focus.focus({preventScroll:true});};},[]);
  useEffect(()=>{if(step==='edit'&&restoreReviewFocus.current){restoreReviewFocus.current=false;reviewButton.current?.focus();}},[step]);
  useEffect(()=>{if(step!=='edit')dialog.current?.querySelector<HTMLElement>('.delivery-review h3,.delivery-discard h3')?.focus();},[step]);
  function requestClose(){if(lock.current)return;if(dirty||uncertain){previousStep.current=step==='review'?'review':'edit';setStep('discard');}else onClose();}
