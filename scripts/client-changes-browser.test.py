@@ -39,19 +39,19 @@ with sync_playwright() as p:
     assert b['x']+b['width']<=heart['x']+1
   assert count>0
  check_badges();shots('shop-discounts-social')
- social=page.get_by_role('navigation',name='Follow Parinaya Sarees',exact=True);expect(social).to_be_visible()
+ social=page.get_by_role('navigation',name='Follow Parinaya Sarees',exact=True)
  for width in widths:
   page.set_viewport_size({'width':width,'height':900});page.evaluate('scrollTo(0,0)')
-  toggle=social.get_by_role('button')
-  if width<768:
-   expect(toggle).to_have_attribute('aria-expanded','false');expect(social.get_by_role('link').first).not_to_be_visible();toggle.click()
-  links=social.get_by_role('link');expect(links).to_have_count(2)
+  if width<=1100:
+   expect(social).not_to_be_visible();page.get_by_role('button',name='Open Navigation Drawer').click();links=page.get_by_role('region',name='Follow Us',exact=True).get_by_role('link');links.first.scroll_into_view_if_needed()
+  else:
+   expect(social).to_be_visible();links=social.get_by_role('link')
+  expect(links).to_have_count(2)
   for link in links.all():
    expect(link).to_be_visible();assert link.get_attribute('target')=='_blank';assert 'noopener' in link.get_attribute('rel');assert link.bounding_box()['height']>=44
-  if width<768:
-   assert social.bounding_box()['y']+social.bounding_box()['height']<=page.locator('main').first.bounding_box()['y']+1
   page.screenshot(path=str(screens/f'social-open-{width}.png'),full_page=True)
-  if width<768:page.keyboard.press('Escape');expect(toggle).to_be_focused()
+  if width<=1100:
+   page.keyboard.press('Escape');expect(page.get_by_role('button',name='Open Navigation Drawer')).to_be_focused()
  for route in ['/collections/kanchipuram-silk','/shop?search=Crimson','/sale/fixture-campaign-0']:
   page.goto(origin+route);expect(page.locator('.shop-discount-badge').first).to_be_visible();check_badges()
  page.screenshot(path=str(screens/'campaign-actual-price.png'),full_page=True)

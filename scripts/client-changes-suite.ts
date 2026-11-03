@@ -40,7 +40,7 @@ try {
   }
   if (!ready) throw new Error('Local test server unavailable.');
   
-  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','checkout-design','shopping-design','customer-order-states']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','social-drawer','checkout-design','shopping-design','customer-order-states']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
 
 
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }
