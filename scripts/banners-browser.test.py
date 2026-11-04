@@ -18,6 +18,7 @@ with sync_playwright() as p:
   if upload_fail['once']:upload_fail['once']=False;route.fulfill(status=500,headers={'Access-Control-Allow-Origin':'*'},content_type='application/json',body='{}');return
   public_id=re.search(b'name="public_id"\r\n\r\n([^\r]+)',route.request.post_data_buffer).group(1).decode();ctx.request.post('http://127.0.0.1:3200/test/upload',data={'publicId':public_id});route.fulfill(status=200,headers={'Access-Control-Allow-Origin':'*'},content_type='application/json',body='{}')
  ctx.route('https://api.cloudinary.com/v1_1/parinaya-emulator/image/upload',upload)
+ ctx.route('**/api/catalog?campaigns=1',lambda route:route.fulfill(status=200,json={'items':[],'serverNow':int(__import__('time').time()*1000),'nextBoundary':None}))
  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:saves.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='banners:save' else None)
  first_failure={'once':True}
  def fail_initial(route):

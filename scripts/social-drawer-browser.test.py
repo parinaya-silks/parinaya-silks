@@ -19,6 +19,7 @@ with sync_playwright() as p:
   if settings['social']=='invalid':value['contact'].update({'instagram':'https://instagram.com.attacker.test/private','facebook':'javascript:alert(1)'})
   if settings['social']=='one':value['contact'].update({'facebook':''})
   route.fulfill(status=200,json=value)
+ ctx.route('**/api/catalog?campaigns=1',lambda route:route.fulfill(status=200,json={'items':[],'serverNow':int(__import__('time').time()*1000),'nextBoundary':None}))
  ctx.route('**/api/catalog?content=store',content);page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));metrics={}
  def geometry():
   return page.evaluate("""()=>{const b=document.querySelector('.home-banner-slide'),h=document.querySelector('.storefront-header'),img=b.querySelector('img'),r=b.getBoundingClientRect(),hr=h.getBoundingClientRect();return {header:{x:hr.x,y:hr.y,width:hr.width,height:hr.height,bottom:hr.bottom},banner:{x:r.x,y:r.y,width:r.width,height:r.height},fit:getComputedStyle(img).objectFit,position:getComputedStyle(img).objectPosition,duration:document.querySelector('.home-banner-carousel').dataset.durationMs}}""")

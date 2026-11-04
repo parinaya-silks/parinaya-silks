@@ -1,3 +1,4 @@
+import {CampaignProvider} from './home/campaigns.tsx';
 import {ConnectionNotice} from './loading/Loading.tsx';
 import {AnalyticsConsent} from './analytics/Consent.tsx';
 import {RemovalDialog} from './shopping/ShoppingDialogs.tsx';
@@ -97,7 +98,7 @@ function customerLocation() {
   return normalizePath(window.location.hash.startsWith('#/') ? window.location.hash.slice(1) : window.location.pathname + window.location.search);
 }
 
-function Storefront() {return <CustomerAuthProvider><StoreContentProvider><StorefrontContent/></StoreContentProvider></CustomerAuthProvider>;}
+function Storefront() {return <CustomerAuthProvider><StoreContentProvider><CampaignProvider><StorefrontContent/></CampaignProvider></StoreContentProvider></CustomerAuthProvider>;}
 
 function StorefrontContent() {
   const session=useCustomerAuth();

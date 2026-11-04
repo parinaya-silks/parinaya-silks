@@ -36,6 +36,35 @@ test('coupon management and real checkout preserve usage, transaction limits, ex
   await db.doc('coupons/LEGACY').set({code:'LEGACY',kind:'fixed',value:100,enabled:true,revision:1,uses:0});assert.equal((await call({action:'coupons:get',code:'LEGACY'}) as any).endsAt,null);assert.equal((await review(remaining,'LEGACY')).discountPaise,'100');
   // Complete list uses deterministic ID pages; optional fields do not hide legacy rows.
   for(let i=0;i<28;i++)await db.doc('coupons/PAGE'+String(i).padStart(2,'0')).set({...coupon,code:'PAGE'+String(i).padStart(2,'0'),revision:1,uses:0});const first=await call({action:'coupons:list'}) as any,second=await call({action:'coupons:list',cursor:first.nextCursor}) as any;assert.equal(first.items.length,25);assert.equal(second.items.length,6);assert.equal(new Set([...first.items,...second.items].map(c=>c.code)).size,31);
+  // Sequence restriction is derived from token-owned Delivered orders, irrespective of COD collection.
+  await save({...coupon,code:'THIRD',globalLimit:null,eligibleOrderNumber:3});
+  for(let n=0;n<=3;n++){
+   const customer='sequence-'+n;
+   await db.doc(`customerShopping/${customer}/addresses/${aid}`).set((await db.doc(`customerShopping/customer-a/addresses/${aid}`).get()).data()!);
+   await db.doc(`customerShopping/${customer}/bag/${pid}--simple`).set({productId:pid,variantId:null,quantity:1});
+   for(let i=0;i<n;i++)await db.doc(`orders/sequence-${n}-${i}`).set({uid:customer,status:'Delivered',paymentStatus:'due'});
+   for(const status of ['Placed','Confirmed','Processing','Shipped','Cancelled','Rejected','Failed','Pending'])await db.doc(`orders/sequence-${n}-${status}`).set({uid:customer,status});
+   if(n===2)assert.equal((await review(customer,'THIRD')).discountPaise,'5000');else await assert.rejects(review(customer,'THIRD'),{code:'conflict'});
+  }
+  await assert.rejects(review('guest','THIRD'),{code:'unauthorized'});
+  await assert.rejects(call({action:'orders:review',addressId:aid,couponCode:'THIRD',uid:'sequence-2',deliveredOrders:2},'sequence-0'),{code:'invalid'});
+  const seq=await review('sequence-2','THIRD'),submission={action:'orders:place',addressId:aid,couponCode:'THIRD',fingerprint:seq.fingerprint,operationId:op()};
+  await db.doc('orders/sequence-2-0').update({status:'Processing'});
+  await assert.rejects(call(submission,'sequence-2'),{code:'conflict'});
+  assert.equal((await db.doc('coupons/THIRD').get()).get('uses'),0,'Failed eligibility must not consume a use');
+  await db.doc('orders/sequence-2-0').update({status:'Delivered'});
+  assert.equal((await call({...submission,fingerprint:'0'.repeat(64),operationId:op()},'sequence-2') as any).changed,true);
+  assert.equal((await db.doc('coupons/THIRD').get()).get('uses'),0,'Renewed review must not consume a use');
+  const sequenceBodies=[submission,{...submission,operationId:op()}];const simultaneous=await Promise.allSettled(sequenceBodies.map(body=>call(body,'sequence-2')));
+  assert.equal(simultaneous.filter(x=>x.status==='fulfilled'&&!!(x.value as any).order).length,1);
+  const acceptedSequence=(simultaneous[0] as PromiseFulfilledResult<any>).value?.order||(simultaneous[1] as PromiseFulfilledResult<any>).value.order;
+  const successfulBody=sequenceBodies[simultaneous.findIndex(x=>x.status==='fulfilled')];
+  // Retry the accepted operation, even after the customer's delivered count changes.
+  if(successfulBody){await db.doc('orders/sequence-extra').set({uid:'sequence-2',status:'Delivered'});assert.equal((await call(successfulBody,'sequence-2') as any).order.id,acceptedSequence.id);await db.doc('orders/sequence-extra').delete();}
+  assert.equal((await db.doc('coupons/THIRD').get()).get('uses'),1);
+  await call({action:'adminOrders:update',id:acceptedSequence.id,expectedRevision:acceptedSequence.revision,operationId:op(),command:'Cancelled',note:'Local fixture cancellation'},'owner');
+  await assert.rejects(review('sequence-2','THIRD'),{code:'conflict'});
+  assert.equal((await db.doc('coupons/THIRD').get()).get('uses'),1,'Accepted cancellation retains usage consistently');
   const customer=env.authenticatedContext('customer-a').firestore();await assertFails(getDoc(doc(customer,'coupons','ONCE10')));await assertFails(setDoc(doc(customer,'coupons','UNTRUSTED'),coupon));await db.doc('adminAccess/owner').update({enabled:false});await assert.rejects(save({...coupon,value:30},2),{code:'permission'});
  }finally{await env.clearFirestore();await env.cleanup();}
 });

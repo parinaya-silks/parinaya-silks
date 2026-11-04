@@ -1,3 +1,4 @@
+import {campaignDestination} from '../campaigns/model.ts';
 import {ProductError} from '../products/model.ts';
 import {validateAppearance,type AppearanceInput,type Appearance} from '../appearance/model.ts';
 import {exact,text,safeLink,referenceId} from '../orders/model.ts';
@@ -36,4 +37,4 @@ export function validateBanner(value:unknown):BannerInput {
  return result;
 }
 export function bannerInput(b:Banner):BannerInput {return {...b,images:{desktop:b.images.desktop?(({mediaId,alt,focalX,focalY})=>({mediaId,alt,focalX,focalY}))(b.images.desktop):null,mobile:b.images.mobile?(({mediaId,alt,focalX,focalY})=>({mediaId,alt,focalX,focalY}))(b.images.mobile):null}};}
-export function publicBanner(b:Banner):PublicBanner {return {id:b.id,title:b.title,link:b.showButton===false?'':b.link,supportingText:b.supportingText||'',showButton:b.showButton??!!b.link,buttonLabel:b.buttonLabel??'Explore',placement:b.placement??'bottom',images:{desktop:b.images.desktop?(({url,alt,focalX,focalY,width,height})=>({url,alt,focalX,focalY,width,height}))(b.images.desktop):null,mobile:b.images.mobile?(({url,alt,focalX,focalY,width,height})=>({url,alt,focalX,focalY,width,height}))(b.images.mobile):null}};}
+export function publicBanner(b:Banner):PublicBanner {return {id:b.id,title:b.title,link:b.showButton===false&&!campaignDestination(b.link)?'':b.link,supportingText:b.supportingText||'',showButton:b.showButton??!!b.link,buttonLabel:b.buttonLabel??'Explore',placement:b.placement??'bottom',images:{desktop:b.images.desktop?(({url,alt,focalX,focalY,width,height})=>({url,alt,focalX,focalY,width,height}))(b.images.desktop):null,mobile:b.images.mobile?(({url,alt,focalX,focalY,width,height})=>({url,alt,focalX,focalY,width,height}))(b.images.mobile):null}};}

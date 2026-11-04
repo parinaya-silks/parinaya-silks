@@ -18,7 +18,7 @@ Money is persisted as integer paise. Rupee entry accepts at most two decimal pla
 
 Date entry and display explicitly use Asia/Kolkata. `datetime-local` values are converted using the +05:30 offset, independently of browser/host timezone. Existing subsecond instants survive an unchanged edit. Start immediately and No end date persist null instants.
 
-Missing optional legacy restrictions normalize as no restriction: start/end, percentage cap, total limit and per-customer limit become null; absent optional minimum becomes zero. Required code/type/value/enabled and invalid recorded usage never silently default. Legacy per-customer limits remain enforced and are preserved on edits, with a read-only explanation; no new targeting or loyalty controls are added. Corrupt settings fail explicitly instead of presenting partial coupons or resetting counters.
+Missing optional legacy restrictions normalize as no restriction: start/end, percentage cap, total limit and per-customer limit become null; absent optional minimum becomes zero. Required code/type/value/enabled and invalid recorded usage never silently default. Legacy per-customer limits remain enforced and are preserved on edits, with a read-only explanation; the optional order-sequence restriction described below is supported; loyalty controls are unchanged. Corrupt settings fail explicitly instead of presenting partial coupons or resetting counters.
 
 The preview shares `couponDiscount` with trusted checkout. It calculates eligibility, discount/cap and amount after discount for the entered subtotal. It is labelled **Preview — delivery charges not included.** It assumes zero prior uses for a particular customer and is advisory; actual customer limits and current usage are verified server-side. Preview and checkout review do not consume redemptions.
 
@@ -44,3 +44,13 @@ Final COD acceptance independently rechecks coupon existence/identity, enabled s
 Accept locally with emulators at `/admin/coupons`: create a percentage and fixed coupon, preview qualifying/nonqualifying subtotals, schedule a coupon in IST, edit without changing usage, confirm/cancel disabling and inspect mobile filters. Use emulator customers/orders for redemption checks.
 
 No new indexes, security rules, dependencies, migrations or production preparation are required. List pagination uses only document-name ordering. Owner application deployment and hosted acceptance remain release steps; local/emulator checks do not establish production readiness. Nothing was committed, pushed, deployed, published or changed in production.
+
+## Customer order sequence (November 2026)
+
+In Create/Edit Coupon, choose **Customer eligibility > Specific order number** and enter a positive whole number (up to 1,000,000,000). Leave **All customers** selected to preserve unrestricted behaviour. The optional persisted `eligibleOrderNumber` defaults to unrestricted when missing/null. It appears in Admin list/details and round trips through revision-checked saves.
+
+Example: THIRD with 3 requires exactly two `Delivered` orders owned by the authenticated token UID. COD collection is irrelevant; all other statuses are excluded. Review and final acceptance query `orders` using equality on `uid` and `status == Delivered`, project document names only, and limit to the entered number: reaching that number already proves ineligibility. Existing equality index merging supports this query; the exact shape was verified read-only against Production `(default)`. No new index/rule publication is needed.
+
+Final acceptance reads both trusted Delivered records and the existing `coupons/{code}/customers/{uid}` usage record in the order transaction. Sequence coupons require zero prior accepted uses regardless of a looser configured per-customer limit. All existing dates, minimum, caps and total/per-customer limits still apply. Usage, stock, order and idempotency receipt commit atomically. Applying/reviewing, failed attempts and a changed review consume nothing. There is no separate coupon reservation. Exact accepted-operation retries recover the original order without another use. Accepted cancellations/rejections retain usage under the existing lifecycle, including sequence coupons; they do not release a use. Adding a restriction to an already-used coupon does not erase customer usage.
+
+Regression coverage extends the existing coupon unit, real-service emulator and responsive Admin browser suites. No production customers, coupons or orders are created for testing.

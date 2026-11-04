@@ -7,7 +7,7 @@ import {checkoutSource,type CheckoutSource} from '../src/checkout/source.ts';
 import {createHash} from 'node:crypto';
 import {FieldValue,Timestamp,FieldPath,type Firestore,type Transaction,type DocumentSnapshot,type Query} from 'firebase-admin/firestore';
 import {ProductError,type ProductInput} from '../src/products/model.ts';
-import {referenceId,exact,text,noteText,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,storedCoupon,couponUses,couponDiscount,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
+import {referenceId,exact,text,noteText,transitions,orderStatuses,changeStock,lowStock,newlyLowStock,storedCoupon,couponUses,couponDiscount,checkCouponSequence,type OrderRecord,type OrderItem,type CouponInput} from '../src/orders/model.ts';
 import type {CheckoutReview} from '../src/delivery/model.ts';
 
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -26,6 +26,11 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     if(!saved.exists)throw new ProductError('conflict','This coupon is not available. Remove it or use another code.');
     const data=saved.data()!,input=storedCoupon(data);
     if(input.code!==normalized)throw new ProductError('schema','Coupon identity requires owner review.');
+    if(input.eligibleOrderNumber!=null){
+      // Token-owned query and usage document participate in the final acceptance transaction.
+      const delivered=await tx.get(db.collection('orders').where('uid','==',uid).where('status','==','Delivered').select().limit(input.eligibleOrderNumber));
+      checkCouponSequence(input,delivered.size,couponUses(usage.data()?.uses));
+    }
     return {code:normalized,discountPaise:String(couponDiscount(input,BigInt(subtotal),couponUses(data.uses),couponUses(usage.data()?.uses))),revision:data.revision,input,uses:couponUses(data.uses),customerUses:couponUses(usage.data()?.uses)};
   }
   async function review(tx:Transaction,uid:string,addressId:string|null,code:unknown,source:CheckoutSource={kind:'bag'},points:unknown=0){
@@ -59,7 +64,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
       loyalty.placed(tx,uid,loyal.balance,loyal.snapshot,orderId,value.reference);
       for(const doc of products){const old=doc.data()!,next=inventory.get(doc.id)!;tx.update(doc.ref,{inventory:next,revision:old.revision+1,updatedAt:stamp()});tx.create(db.doc(`inventoryAudit/${orderId}_${doc.id}`),{productId:doc.id,orderId,actor:uid,reason:'COD order accepted',before:old.inventory,after:next,createdAt:stamp()});if(newlyLowStock(old.inventory,next,old.lowStockThreshold))event(tx,orderId+'_'+doc.id,'stock','/admin/products/edit/'+doc.id,'Stock is low or unavailable');}
       if(source.kind==='bag')for(const item of current.items)tx.delete(db.doc(`customerShopping/${uid}/bag/${item.id}`));
-      if(discount.code){tx.update(db.doc('coupons/'+discount.code),{uses:discount.uses+1});tx.set(db.doc(`coupons/${discount.code}/customers/${uid}`),{uses:discount.customerUses+1,updatedAt:stamp()});}
+      if(discount.code){tx.update(db.doc('coupons/'+discount.code),{uses:discount.uses+1});tx.set(db.doc(`coupons/${discount.code}/customers/${uid}`),{uses:discount.customerUses+1,updatedAt:stamp()},{merge:true});}
       if(directory.exists){const old=directory.data()!;tx.update(directory.ref,{orderCount:old.orderCount+1,hasOrders:true,itemsOrdered:Number.isSafeInteger(old.itemsOrdered)?old.itemsOrdered+itemQuantity:null,latestOrderAt:stamp(),latestOrderId:orderId,latestOrderReference:value.reference});}
       tx.create(ref,value);tx.create(receipt,{hash,orderId,createdAt:stamp()});tx.set(limit.ref,{count:(limit.data()?.count||0)+1,updatedAt:stamp()});event(tx,orderId,'order','/admin/orders/'+orderId,'New COD order '+value.reference);
       return {order:projection({...value,id:orderId,createdAt:now(),updatedAt:now()} as OrderRecord,false)};

@@ -12,7 +12,7 @@ import {referenceId,exact} from '../src/orders/model.ts';
 export function contentService(db:Firestore,access:(tx:Transaction,uid:string)=>Promise<void>,project:(doc:FirebaseFirestore.DocumentSnapshot,name?:string)=>Promise<PublicProductRecord>,campaignLive?:(slug:string)=>Promise<boolean>,clock:()=>number=Date.now){
  const ref=db.doc('siteSettings/storeContent');
  async function destination(b:BannerInput,window=false):Promise<string|null>{
-  if(b.showButton===false||!b.link)return null;
+  if(!b.link)return null;
   const campaign=campaignDestination(b.link);
   if(campaign){
    if(!window&&campaignLive)return await campaignLive(campaign)?null:'Campaign is not live.';
@@ -24,6 +24,7 @@ export function contentService(db:Firestore,access:(tx:Transaction,uid:string)=>
    if(c.startsAt!=null&&start<c.startsAt)return 'Banner must start when the campaign is available.';
    return null;
   }
+  if(b.showButton===false)return null;
   let path=b.link;try{const url=new URL(path);if(url.origin==='https://parinayasilks.vercel.app')path=url.pathname;else return null;}catch{}
   if(path==='/shop'||path==='/sale'||path==='/collections')return null;
   const match=/^\/(collections|product)\/([a-z0-9-]+)$/.exec(path);if(!match)return 'Destination is not an implemented storefront route.';
