@@ -1,14 +1,16 @@
 /* Approved customer palette. Keep Admin's shared Tailwind/theme values intact.
    Colours only: no sizing, opacity, image filters or layout rules belong here. */
-body:has(.customer-storefront),
-.customer-storefront {
-  --store-canvas: #BC8692;
-  --store-surface: #FFFFFF;
-  --store-primary: #780D24;
-  --store-heading: #3A0510;
-  --store-body: #2A0810;
-  --store-surface-text: #231919;
+html:has(.customer-storefront), body:has(.customer-storefront), .customer-storefront {
+  --store-canvas:#FAF7F0; --store-surface:#FFFFFF; --store-primary:#6B2435;
+  --store-heading:#171511; --store-body:#171511; --store-surface-text:#171511;
+  --store-deep:#4F0818; --store-gold:#B68A3A; --store-border:#E4DCCD;
 }
+html:has(.customer-storefront[data-store-theme=light-maroon]), body:has(.customer-storefront[data-store-theme=light-maroon]), .customer-storefront[data-store-theme=light-maroon] {
+  --store-canvas:#BC8692; --store-primary:#780D24; --store-deep:#4F0818;
+  --store-heading:#3A0510; --store-body:#2A0810; --store-surface-text:#231919;
+  --store-gold:#B88A44; --store-border:#D8A8B2;
+}
+.customer-storefront {--color-maroon:var(--store-primary);--color-maroon-dark:var(--store-deep);--color-gold:var(--store-gold);--color-ivory:var(--store-canvas)}
 
 /* Body/root coverage includes short pages, outer gutters and mobile safe areas.
    :has follows the mounted shell, so navigating to Admin restores its palette. */
@@ -19,7 +21,7 @@ body:has(.customer-storefront) #root,
 .customer-storefront :is(.home-page, .home-curations, .discovery-page,
   .discovery-heading, .shopping-page, .checkout-screen, .checkout-progress,
   .customer-order-experience, .customer-order-history) {
-  background-color: var(--store-canvas, #BC8692);
+  background-color: var(--store-canvas, #FAF7F0);
 }
 .customer-storefront,
 .customer-storefront :is(.home-page, .discovery-page, .shopping-page,
@@ -172,3 +174,11 @@ body:has(.customer-storefront) dialog :is(input:not([type=checkbox]):not([type=r
 .customer-storefront>footer :focus-visible {
   outline-color: #F2BE72;
 }
+
+/* Legacy utility colours follow the same storefront-only tokens. Semantic statuses,
+   media/artwork, footer and Admin retain their intentional colours. */
+.customer-storefront :is(.storefront-header,.home-primary,.home-add,.home-banner-cta,.shopping-checkout,.checkout-primary,[class~="bg-[#780D24]"]) {background-color:var(--store-primary)}
+.customer-storefront :is([class~="text-[#780D24]"],.storefront-bottom-nav button[aria-current=page]) {color:var(--store-primary)}
+.customer-storefront [class~="border-[#780D24]"] {border-color:var(--store-primary)}
+.customer-storefront [class~="text-[#B88A44]"] {color:var(--store-gold)}
+.customer-storefront :is(.storefront-drawer,.storefront-bottom-nav,.discovery-search,.discovery-toolbar>*,.profile-dialog,.customer-shopping-dialog) {border-color:var(--store-border)}

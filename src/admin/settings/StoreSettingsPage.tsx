@@ -1,3 +1,4 @@
+import {ThemeSettings} from './ThemeSettings.tsx';
 import {bannerSeconds,validateBannerTiming} from '../../content/bannerTiming.ts';
 import {LoyaltySettingsCard,loyaltyDraft,loyaltyDraftInput} from '../../loyalty/SettingsCard.tsx';
 import React,{useCallback,useEffect,useRef,useState} from 'react';
@@ -14,7 +15,7 @@ import './settings.css';
 export function StoreSettingsPage(){
  const [snapshot,setSnapshot]=useState<SettingsSnapshot>(),[attempt,setAttempt]=useState(0),[error,setError]=useState('');
  useEffect(()=>{let live=true;const c=new AbortController();setError('');void catalogAction<SettingsSnapshot>({action:'settings:get'},c.signal).then(v=>{if(live)setSnapshot(v);}).catch(()=>{if(live)setError('Unable to load store settings. Please try again.');});return()=>{live=false;c.abort();};},[attempt]);
- return <section className="settings-workspace" aria-label="Store Settings">{!snapshot&&!error&&<p role="status">Loading store settings…</p>}{error&&<div role="alert"><p>{error}</p><button onClick={()=>setAttempt(n=>n+1)}>Retry store settings</button></div>}{snapshot&&<SettingsEditor initial={snapshot}/>}</section>;
+ return <section className="settings-workspace" aria-label="Store Settings">{!snapshot&&!error&&<p role="status">Loading store settings…</p>}{error&&<div role="alert"><p>{error}</p><button onClick={()=>setAttempt(n=>n+1)}>Retry store settings</button></div>}{snapshot&&<><ThemeSettings initial={snapshot}/><SettingsEditor initial={snapshot}/></>}</section>;
 }
 function SettingsEditor({initial}:{initial:SettingsSnapshot}){
  const allowed=useAdminWritePermission(),[saved,setSaved]=useState(initial),[bannerTime,setBannerTime]=useState(()=>String(bannerSeconds(initial.homepageBanners?.seconds))),[draft,setDraft]=useState(()=>shippingDraft(initial.shipping)),[loyalty,setLoyalty]=useState(()=>loyaltyDraft(initial.loyalty?.config)),[images,setImages]=useState(initial.appearance),[pending,setPending]=useState({desktop:false,mobile:false}),[local,setLocal]=useState({desktop:'',mobile:''}),[generation,setGeneration]=useState(0),[tab,setTab]=useState('settings'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[discard,setDiscard]=useState(false),[conflict,setConflict]=useState(false),[latest,setLatest]=useState<SettingsSnapshot>(),active=useRef(true),lock=useRef(false),flight=useRef<AbortController|null>(null),operation=useRef({key:'',id:''}),state=useRef({dirty:false,busy:false});

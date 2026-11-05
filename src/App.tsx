@@ -26,7 +26,7 @@ import {
 
 // Customer Shell Components
 import {Seo} from './content/Seo.tsx';
-import {StoreContentProvider} from './content/public.tsx';
+import {StoreContentProvider,useStoreContent} from './content/public.tsx';
 import { Header } from './components/Header.tsx';
 import {FloatingSocial} from './contact/FloatingSocial.tsx';
 import {FloatingContact} from './contact/ContactLinks.tsx';
@@ -101,7 +101,7 @@ function customerLocation() {
 function Storefront() {return <CustomerAuthProvider><StoreContentProvider><CampaignProvider><StorefrontContent/></CampaignProvider></StoreContentProvider></CustomerAuthProvider>;}
 
 function StorefrontContent() {
-  const session=useCustomerAuth();
+  const session=useCustomerAuth(),{content}=useStoreContent();
   // Navigation State (Simple client-side routing)
   const [currentPath, setCurrentPath] = useState<string>(() => {
     return customerLocation();
@@ -255,7 +255,7 @@ function StorefrontContent() {
   }
 
   return (
-    <div data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"customer-storefront min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")+(currentPath==='/'?" homepage-shell":"")}>
+    <div data-store-theme={content.storefrontAppearance?.theme==='light-maroon'?'light-maroon':'classic-cream'} data-shopping-status={shopping.signedIn?shopping.status:session.status} className={"customer-storefront min-h-screen bg-[#FBF7F0] text-[#231919] font-sans antialiased flex flex-col selection:bg-[#780D24] selection:text-white"+(authExperience?" customer-auth-shell":"")+(currentPath==='/'?" homepage-shell":"")}>
       <Seo path={currentPath}/>
       <AnalyticsConsent path={currentPath}/>
       {/* Top Store Announcement Banner */}

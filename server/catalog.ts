@@ -1,3 +1,4 @@
+import {couponDiscoveryService} from './couponDiscovery.ts';
 import {categoryService} from './categories.ts';
 import {loyaltyService} from './loyalty.ts';
 import {enquiriesService} from './enquiries.ts';
@@ -172,15 +173,17 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   }
   const delivery=deliveryService(db,async(document,name)=>publicProduct(await present(document,name)));
   const orders=ordersService(db,transactionAccess,delivery.reviewInTransaction);
+  const availableOffers=couponDiscoveryService(db,orders.review);
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
-    submitEnquiry:enquiries.submit,
+    submitEnquiry:enquiries.submit,publicCoupons:availableOffers.publicList,
     sitemap:()=>sitemap(db),
     publicCampaignList:campaigns.publicList,publicCampaignGet:campaigns.publicGet,publicCampaignBrowse:campaigns.browse,
     publicBrowse:browseService(db,async(doc,name)=>publicProduct(await present(doc,name))),
     publicAppearance:appearance.publicGet,publicContent:content.publicGet,
     publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      if(body.action==='coupons:available')return availableOffers.personal((await authenticate(token)).uid,body);
       if(['loyalty:account','loyalty:customerHistory'].includes(String(body.action)))return loyalty.action((await authenticate(token)).uid,body);
       if(body.action==='profile:syncDirectory'){keys(body,['action']);return customers.sync((await authenticate(token)).uid);}
       if(body.action==='profile:update')return business.profile((await authenticate(token)).uid,body);

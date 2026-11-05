@@ -6,8 +6,8 @@
 .home-heart svg{position:relative;width:18px;height:18px}
 .home-product-art{margin:6px 6px 0}
 .home-collection-status{font-size:12px;color:#817567;margin-top:12px}
-.home-collection-retry{min-height:44px;text-decoration:underline;color:#780D24;font-size:12px}
-.home-categories>.home-copy h2{font:600 12px/1.4 var(--font-sans);text-transform:uppercase;letter-spacing:.06em;color:#780D24}
+.home-collection-retry{min-height:44px;text-decoration:underline;color:var(--store-primary,#780D24);font-size:12px}
+.home-categories>.home-copy h2{font:600 12px/1.4 var(--font-sans);text-transform:uppercase;letter-spacing:.06em;color:var(--store-primary,#780D24)}
 .home-page .home-rail-heading h2{font-family:var(--font-sans)}
 .home-category-art img{object-fit:cover}
 .home-page .home-banner-cta{gap:20px;border-radius:3px}

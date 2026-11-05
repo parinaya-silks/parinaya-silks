@@ -20,3 +20,20 @@ test('full list traversal, deterministic filters and no partial results on faile
 });
 
 test('order-sequence eligibility validates positive integers, round trips and leaves legacy coupons unrestricted',async()=>{const {checkCouponSequence,storedCoupon,couponSequenceMessage}=await import('../../orders/model.ts');const base=storedCoupon({code:'THIRD',kind:'percent',value:10,enabled:true});assert.equal(base.eligibleOrderNumber,null);for(const n of [0,1,2,3]){checkCouponSequence(base,n,0);if(n===2)checkCouponSequence({...base,eligibleOrderNumber:3},n,0);else assert.throws(()=>checkCouponSequence({...base,eligibleOrderNumber:3},n,0));}assert.throws(()=>checkCouponSequence({...base,eligibleOrderNumber:3},2,1));for(const n of [0,-1,1.5,'3',Infinity,1000000001])assert.throws(()=>storedCoupon({...base,eligibleOrderNumber:n}));const draft=couponDraft({...base,eligibleOrderNumber:3,uses:0,revision:1,createdAt:null,updatedAt:null});assert.equal(draft.sequence,'3');assert.equal(draftCoupon(draft,null).eligibleOrderNumber,3);assert.match(couponSequenceMessage(3),/third order after 2 delivered orders/);});
+
+import {availableCoupon} from '../../offers/model.ts';
+test('public offers opt in explicitly and delegate validity and limits to checkout',()=>{
+ const offer={...coupon,discoverable:true};const list=(c=offer,g=0,u=0)=>availableCoupon(c,g,u,0,100000n,true,100);
+ assert.equal(storedCoupon({...coupon}).discoverable,false);assert.equal(list({...offer,discoverable:false}),null);
+ for(const c of [{...offer,enabled:false},{...offer,startsAt:101},{...offer,endsAt:100},{...offer,globalLimit:1},{...offer,perCustomerLimit:1}])assert.equal(list(c,1,1),null);
+ assert.equal(list()?.state,'eligible');assert.equal(availableCoupon(offer,0,0,null,null,false,100)?.state,'login');
+ assert.equal(availableCoupon({...offer,minimumPaise:200000},0,0,0,100000n,true,100)?.state,'minimum');assert.equal(availableCoupon(offer,0,0,0,null,false,100)?.state,'items');
+ const draft=couponDraft({...offer});assert.equal(draftCoupon(draft,null).discoverable,true);
+ assert.throws(()=>couponInput({...offer,discoverable:'true'}));
+});
+test('upcoming offers use only exact order-number policy and never expose customer counts',()=>{
+ const c={...coupon,discoverable:true,eligibleOrderNumber:3};
+ for(const n of [0,1]){const offer=availableCoupon(c,0,0,n,10000n,true,100)!;assert.equal(offer.state,'upcoming');assert.match(offer.message,new RegExp('Complete '+(2-n)+' more Delivered order'));assert.equal('uid' in offer,false);assert.equal('deliveredCount' in offer,false);}
+ assert.equal(availableCoupon(c,0,0,2,10000n,true,100)?.state,'eligible');assert.equal(availableCoupon(c,0,0,3,10000n,true,100),null);assert.equal(availableCoupon(c,0,1,2,10000n,true,100),null);
+ assert.match(availableCoupon(c,0,0,null,null,false,100)!.message,/Unlock after 2 Delivered orders/);
+});

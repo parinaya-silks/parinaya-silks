@@ -1,3 +1,4 @@
+import {AvailableCoupons} from '../offers/AvailableCoupons.tsx';
 import {openModal,closeModal} from '../components/modalLayer.ts';
 import {Loading,Recovery,Updating,Skeleton,ImageState} from '../loading/Loading.tsx';
 import './shop-cards.css';
@@ -32,7 +33,7 @@ export const ShopView:React.FC<ShopViewProps>=({initialCategory,initialSearch=''
  function apply(){try{const next={...draft,minPrice:paise(minText),maxPrice:paise(maxText)};discoveryFilters({...options,minPrice:next.minPrice===null?'':String(next.minPrice),maxPrice:next.maxPrice===null?'':String(next.maxPrice)});change(next);setDrawer(false);}catch(e){setError((e as Error).message);}}
  const categoryLink=(slug?:string)=>campaignSlug?change({category:slug||''}):change({category:''},slug?'/collections/'+slug:'/shop');
  return <div className="discovery-page space-y-4"><section className="discovery-heading"><h1>{campaignTitle||baseCategory?.name||(filters.q?'Search: "'+(params.get('search')||initialSearch)+'"':'Shop All Sarees')}</h1>{page.state==='loading'&&<Skeleton className="sk-short"/>}{page.state==='ready'&&!invalidCategory&&!queryError&&<span>{page.total===undefined?filteredProducts.length+' sarees shown':page.total+' Sarees'}</span>}</section>
- <div className="discovery-wrap"><form className="discovery-search" onSubmit={e=>{e.preventDefault();change({q:searchText});}}><Search size={18}/><label className="sr-only" htmlFor="catalog-search">Search products</label><input id="catalog-search" value={searchText} maxLength={100} onChange={e=>setSearchText(e.target.value)} placeholder="Search sarees, code, fabric or colour"/><button>Search</button></form>
+ <div className="discovery-wrap"><AvailableCoupons onNavigate={onNavigate}/><form className="discovery-search" onSubmit={e=>{e.preventDefault();change({q:searchText});}}><Search size={18}/><label className="sr-only" htmlFor="catalog-search">Search products</label><input id="catalog-search" value={searchText} maxLength={100} onChange={e=>setSearchText(e.target.value)} placeholder="Search sarees, code, fabric or colour"/><button>Search</button></form>
  {categoryState.status==='error'&&<div role="alert">Categories are unavailable. <button onClick={retryCategories}>Retry categories</button></div>}
  <nav className="discovery-categories" aria-label="Catalog categories"><button onClick={()=>categoryLink()}>All Sarees</button>{publicCategories.map(c=><button key={c.id} aria-current={c.id===selectedPublic?.id?'page':undefined} onClick={()=>campaignSlug?change({category:c.slug}):categoryLink(c.slug)}>{c.name}</button>)}</nav>
  {baseCategory?.description&&<p>{baseCategory.description}</p>}

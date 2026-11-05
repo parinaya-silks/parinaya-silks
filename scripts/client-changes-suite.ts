@@ -8,7 +8,8 @@ if (process.env.FIREBASE_AUTH_EMULATOR_HOST !== '127.0.0.1:9099' || process.env.
 async function run(command: string, args: string[], environment = process.env) {
   await new Promise<void>((resolve, reject) => { const child = spawn(command, args, { stdio: 'inherit', env: environment }); child.on('error', reject); child.on('exit', code => code === 0 ? resolve() : reject(new Error(`Test command exited ${code}`))); });
 }
-for(const file of (process.env.PARINAYA_CLIENT_BROWSER_ONLY?[]:['admin-rules','customer-rules','category-rules','catalog-emulator','campaigns-emulator','loyalty-emulator','delivery-loyalty-emulator','contact-emulator','discovery-emulator','orders-list-emulator','four-fixes-emulator']))await run(process.execPath,['--import','tsx','--test','scripts/'+file+'.test.ts']);
+for(const file of (process.env.PARINAYA_CLIENT_BROWSER_ONLY?[]:process.env.PARINAYA_CLIENT_SERVICE_FILES?.split(',')||['admin-rules','customer-rules','category-rules','catalog-emulator','campaigns-emulator','loyalty-emulator','delivery-loyalty-emulator','contact-emulator','discovery-emulator','orders-list-emulator','four-fixes-emulator','coupons-emulator','settings-emulator','theme-offers-emulator']))await run(process.execPath,['--import','tsx','--test','scripts/'+file+'.test.ts']);
+if(process.env.PARINAYA_CLIENT_SERVICES_ONLY)process.exit(0);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -27,7 +28,7 @@ try {
     if (uid !== 'test-claim-only') await database.doc(`adminAccess/${uid}`).set({ enabled });
   }
 } finally { await deleteApp(app); }
-const fixtureApp=initializeApp({projectId:'parinaya-silks'},'discovery-browser-seed');await (await import('./discovery-fixtures.ts')).seedDiscovery(getFirestore(fixtureApp));const db=getFirestore(fixtureApp);await db.doc('siteSettings/homepageBanners').set({seconds:6,revision:1,schemaVersion:1});await db.doc('customerProfiles/test-customer').set({uid:'test-customer',displayName:'Local Customer',mobileNumber:'+919876543210',createdAt:new Date(),updatedAt:new Date()});const pid='p'+String(2).padStart(19,'0');await db.doc('customerShopping/test-customer/bag/'+pid+'--simple').set({productId:pid,variantId:null,quantity:1,createdAt:new Date()});await db.doc('customerShopping/test-customer/wishlist/'+pid).set({productId:pid,createdAt:new Date()});await deleteApp(fixtureApp);
+const fixtureApp=initializeApp({projectId:'parinaya-silks'},'discovery-browser-seed');await (await import('./discovery-fixtures.ts')).seedDiscovery(getFirestore(fixtureApp));const db=getFirestore(fixtureApp);await db.doc('siteSettings/storefrontAppearance').set({schemaVersion:1,revision:1,theme:'light-maroon'});await db.doc('siteSettings/homepageBanners').set({seconds:6,revision:1,schemaVersion:1});await db.doc('customerProfiles/test-customer').set({uid:'test-customer',displayName:'Local Customer',mobileNumber:'+919876543210',createdAt:new Date(),updatedAt:new Date()});const pid='p'+String(2).padStart(19,'0');await db.doc('customerShopping/test-customer/bag/'+pid+'--simple').set({productId:pid,variantId:null,quantity:1,createdAt:new Date()});await db.doc('customerShopping/test-customer/wishlist/'+pid).set({productId:pid,createdAt:new Date()});await deleteApp(fixtureApp);
 const catalogApi = spawn(process.execPath, ['--import','tsx','scripts/catalog-emulator-server.ts'], {stdio:'inherit',env:process.env});
 const vite = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '3100', '--strictPort', '--mode', 'admin-test'], { stdio: 'inherit', env: process.env });
 const preview = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4200', '--strictPort'], { stdio: 'inherit', env: process.env });
@@ -40,7 +41,7 @@ try {
   }
   if (!ready) throw new Error('Local test server unavailable.');
   
-  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','sequence-sales','social-drawer','checkout-design','shopping-design','customer-order-states','four-fixes']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  for(const file of (process.env.PARINAYA_CLIENT_FILES?.split(',')||['client-changes','sequence-sales','social-drawer','checkout-design','shopping-design','customer-order-states','four-fixes','theme-offers']))await run('python',['scripts/'+file+'-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
 
 
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }
