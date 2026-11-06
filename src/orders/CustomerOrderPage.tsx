@@ -1,3 +1,4 @@
+import {PaymentStatus} from '../payments/PaymentStatus.tsx';
 import {openModal,closeModal} from '../components/modalLayer.ts';
 import {useRead} from '../loading/useRead.ts';
 import {Loading,Recovery,Updating} from '../loading/Loading.tsx';
@@ -47,7 +48,7 @@ export function CustomerOrderPage({id,confirmed,onNavigate}:{id:string;confirmed
  return <div className={'customer-order-experience '+(confirmed?'order-confirmation':'customer-order-detail-screen')}><OrderHeader confirmed={confirmed} onNavigate={onNavigate}/><div className="customer-order-container">
  {!order&&(resource.loading?<Loading kind="order" label="Loading your order" retry={resource.retry}/>:<Recovery retry={resource.retry} message={resource.error}/>)}
  {order&&<Updating busy={resource.loading} error={resource.error} retry={resource.retry}/>}
- {order&&<>
+ {order&&<>{order.payment&&<PaymentStatus order={order} onRefresh={resource.retry}/>}
  {confirmedOrder?<><section className={'order-greeting'+(animate?' order-greeting-animate':'')} data-animated={animate}><ConfirmationMotif animate={animate}/><span className="order-label">Order Confirmation</span><h1>Thank you for choosing Parinaya.</h1><h2>Your order has been placed.</h2><p className="order-greeting-quote">“Your next beautiful drape is on its way to becoming part of your story.”</p><p>You can follow your order updates from your account anytime.</p></section><PaymentNotice order={order}/><div className="order-confirm-actions"><button className="order-primary" onClick={()=>onNavigate('/order-tracking/'+order.id)}>View Order & Updates <ArrowRight size={17}/></button><button onClick={()=>onNavigate('/shop')}>Continue Shopping</button><button className="order-text-button" onClick={()=>onNavigate('/account/orders')}>View My Orders</button></div><div className="order-confirm-grid"><div className="order-card order-confirm-items"><div className="order-reference-heading"><div><span className="order-label">Order Reference</span><CopyReference reference={order.reference}/></div><div><span className="order-label">Placed on</span><time>{ist(order.createdAt)}</time></div></div><PurchasedItems order={order}/></div><div className="order-confirm-side"><OrderAddress order={order}/><PaymentSummary order={order}/></div></div></>:<>
  {confirmed&&<div className="order-notice" role="status">This order is currently {order.status.toLowerCase()}. See its current details below.</div>}
  <section className="order-card order-detail-heading"><div><span className="order-status" data-status={order.status}>{order.status}</span><h1>Order Details</h1><span className="order-label">Order Reference</span><CopyReference reference={order.reference}/><time>Placed on {ist(order.createdAt)}</time></div><PaymentNotice order={order}/></section>

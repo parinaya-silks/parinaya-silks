@@ -1,3 +1,4 @@
+import {capturedPayment} from '../../payments/model.ts';
 import {transitions,type OrderRecord} from '../../orders/model.ts';
 import {ProductError,rupeesToPaise} from '../../products/model.ts';
 
@@ -11,6 +12,7 @@ export function orderFinance(order:DetailOrder){
  return {total,recorded,outstanding:order.paymentStatus==='due'&&!cancelled?total-recorded:0n,refunds:(order.refunds||[]).reduce((sum,item)=>sum+amount(item.amountPaise),0n)};
 }
 export function orderCommands(order:DetailOrder):string[]{
+ if(order.payment)return [...(capturedPayment(order.payment)?(transitions[order.status]||[]).filter(s=>!['Cancelled','Rejected'].includes(s)):[]),'note',...(order.request?.status==='pending'?['reject-request']:[])];
  return [...(transitions[order.status]||[]),...(order.status==='Delivered'&&order.paymentStatus==='due'?['collect']:[]),'note',...(order.request?.status==='pending'?['approve-request','reject-request']:[]),...(order.request?.status==='approved'&&order.request.kind!=='cancellation'&&!order.request.restocked?['receive-restock','resolve-request']:[]),...(order.request?.status==='resolved'&&order.paymentStatus==='collected'?['manual-refund']:[])];
 }
 export const commandLabel=(command:string)=>({'Confirmed':'Confirm order','Processing':'Start processing','Shipped':'Dispatch order','Delivered':'Mark delivered','Cancelled':'Cancel order','Rejected':'Reject order','collect':'Record COD collection','note':'Internal note','approve-request':'Approve request','reject-request':'Reject request','receive-restock':'Returned goods received, inspected and restock','resolve-request':'Resolve request without restocking','manual-refund':'Record external manual refund'} as Record<string,string>)[command]||command;

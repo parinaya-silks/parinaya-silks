@@ -1,4 +1,6 @@
 // Test-only Cloudinary REST fixture; never imported by api/ or normal dev server.
+import {paymentHandler} from '../server/payments/http.ts';
+import {paymentService} from '../server/payments/service.ts';
 import {createServer} from 'node:http';
 import {serverFirebase} from '../server/firebase.ts';
 import {catalogService} from '../server/catalog.ts';
@@ -14,7 +16,9 @@ const media=cloudinaryMedia({CLOUDINARY_CLOUD_NAME:'parinaya-emulator',CLOUDINAR
 });
 const service=catalogService({...serverFirebase(),media});
 const handler=catalogHandler(()=>service);
+const payments=paymentHandler(()=>paymentService(serverFirebase().database,service.paymentContext,{}));
 createServer(async(request,response)=>{
+  if(request.url?.startsWith('/api/payments/')){await payments(request,response);return;}
   if(request.url==='/test/upload'&&request.method==='POST') {
     let raw='';for await(const chunk of request)raw+=chunk;
     const value=JSON.parse(raw);if(typeof value.publicId==='string')uploaded.add(value.publicId);

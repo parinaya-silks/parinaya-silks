@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { ProductError } from '../src/products/model.ts';
 import type { catalogService } from './catalog.ts';
 import { catalogDiagnostic, catalogFailure } from './diagnostics.ts';
-type Service=ReturnType<typeof catalogService>;
+type Service=Omit<ReturnType<typeof catalogService>,'paymentContext'>;
 export function catalogHandler(service:()=>Service|Promise<Service>, report:(diagnostic:ReturnType<typeof catalogDiagnostic>)=>void=diagnostic=>console.error(JSON.stringify(diagnostic))) {
   return async (request:IncomingMessage & {body?:unknown},response:ServerResponse) => {
     const requestId=randomUUID();

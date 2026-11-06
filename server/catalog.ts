@@ -1,3 +1,4 @@
+import {publicPayment} from '../src/payments/model.ts';
 import {couponDiscoveryService} from './couponDiscovery.ts';
 import {categoryService} from './categories.ts';
 import {loyaltyService} from './loyalty.ts';
@@ -176,6 +177,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
   const availableOffers=couponDiscoveryService(db,orders.review);
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
+    paymentContext:{orders,authenticate,administrator},
     submitEnquiry:enquiries.submit,publicCoupons:availableOffers.publicList,
     sitemap:()=>sitemap(db),
     publicCampaignList:campaigns.publicList,publicCampaignGet:campaigns.publicGet,publicCampaignBrowse:campaigns.browse,
@@ -195,7 +197,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
       if(typeof body.action==='string'&&body.action.startsWith('enquiries:'))return enquiries.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('campaigns:'))return campaigns.admin(uid,body);
       if(body.action==='dashboard:orders')return orders.admin(uid,body);
-      if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
+      if(body.action==='customers:orders'){keys(body,['action','uid','cursor']);const target=customerUid(body.uid);if(!(await db.doc('customerProfiles/'+target).get()).exists)throw new ProductError('not-found','Customer profile not found.');const page=await orders.admin(uid,{action:'adminOrders:list',view:'history',pageSize:5,customerUid:target,...(body.cursor?{cursor:body.cursor}:{})}) as {items:any[];nextCursor:string|null};return {...page,items:page.items.map(order=>({id:order.id,reference:order.reference,createdAt:order.createdAt,status:order.status,paymentStatus:order.paymentStatus,...(order.payment?{payment:publicPayment(order.payment)}:{}),collectedPaise:order.collectedPaise||0,totalPaise:order.totalPaise,items:Array.isArray(order.items)?order.items.map((item:any)=>({name:item.name,quantity:item.quantity})):null}))};}
       if(typeof body.action==='string'&&body.action.startsWith('customers:')){const result=await customers.admin(body);if(body.action==='customers:list'&&result&&'items' in result){const points=await loyalty.many(result.items.map((v:any)=>v.uid));return {...result,items:result.items.map((v:any,i:number)=>({...v,availablePoints:points[i]}))};}return result;}
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);

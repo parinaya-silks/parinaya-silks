@@ -31,7 +31,7 @@ try:
    page.keyboard.press('Escape');expect(drawer).not_to_be_visible();assert page.url==origin+'/'
    if width<1024:assert page.locator('.storefront-bottom-nav button').count()==5
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
-   assert page.locator('.customer-storefront').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(188, 134, 146)'
+   expect(page.locator('.customer-storefront')).to_have_css('background-color','rgb(188, 134, 146)')
    page.screenshot(path=str(out/f'home-{width}.png'),full_page=True)
   page.set_viewport_size({'width':390,'height':900});page.goto(origin+'/');page.get_by_role('button',name='Show banner 1',exact=True).click()
   hero=page.locator('.home-banner-slide');hero.evaluate("""el=>{for(const [type,key,x] of [['touchstart','touches',280],['touchmove','touches',70],['touchend','changedTouches',70]]){const event=new Event(type,{bubbles:true});Object.defineProperty(event,key,{value:[{clientX:x,clientY:180}]});el.dispatchEvent(event);}}""");expect(page.get_by_role('button',name='Show banner 2',exact=True)).to_have_attribute('aria-current','true');hero.locator('a').evaluate('el=>el.click()');assert page.url==origin+'/'

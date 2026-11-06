@@ -2,6 +2,9 @@
   "functions": {
     "api/catalog.ts": {
       "maxDuration": 30
+    },
+    "api/payments/[action].ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

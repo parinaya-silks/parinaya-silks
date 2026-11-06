@@ -237,3 +237,7 @@
  .checkout-screen .address-editor-actions button{flex:1;padding-inline:10px;font-size:14px}
 }
 @media(max-width:359px){.checkout-brand{font-size:12px;gap:3px}.checkout-brand img{width:23px;height:23px}.checkout-back span{font-size:10px}.checkout-header>.checkout-container{gap:3px}.checkout-step-number{width:23px;height:23px}.checkout-progress button{gap:4px;font-size:10px}.checkout-summary summary h2{font-size:16px}.checkout-totals{font-size:12px}}
+
+/* Keep payment-method selection explicit without changing the shared card size. */
+.checkout-cod:has(>input:not(:checked)){border-color:var(--store-border,#D3C4B3)}
+.checkout-cod+.checkout-cod{margin-top:12px}

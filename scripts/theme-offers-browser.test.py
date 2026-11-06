@@ -29,7 +29,7 @@ try:
     display.set_viewport_size({'width':width,'height':900})
     for path in ['/','/shop','/product/home-saree-0','/login','/about','/contact','/policies/privacy']:
      display.goto(origin+path);expect(display.locator('.customer-storefront')).to_have_attribute('data-store-theme',name)
-     assert display.locator('.customer-storefront').evaluate('e=>getComputedStyle(e).backgroundColor')==bg,(name,path,width)
+     expect(display.locator('.customer-storefront')).to_have_css('background-color',bg)
      assert display.locator('.storefront-header').evaluate('e=>getComputedStyle(e).backgroundColor')==primary
      assert display.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(name,path,width)
      if path=='/shop':

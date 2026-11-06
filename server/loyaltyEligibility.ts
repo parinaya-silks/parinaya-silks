@@ -1,7 +1,9 @@
 import {validateLoyalty,pointNumber,type LoyaltyOrder} from '../src/loyalty/model.ts';
-type Candidate={status:string;loyalty?:LoyaltyOrder;refunds?:unknown[];request?:{kind:string;status:string}|null};
+import {capturedPayment,type OrderPayment} from '../src/payments/model.ts';
+type Candidate={status:string;payment?:OrderPayment;loyalty?:LoyaltyOrder;refunds?:unknown[];request?:{kind:string;status:string}|null};
 // Trusted saved terms only. Current settings cannot retrospectively qualify an order.
 export function deliveryAwardBlocker(order:Candidate):string|null{
+ if(order.payment&&!capturedPayment(order.payment))return 'online-payment-not-eligible';
  const s=order.loyalty;if(order.status!=='Delivered')return 'not-delivered';if(!s)return 'no-snapshot';
  if(s.stage!=='pending')return 'not-pending';if(order.refunds?.length||s.earned||s.reversed||s.restored)return 'previous-award-or-refund';
  if(order.request?.kind==='return'&&order.request.status!=='rejected')return 'return-in-progress-or-resolved';
