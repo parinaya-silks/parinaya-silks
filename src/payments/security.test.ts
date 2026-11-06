@@ -38,7 +38,8 @@ test('HTTP exported handler rejects unauthenticated, cross-origin, oversized, pr
   r=await fetch(base+'status?amount=1',{headers:{'x-forwarded-proto':'https',Authorization:'Bearer synthetic'}});assert.equal(r.status,400);
   r=await fetch(base+'worker',{method:'POST',headers:{'x-forwarded-proto':'https','Content-Type':'application/json'},body:'{}'});assert.equal(r.status,403);
   r=await fetch(base+'webhook',{method:'POST',headers:{'x-forwarded-proto':'https','Content-Type':'application/json'},body:'x'.repeat(65537)});assert.equal(r.status,400);
-  const raw='{ "original": true }\n';r=await fetch(base+'webhook',{method:'POST',headers:{'x-forwarded-proto':'https','Content-Type':'application/json'},body:raw});assert.equal(r.status,202);assert.equal(received!.toString(),raw);
+  const raw='{ "original": true }\n';r=await fetch(base+'webhook?action=webhook',{method:'POST',headers:{'x-forwarded-proto':'https','Content-Type':'application/json'},body:raw});assert.equal(r.status,202);assert.equal(received!.toString(),raw);
+  r=await fetch(base+'webhook?action=verify',{method:'POST',headers:{'x-forwarded-proto':'https','Content-Type':'application/json'},body:raw});assert.equal(r.status,400);
  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
 test('pending or held online orders cannot celebrate or expose payment mutation controls',()=>{

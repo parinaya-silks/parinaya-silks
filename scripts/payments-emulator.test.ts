@@ -10,7 +10,7 @@ import {paymentService} from '../server/payments/service.ts';import type {Paymen
 import {emptyProduct} from '../src/products/model.ts';import {blankAddress} from '../src/delivery/model.ts';import {initialShipping} from '../src/shipping/model.ts';
 
 if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw Error('Loopback emulators required');
-process.env.PARINAYA_SERVER_EMULATORS='true';setLogLevel('silent');
+process.env.PARINAYA_SERVER_EMULATORS='true';process.env.METADATA_SERVER_DETECTION='none';setLogLevel('silent');
 test('online payments: authoritative existing checkout, reservations, capture, recovery, replay, refunds and isolation',async t=>{
  const rules=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database;
  const env={RAZORPAY_MODE:'test',RAZORPAY_KEY_ID:'rzp_test_fixture123456',RAZORPAY_KEY_SECRET:'synthetic-secret-for-tests',RAZORPAY_WEBHOOK_SECRET:'synthetic-webhook-for-tests',RAZORPAY_TEST_ENVIRONMENT:'true',NODE_ENV:'development'};

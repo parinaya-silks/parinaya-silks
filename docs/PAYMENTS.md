@@ -91,7 +91,9 @@ Official references: [Standard Checkout integration](https://razorpay.com/docs/p
 
 One `api/payments/[action].ts` Node function provides these routes. Vercel Web
 GET/POST exports preserve the request stream and original webhook bytes; the
-Next.js `bodyParser` configuration is not used or assumed to work in Vite.
+Next.js `bodyParser` configuration is not used or assumed to work in Vite. Vercel's
+redundant `action` route query is removed only when it exactly matches the path;
+other query inputs remain strictly rejected.
 
 | Route | Purpose |
 | --- | --- |
@@ -274,8 +276,8 @@ No real Razorpay TEST transaction was executed: TEST credentials are unavailable
 No gateway credentials, worker secret, TEST UID allowlist or live activation flag
 were present in the inspected Vercel Production variable-name inventory. The
 external scheduler has not been provisioned. Production Firestore rule equality
-could not be inspected with the former local service-account path (file absent);
-verify that the deployed rules deny all client writes to payment/order records
-before enabling payments. The local least-privilege rules pass emulator tests and
+could not be inspected with available local Admin credentials; verify that the
+deployed rules deny all client writes to payment/order records before enabling
+payments. The local least-privilege rules pass emulator tests and
 need no new definitions for this feature. No rules, indexes or business records
 were published or modified by implementation checks.

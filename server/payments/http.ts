@@ -12,6 +12,9 @@ export function paymentHandler(initialize:()=>ReturnType<typeof paymentService>|
   try{
    const url=new URL(req.url||'/','https://www.parinayasarees.com'),action=url.pathname.split('/').at(-1)||'';
    if(!['capabilities','create-order','verify','webhook','status','resume','reconcile','worker'].includes(action)){res.statusCode=404;res.end(JSON.stringify({code:'not-found',message:'Not found.'}));return;}
+   // Vercel dynamic routes append the matched file parameter to the URL.
+   // Ignore only that redundant, exact path match; never accept a different action.
+   if(url.searchParams.getAll('action').length===1&&url.searchParams.get('action')===action)url.searchParams.delete('action');
    const get=['status','capabilities'].includes(action);
    if(req.method!==(get?'GET':'POST')){res.statusCode=405;res.setHeader('Allow',get?'GET':'POST');res.end(JSON.stringify({code:'method',message:'Method not allowed.'}));return;}
    const local=env.PARINAYA_SERVER_EMULATORS==='true'||env.NODE_ENV!=='production'&&!env.VERCEL;
