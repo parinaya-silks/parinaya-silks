@@ -13,7 +13,7 @@ with sync_playwright() as p:
  def photo(r):media.append(r.request.url);r.abort()
  ctx.route('https://res.cloudinary.com/parinaya-emulator/**',photo)
  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
- for route,label in [('about','About Parinaya Silks'),('contact','We’re Here to Help')]:
+ for route,label in [('about','About Parinaya Sarees'),('contact','We’re Here to Help')]:
   page.goto(origin+'/'+route);expect(page.get_by_role('heading',name=label,exact=True)).to_be_visible()
   for width in [320,390,768,1440,1920]:
    page.set_viewport_size({'width':width,'height':900});page.evaluate('document.fonts.ready');page.screenshot(path=str(out/f'{route}-{width}.png'),full_page=True)
@@ -29,7 +29,7 @@ with sync_playwright() as p:
  def unavailable(r):r.fulfill(status=503,json={'code':'unavailable'})
  page.route('**/api/catalog?content=store',unavailable);page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.get_by_role('alert')).to_contain_text('last loaded');expect(channels).to_contain_text('Hyderabad');expect(page.get_by_label('Full Name',exact=True)).to_have_value('Kept visitor');page.unroute('**/api/catalog?content=store',unavailable)
  # First-load failure must not masquerade as blank contacts/About fallback; form stays usable.
- first=ctx.new_page();first.route('**/api/catalog?content=store',unavailable);first.goto(origin+'/contact');expect(first.get_by_role('alert')).to_contain_text('Unable to load contact');expect(first.get_by_label('Message',exact=True)).to_be_visible();first.unroute('**/api/catalog?content=store',unavailable);first.get_by_role('button',name='Retry contact information').click();expect(first.get_by_role('region',name='Contact Channels')).to_contain_text('Hyderabad');first.close()
+ first=ctx.new_page();first.route('**/api/catalog?content=store',unavailable);first.goto(origin+'/contact');expect(first.get_by_role('alert')).to_contain_text('We couldn’t load this right now. Please try again.');expect(first.get_by_label('Message',exact=True)).to_be_visible();first.unroute('**/api/catalog?content=store',unavailable);first.get_by_role('button',name='Retry contact information').click();expect(first.get_by_role('region',name='Contact Channels')).to_contain_text('Hyderabad');first.close()
  fixture('hidden');page.goto(origin+'/about');expect(page.get_by_role('heading',name='Short About')).to_be_visible();assert page.locator('.about-story-sections,.about-public-founder').count()==0
  page.goto(origin+'/contact');expect(channels).to_contain_text('not currently available');assert not page.locator('a[href^="tel:"],a[href^="mailto:"],a[href^="https://wa.me"],a[href*="maps.app"]').count();assert 'Private retained' not in page.content();assert 'Hyderabad' not in channels.inner_text()
  # Founder comes only from public CMS; broken verified photo collapses independently.

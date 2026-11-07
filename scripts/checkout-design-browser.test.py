@@ -22,9 +22,13 @@ try:
     if network['mode']=='fail':route.fulfill(status=503,json={'code':'unavailable','message':'Private diagnostics omitted'});return
    route.continue_()
   page.route('**/api/catalog',read_network)
-  def response(r):
-   if '/api/catalog' in r.url and r.request.method=='POST' and r.request.post_data_json.get('action')=='orders:review' and r.status==200:reviews.append(r.json())
-  page.on('response',response);page.on('request',lambda r:places.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='orders:place' else None)
+  def completed_review(request):
+   # A response header can arrive before navigation aborts its body. Only a
+   # completed request can provide a quote for the later totals assertions.
+   if '/api/catalog' in request.url and request.method=='POST' and request.post_data_json.get('action')=='orders:review':
+    response=request.response()
+    if response and response.status==200:reviews.append(response.json())
+  page.on('requestfinished',completed_review);page.on('request',lambda r:places.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='orders:place' else None)
   page.goto(origin+'/login?returnTo=%2Fcheckout');page.get_by_label('Email address',exact=True).fill('customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();page.wait_for_url('**/checkout')
   expect(page.locator('.store-loading-checkout')).to_be_visible()
   for width in [320,390,768,1440,1920]:

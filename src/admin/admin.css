@@ -59,3 +59,6 @@
  .parinaya-admin .dashboard-check{width:18px;height:18px}
  .parinaya-admin .admin-drawer .admin-navigation button{min-height:40px}
 }
+
+/* Sign-in controls keep full touch targets outside the compact management tables. */
+.parinaya-admin .admin-login-form :is(input,button):not([type=checkbox]):not([type=radio]):not([type=hidden]){min-height:44px}

@@ -10,6 +10,9 @@ with sync_playwright() as p:
  ctx=browser.new_context(viewport={'width':390,'height':900},reduced_motion='no-preference');ctx.route('https://res.cloudinary.com/**',lambda r:r.fulfill(status=200,content_type='image/jpeg',body=image));settings={'seconds':None,'count':3}
  base=ctx.request.get(origin+'/api/catalog?content=store').json()
  def banners(r):
+  # Campaign promotions share this carousel; isolate the exact timing fixture
+  # from campaigns left by other acceptance tests in the same emulator suite.
+  if 'campaigns=1' in r.request.url:r.fulfill(status=200,json={'items':[],'serverNow':0,'nextBoundary':None});return
   if 'content=store' not in r.request.url:r.continue_();return
   value=copy.deepcopy(base);art={'url':'https://res.cloudinary.com/parinaya-emulator/image/upload/fixture.jpg','alt':'Local timing fixture','width':800,'height':1000,'focalX':50,'focalY':50};value['banners']=[{'id':str(i),'title':'Local Banner '+str(i),'link':'/shop','images':{'desktop':art,'mobile':art},'showButton':False} for i in range(settings['count'])];value['bannerSeconds']=settings['seconds'];r.fulfill(status=200,json=value)
  ctx.route('**/api/catalog?*',banners);page=ctx.new_page();page.clock.install();page.clock.pause_at(datetime.now(timezone.utc)+timedelta(seconds=1));page.goto(origin+'/');slides=page.locator('.home-banner-carousel [aria-roledescription=slide]');expect(slides).to_have_attribute('aria-label','1 of 3');page.clock.run_for(2999);expect(slides).to_have_attribute('aria-label','1 of 3');page.clock.run_for(1);expect(slides).to_have_attribute('aria-label','2 of 3')

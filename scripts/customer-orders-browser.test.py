@@ -23,7 +23,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Sign In',exact=True).click()
  message='We couldn’t load your orders. Please try again.'
  expect(page.get_by_role('alert')).to_contain_text(message)
- expect(page.get_by_text('You have no orders yet.',exact=True)).to_have_count(0)
+ expect(page.get_by_role('heading',name='No orders yet',exact=True)).to_have_count(0)
  assert 'Technical fixture' not in page.locator('body').inner_text()
  state['mode']='network';before=state['calls'];page.get_by_role('button',name='Retry',exact=True).click()
  expect(page.get_by_role('alert')).to_contain_text(message)
@@ -34,14 +34,14 @@ with sync_playwright() as p:
  assert state['calls']>before
  expect(page.get_by_role('alert')).to_contain_text(message)
  state['mode']='hold';page.get_by_role('button',name='Retry',exact=True).click()
- expect(page.get_by_role('status').filter(has_text='Loading...')).to_be_visible()
- expect(page.get_by_text('You have no orders yet.',exact=True)).to_have_count(0)
+ expect(page.get_by_role('status').filter(has_text='Loading your orders')).to_be_visible()
+ expect(page.get_by_role('heading',name='No orders yet',exact=True)).to_have_count(0)
  for _ in range(100):
   if 'held' in state:break
   page.wait_for_timeout(50)
  # Let the actual authenticated handler return the genuinely empty history.
  state['mode']='live';state.pop('held').continue_()
- expect(page.get_by_text('You have no orders yet.',exact=True)).to_be_visible()
+ expect(page.get_by_role('heading',name='No orders yet',exact=True)).to_be_visible()
  expect(page.get_by_role('alert')).to_have_count(0)
  for width in [320,390,768,1440]:
   page.set_viewport_size({'width':width,'height':900})

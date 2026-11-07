@@ -34,6 +34,7 @@ await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/order-details
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/delivery-update-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/customers-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/theme-offers-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/payments-emulator.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {
@@ -63,33 +64,39 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!ready) throw new Error('Local test server unavailable.');
-  await run('python', ['scripts/customers-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/delivery-update-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/customer-orders-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/customer-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/homepage-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/loyalty-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/settings-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/appearance-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/product-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/inventory-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/coupons-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/campaigns-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/banners-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/website-content-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/about-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/enquiries-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
-  await run('python', ['scripts/contact-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/shopping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/delivery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/shipping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/business-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/catalog-recovery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/purchase-journey-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/cod-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/order-details-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/orders-list-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
-  await run('python', ['scripts/dashboard-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  // Finish independent browser files so one failure does not hide later bugs.
+  // Any failure still makes the complete command fail; services remain fail-fast.
+  const browserFailures:string[]=[];
+  const browserRun=async(command:string,args:string[],environment=process.env)=>{try{await run(command,args,environment);}catch{browserFailures.push(args.join(' '));console.error('Browser regression failed: '+args.join(' '));}};
+  await browserRun('python', ['scripts/checkout-coupons-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/customers-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/delivery-update-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/customer-orders-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/customer-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/homepage-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/loyalty-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/settings-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/appearance-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/admin-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/category-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/product-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/inventory-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/coupons-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/campaigns-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/banners-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/website-content-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/about-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/enquiries-browser.test.py'],{...process.env,PARINAYA_ADMIN_TEST_PASSWORD:password});
+  await browserRun('python', ['scripts/contact-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/shopping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/delivery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/shipping-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/business-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/catalog-recovery-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/purchase-journey-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/cod-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/order-details-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/orders-list-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/dashboard-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  if(browserFailures.length)throw new Error('Browser regressions failed: '+browserFailures.join(', '));
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

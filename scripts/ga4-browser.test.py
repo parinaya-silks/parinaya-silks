@@ -55,7 +55,8 @@ with sync_playwright() as p:
  assert all(hit['en']=='page_view' for hit in hits);assert not errors,errors;ctx.close()
  for options in [dict(host='https://parinayasarees.com',preference='granted'),dict(host=HOST,preference='denied'),dict(host=HOST,privacy=True),dict(host=HOST,automation=True,preference='granted'),dict(host=HOST,path='/admin/customers',preference='granted'),dict(host='https://preview.vercel.app',preference='granted'),dict(host='http://localhost:3000',preference='granted'),dict(host=HOST,deployment='preview',preference='granted')]:
   c,h,s,_=context(**options);v=c.new_page();v.goto(options.get('host',HOST)+options.get('path','/'));v.wait_for_timeout(250)
-  if options.get('host')=='https://parinayasarees.com':assert len(h)==1 and len(s)==1
+  if options.get('host')=='https://parinayasarees.com':
+   v.wait_for_function("(window.__ga_commands||[]).some(a=>a[0]==='event')"); expect(v.locator('body')).to_be_visible(); v.wait_for_timeout(150); assert len(h)==1 and len(s)==1
   else:assert not h and not s,options
   c.close()
  c,h,s,_=context(preference='granted');v=c.new_page();v.goto(HOST+'/shop?email=private@example.test&token=private-token');v.wait_for_function("(window.__ga_commands||[]).some(a=>a[0]==='event')");v.wait_for_timeout(150);assert len(h)==1 and h[0]['dl']==HOST+'/shop' and h[0]['dr']=='';c.close()

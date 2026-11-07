@@ -50,8 +50,8 @@ with sync_playwright() as p:
             assert not page.evaluate('document.documentElement.scrollWidth > innerWidth + 1'), route
             tabs=page.get_by_role('navigation',name='Mobile Bottom Navigation')
             assert tabs.get_by_role('button').count()==5
-            assert tabs.get_by_role('button').nth(2).inner_text().strip().endswith('Wishlist')
-            assert tabs.get_by_role('button').nth(3).inner_text().strip().endswith('Bag')
+            assert tabs.get_by_role('button',name='Wishlist',exact=True).count()==1
+            assert tabs.get_by_role('button',name='Bag',exact=True).count()==1
             assert not any(char.isdigit() for char in tabs.inner_text())
         state=page.evaluate('Object.fromEntries(Object.entries(localStorage))')
         assert json.loads(state['parinaya_cart_preview_v1'])==[{'productId':'owner-real-item','product':{'id':'owner-real-item','name':'Owner data'}}]
@@ -65,7 +65,7 @@ with sync_playwright() as p:
         assert page.get_by_role('button',name='Kanjeevaram',exact=True).count()==0
         page.goto(origin+'/shop?search=wine')
         page.get_by_role('heading',name='No products found.',exact=True).wait_for()
-        page.get_by_role('button',name='Clear filters',exact=True).click()
+        page.locator('.discovery-chips').get_by_role('button',name='Search: wine',exact=False).click()
         page.get_by_role('heading',name='No products available yet.',exact=True).wait_for()
         for route,heading in [('/bag','Sign in to view your bag'),('/wishlist','Sign in to view your wishlist'),('/product/prod-mayuri-wine','Product not found'),('/order-confirmed/missing','Welcome back'),('/checkout','Welcome back')]:
             page.goto(origin+route)
@@ -80,8 +80,12 @@ with sync_playwright() as p:
             assert page.locator('[aria-invalid="true"]').count()>0
             assert page.url==origin+route
         page.goto(origin+'/contact')
-        for label in ['How do I track my order?','Where can I find delivery information?','Where can I check the returns and exchange policy?']:
-            page.get_by_role('button',name=label,exact=False).click()
+        # The approved Contact design replaced FAQs with a real enquiry form.
+        page.get_by_role('heading',name='We’re Here to Help',exact=True).wait_for()
+        assert page.get_by_label('Full Name',exact=True).is_visible()
+        assert page.get_by_label('Email Address',exact=True).is_visible()
+        assert page.get_by_label('Message',exact=True).is_visible()
+        assert page.get_by_role('button',name='Send Message',exact=True).is_enabled()
         text=page.locator('body').inner_text()
         for phrase in forbidden: assert phrase not in text, phrase
         # Enabled category queries are now expected; public pages must not start
@@ -92,13 +96,13 @@ with sync_playwright() as p:
         page.get_by_role('heading',name='Administrator Sign In').wait_for()
         assert page.get_by_role('heading',name='Dashboard',exact=True).count()==0
         page.goto(origin+'/')
-        page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+        page.locator('main h1').filter(has_text='PARINAYA SAREES').wait_for()
         page.get_by_role('navigation',name='Mobile Bottom Navigation').get_by_role('button').nth(1).click()
         assert page.url==origin+'/shop'
         page.go_back()
-        page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+        page.locator('main h1').filter(has_text='PARINAYA SAREES').wait_for()
         page.goto(origin+'/#/about')
-        page.get_by_role('heading',name='About Parinaya Silks').wait_for()
+        page.get_by_role('heading',name='About Parinaya Sarees').wait_for()
         Path('.cache/empty-content').mkdir(parents=True,exist_ok=True)
         for width in [360,390,430,768,1024,1440]:
             page.set_viewport_size({'width':width,'height':900})

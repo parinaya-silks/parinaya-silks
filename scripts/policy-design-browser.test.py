@@ -20,7 +20,7 @@ with sync_playwright() as p:
  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.on('popup',lambda w:popups.append(w.url))
  for key,path in paths.items():
   page.goto('http://127.0.0.1:3100'+path+'?preview=policy');expect(page.locator('[data-policy-state=sample]')).to_be_visible();expect(page.get_by_role('heading',name=labels[key],exact=True)).to_be_visible()
-  expect(page.get_by_text('Sample content for design review. Final policy wording will be provided by Parinaya Silks.',exact=True)).to_be_visible()
+  expect(page.get_by_text('Sample content for design review. Final policy wording will be provided by Parinaya Sarees.',exact=True)).to_be_visible()
   for width in [320,390,768,1440,1920]:
    page.set_viewport_size({'width':width,'height':900});page.evaluate('document.fonts.ready');
    if width<768 and page.locator('.policy-mobile-index').evaluate('(e)=>e.open')!=(key!='privacy'):page.locator('.policy-mobile-index summary').click()
@@ -40,7 +40,7 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Back to Top').click();expect(page.locator('#policy-top')).to_be_focused();assert page.evaluate('scrollY')==0
   page.set_viewport_size({'width':1440,'height':1000});assert page.locator('.policy-reading').bounding_box()['width']<=830
  # Selector changes real routes; refresh, Back/Forward, legacy footer URLs and metadata agree.
- page.set_viewport_size({'width':390,'height':900});page.get_by_label('Select policy document',exact=True).select_option('privacy');expect(page).to_have_url(re.compile('/privacy-policy\\?preview=policy$'));page.get_by_label('Select policy document',exact=True).select_option('shipping');page.go_back();expect(page.locator('.policy-page h1')).to_have_text('Privacy Policy');page.go_forward();expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');page.reload();expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');assert page.title()=='Shipping policy | PARINAYA SILKS'
+ page.set_viewport_size({'width':390,'height':900});page.get_by_label('Select policy document',exact=True).select_option('privacy');expect(page).to_have_url(re.compile('/privacy-policy\\?preview=policy$'));page.get_by_label('Select policy document',exact=True).select_option('shipping');page.go_back();expect(page.locator('.policy-page h1')).to_have_text('Privacy Policy');page.go_forward();expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');page.reload();expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');assert page.title()=='Shipping policy | PARINAYA SAREES'
  page.goto('http://127.0.0.1:3100/policies?tab=terms');expect(page.locator('.policy-page h1')).to_have_text('Terms & Conditions');expect(page.locator('[data-policy-state=unavailable]')).to_be_visible()
  # Explicit samples must never win over approved plain text, even with the preview flag.
  body=payload();literal='First paragraph\n\n- Literal list item\n<script>window.policyExecuted=true</script>\nhttps://example.test/'+('a'*600)
@@ -56,17 +56,22 @@ with sync_playwright() as p:
   page.set_viewport_size({'width':width,'height':900});expect(page.locator('[data-policy-state=published]')).to_have_text(literal);assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert not page.locator('.policy-page time,.policy-real-copy a,.policy-real-copy script').count()
  page.screenshot(path=str(out/'published-long-1920.png'),full_page=True)
  # Last loaded real content survives background errors. First-load errors never show samples.
- state['fail']=True;page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.get_by_role('alert')).to_contain_text('last successfully loaded');expect(page.locator('[data-policy-state=published]')).to_have_text(literal)
- first=ctx.new_page();first.goto('http://127.0.0.1:3100/privacy-policy?preview=policy');expect(first.get_by_role('alert')).to_contain_text('Unable to load this policy');assert not first.locator('[data-policy-state=sample],[data-policy-state=unavailable]').count();state['fail']=False;first.get_by_role('button',name='Retry policy').click();expect(first.locator('[data-policy-state=published]')).to_have_text(literal);first.close()
+ state['fail']=True;page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.get_by_role('alert')).to_contain_text('last loaded information');expect(page.locator('[data-policy-state=published]')).to_have_text(literal)
+ first=ctx.new_page();first.goto('http://127.0.0.1:3100/privacy-policy?preview=policy');expect(first.get_by_role('alert')).to_contain_text('Unable to load this policy. Please try again.');assert not first.locator('[data-policy-state=sample],[data-policy-state=unavailable]').count();state['fail']=False;first.get_by_role('button',name='Retry policy').click();expect(first.locator('[data-policy-state=published]')).to_have_text(literal);first.close()
  # Reject even a malformed public fixture containing unapproved private text and heading.
  state['body']=payload();state['body']['policies']['privacy']={'approved':False,'text':'PRIVATE DRAFT','heading':'PRIVATE TITLE'}
  page.goto('http://127.0.0.1:3100/privacy-policy');expect(page.locator('[data-policy-state=unavailable]')).to_be_visible();assert 'PRIVATE' not in page.locator('body').inner_text()
- # A delayed shared snapshot cannot apply stale data after a newer refresh or select the wrong policy.
+ # Shared reads now coalesce focus refreshes while in flight. Navigation must
+ # retain the selected policy and the queued refresh must publish the newest data.
  state['hold']=True;page.set_viewport_size({'width':1440,'height':1000});page.goto('http://127.0.0.1:3100/privacy-policy');expect(page.get_by_role('status').filter(has_text='Loading policy')).to_be_visible();page.get_by_role('navigation',name='Policy Centre').get_by_role('link',name='Shipping Policy',exact=True).click();expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');page.evaluate("window.dispatchEvent(new Event('focus'))")
- page.wait_for_function('document.querySelector(".policy-loading")!==null');page.wait_for_timeout(100);assert len(held)>=2
- fresh=payload();fresh['policies']['shipping']={'approved':True,'text':'Newest shipping snapshot'};held[-1].fulfill(status=200,json=fresh);expect(page.locator('[data-policy-state=published]')).to_have_text('Newest shipping snapshot');old=payload();old['policies']['shipping']={'approved':True,'text':'STALE shipping snapshot'}
- for r in held[:-1]:r.fulfill(status=200,json=old)
- page.wait_for_timeout(150);expect(page.locator('[data-policy-state=published]')).to_have_text('Newest shipping snapshot');state['hold']=False
+ expect(page.get_by_role('status').filter(has_text='Loading policy')).to_be_visible();page.wait_for_timeout(150);assert len(held)==1,'Busy reads must coalesce, not overlap'
+ old=payload();old['policies']['privacy']={'approved':True,'text':'OLD PRIVATE-POLICY SNAPSHOT'};held[0].fulfill(status=200,json=old)
+ for attempt in range(50):
+  if len(held)==2:break
+  page.wait_for_timeout(100)
+ assert len(held)==2,'The queued focus refresh must actually execute'
+ expect(page.locator('.policy-page h1')).to_have_text('Shipping Policy');assert 'OLD PRIVATE-POLICY SNAPSHOT' not in page.locator('.policy-reading').inner_text()
+ fresh=payload();fresh['policies']['shipping']={'approved':True,'text':'Newest shipping snapshot'};held[1].fulfill(status=200,json=fresh);expect(page.locator('[data-policy-state=published]')).to_have_text('Newest shipping snapshot');page.wait_for_timeout(150);expect(page.locator('[data-policy-state=published]')).to_have_text('Newest shipping snapshot');state['hold']=False
  # Normal production build never loads fixture code or renders samples, including a crafted preview URL.
  state['body']=payload();prod=ctx.new_page();fixture_requests=[];prod.on('request',lambda r:fixture_requests.append(r.url) if 'PolicySample' in r.url else None)
  for key,path in paths.items():

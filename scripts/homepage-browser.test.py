@@ -7,7 +7,7 @@ assert os.environ.get('FIRESTORE_EMULATOR_HOST')=='127.0.0.1:8080'
 assert os.environ.get('FIREBASE_AUTH_EMULATOR_HOST')=='127.0.0.1:9099'
 origin='http://127.0.0.1:3100';screens=Path('.cache/homepage-design');screens.mkdir(parents=True,exist_ok=True)
 def fixture(action):subprocess.run(['node','--import','tsx','scripts/homepage-fixture-control.ts',action],check=True,capture_output=True)
-fixture('cleanup');fixture('seed')
+fixture('cleanup');fixture('seed');fixture('reset-shopping')
 try:
  with sync_playwright() as p:
   browser=p.chromium.launch();ctx=browser.new_context(viewport={'width':390,'height':900},reduced_motion='reduce');ctx.route('https://**/*',lambda r:r.abort())

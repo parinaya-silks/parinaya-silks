@@ -1,5 +1,5 @@
 """Controlled loopback read failures only; no production requests or mutation replay."""
-import os,copy,subprocess
+import os,copy,subprocess,json
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from playwright.sync_api import sync_playwright,expect
@@ -21,7 +21,7 @@ with sync_playwright() as p:
  def api(r):
   req=r.request;q=parse_qs(urlparse(req.url).query);action=(req.post_data_json or {}).get('action','') if req.method=='POST' else ''
   key=action or ('content' if 'content' in q else 'campaigns' if 'campaigns' in q else 'products');counts[key]=counts.get(key,0)+1
-  if action and action not in ['shopping:get','addresses:list','orders:list','orders:get','orders:review','loyalty:account','loyalty:customerHistory','profile:syncDirectory']:writes.append(action)
+  if action and action not in ['shopping:get','addresses:list','orders:list','orders:get','orders:review','loyalty:account','loyalty:customerHistory','profile:syncDirectory','coupons:available']:writes.append(action)
   value=mode['post'] if action and (not mode['action'] or mode['action']==action) else mode['get'] if not action else 'live'
   if mode['more'] and not q.get('cursor'):value='live'
   if value=='hold':held.append(r);return
@@ -35,7 +35,14 @@ with sync_playwright() as p:
    except:pass
   held.clear()
  def capture(name,width):
-  page.set_viewport_size({'width':width,'height':950});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),(name,width);page.screenshot(path=str(out/(name+'-'+str(width)+'.png')))
+  page.set_viewport_size({'width':width,'height':950})
+  initial=page.evaluate('({width:innerWidth,scroll:document.documentElement.scrollWidth})')
+  if initial['scroll']>width:(out/(name+'-'+str(width)+'-before-paint.json')).write_text(json.dumps(initial))
+  # Capture a painted frame after resize before measuring the visible layout.
+  page.screenshot(path=str(out/(name+'-'+str(width)+'.png')))
+  geometry=page.evaluate('''()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,overflow:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:typeof e.className==='string'?e.className:'',left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth||e.left<0)})''')
+  if geometry['scroll']>width:(out/(name+'-'+str(width)+'-overflow.json')).write_text(json.dumps(geometry,indent=2))
+  assert geometry['scroll']<=width,(name,width,geometry['scroll'])
  # Initial shell/data loading has layout-sized placeholders, never a temporary text hero.
  for width in [320,390,768,1440,1920]:
   mode['get']='hold';page.goto(origin+'/');expect(page.locator('.store-banner-skeleton')).to_be_visible();expect(page.locator('.store-products-skeleton')).to_be_visible();assert page.get_by_role('heading',name='Discover our saree collection',exact=True).count()==0

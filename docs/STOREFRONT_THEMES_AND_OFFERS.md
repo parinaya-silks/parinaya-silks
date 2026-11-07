@@ -31,7 +31,7 @@ in for personal eligibility. Product offers use the selected colour/quantity;
 Shop and Bag use current Bag items.
 
 `GET /api/catalog?coupons=available` returns a whitelist of public offer fields.
-`POST {action: "coupons:available", source?}` additionally verifies the customer
+`POST {action: "coupons:available", source?, eligibleOnly?}` additionally verifies the customer
 token and reads only that UID's Delivered orders and usage. Client UID/count
 parameters are rejected. This is read-only and does not reserve or redeem a code.
 Raw coupon documents, usage, customer identity and audit fields are not public.
@@ -45,6 +45,48 @@ validators. Order number N means exactly N-1 Delivered orders, including COD
 orders with unrecorded collection. Coupon names do not determine the sequence.
 Upcoming offers show the remaining Delivered count, eligible offers allow Apply,
 and offers already passed or used are omitted. Subtotals use server product data.
+
+### Checkout Available Coupons selector
+
+The Review step now has a collapsed **Available Coupons** section beside manual
+code entry. Opening it fetches `eligibleOnly: true` through the same authenticated
+endpoint. This boolean filters the existing server projection to `eligible`
+offers only: future, expired, disabled, private, exhausted, below-minimum and
+not-yet-unlocked sequence offers are omitted. Other storefront offer sections
+keep their existing informational/upcoming behavior. An empty response explicitly
+says **No offers available for this order right now.** Loading skeletons and a
+separate retryable failure state never pretend to be an empty result.
+
+Coupon cards derive their description from the saved discount type/value; the
+current coupon schema has no separate title/description, product/category scope
+or arbitrary customer allowlist. Existing customer restrictions are the saved
+per-customer usage limit and exact Delivered-order sequence. No new eligibility
+fields or coupon system are introduced. Cancelled, Rejected and other non-Delivered
+orders do not unlock a sequence offer.
+
+Apply populates manual entry and requests the existing trusted checkout review.
+Only a successful current review displays **Coupon applied**, savings and the
+card's **Applied** indicator. Either Remove action clears the same draft code and
+recalculates totals. Points Apply/Remove and the existing stacking policy remain
+unchanged. The selector stays open across review refreshes; the initial full-page
+loading view is reserved for an account's first review.
+
+Cart identity (including item IDs, quantities, prices and stock) and the review
+fingerprint refresh discovery even when a changed cart has the same subtotal.
+While expanded, discovery refreshes every 15 seconds and on focus/reconnection.
+A selected coupon also refreshes its authoritative review every 15 seconds while
+visible and on focus, suspended during order/payment recovery or submission.
+An invalid selected code is explicitly unconfirmed and blocks progression until
+removed or corrected. Both COD acceptance and online reservation continue their
+original final transaction checks; discovery never reserves or redeems anything.
+
+`scripts/checkout-coupons-browser.test.py` covers the real loopback flow at
+320/390/768/1440px in both themes, including loading, keyboard expansion, retry,
+empty results, Apply/Applied/Remove, trusted totals and live cart changes. The
+exported-handler assertions in `theme-offers-emulator.test.ts` cover token
+ownership, exact input rejection, lifecycle/limit filtering, Delivered-only
+sequence qualification and empty carts. Existing coupon/payment transaction
+regressions continue to cover concurrent redemption and reservations.
 
 Apply on Shop/Bag/Product first invokes the existing `orders:review`, stores one
 coupon code in the existing UID-scoped checkout draft and opens checkout. Apply

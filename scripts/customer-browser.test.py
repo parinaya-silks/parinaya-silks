@@ -116,7 +116,7 @@ with sync_playwright() as p:
     page.route('**/documents:commit*',deny_profile)
     page.get_by_role('form',name='Create customer account',exact=True).evaluate('(form)=>{form.requestSubmit();form.requestSubmit();}')
     page.wait_for_url(origin+'/account',timeout=25000)
-    page.get_by_role('heading',name='Your account',exact=True).wait_for()
+    page.get_by_role('heading',name='Hello, Customer Fixture',exact=True).wait_for()
     assert len(signups)==1,'Auth creation must not repeat after a profile failure'
     page.get_by_role('alert').filter(has_text='Your account already exists').wait_for()
     assert page.get_by_role('button',name='Retry profile setup',exact=True).is_visible()
@@ -127,13 +127,13 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Retry profile setup',exact=True).click()
     page.get_by_role('button',name='Retry profile setup',exact=True).wait_for(state='hidden')
     page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
-    before=inspect_fixture(email);assert before['profileExists'] and not before['adminClaim'] and not before['adminAccessExists']
+    page.locator('.customer-account-details').wait_for();before=inspect_fixture(email);assert before['profileExists'] and not before['adminClaim'] and not before['adminAccessExists']
     assert before['emailVerified'] is False and before['mobileNumber']=='+919876543210','Registration must not change Firebase verification status'
     def assert_clean_account():
         page.get_by_role('button',name='Sign out',exact=True).wait_for()
         page.get_by_role('status').filter(has_text='Loading your profile').wait_for(state='hidden')
-        assert page.locator('.customer-account-details dt').all_text_contents()==['Name','Email address','Mobile number']
-        assert page.locator('.customer-auth-actions').last.locator('button').all_text_contents()==['My orders','Addresses','Browse sarees','Sign out']
+        assert page.locator('.customer-account-details dt').all_text_contents()==['Full name','Mobile number','Sign-in email (read-only)']
+        assert [b.get_attribute('aria-label') or b.inner_text() for b in page.get_by_role('region',name='Account management').get_by_role('button').all()]==['My Orders','Help & Contact','Sign out']
         assert 'verif' not in page.locator('main').inner_text().lower()
         assert 'VERIFY_EMAIL' not in mail_actions,'No verification email request is permitted'
     assert_clean_account()
@@ -141,7 +141,7 @@ with sync_playwright() as p:
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900})
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
-        gap=page.evaluate('document.querySelector(".customer-account-details + button").getBoundingClientRect().top-document.querySelector(".customer-account-details div:last-child dd").getBoundingClientRect().bottom')
+        gap=page.evaluate('document.querySelector(".profile-personal").getBoundingClientRect().bottom-document.querySelector(".customer-account-details").getBoundingClientRect().bottom')
         assert 0<=gap<=32,('No leftover verification gap',width,gap)
         control=page.get_by_role('button',name='Sign out',exact=True)
         control.evaluate('(el)=>el.scrollIntoView({block:"center",behavior:"instant"})')
@@ -169,7 +169,7 @@ with sync_playwright() as p:
     assert page.get_by_label('Email address',exact=True).input_value()==email
     page.unroute('**/accounts:signInWithPassword*',deny_login)
     page.get_by_label('Password',exact=True).press('Enter')
-    page.get_by_role('heading',name='Your account',exact=True).wait_for()
+    page.get_by_role('heading',name='Hello, Customer Fixture',exact=True).wait_for()
     assert page.url==origin+'/account','Unsafe return must use the account default'
     assert_clean_account()
     assert inspect_fixture(email)['emailVerified'] is False,'Existing unverified customers can sign in unchanged'
@@ -196,7 +196,7 @@ with sync_playwright() as p:
     other=ctx.new_page();other.goto(origin+'/account');other.get_by_role('button',name='Sign out',exact=True).wait_for();other.close()
     # Real shared Firebase session must not confer administrator access.
     page.goto(origin+'/admin/products');page.get_by_role('heading',name='Access Restricted',exact=True).wait_for()
-    page.goto(origin+'/account');page.get_by_role('heading',name='Your account',exact=True).wait_for()
+    page.goto(origin+'/account');page.get_by_role('heading',name='Hello, Customer Fixture',exact=True).wait_for()
     after=inspect_fixture(email);assert after==before,'Repeated sign-in must not overwrite the private profile or grant admin'
     page.get_by_role('button',name='Sign out',exact=True).click()
     page.get_by_role('heading',name='Welcome back',exact=True).wait_for()
@@ -232,7 +232,7 @@ with sync_playwright() as p:
     page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
     page.get_by_role('button',name='Sign In',exact=True).click()
     page.wait_for_url(origin+'/account')
-    page.get_by_text('Not provided',exact=True).wait_for()
+    page.get_by_role('button',name='Add mobile number',exact=True).wait_for()
     assert inspect_fixture('legacy-customer@example.test').get('mobileNumber') is None
     page.get_by_role('button',name='Sign out',exact=True).click()
     assert 'VERIFY_EMAIL' not in mail_actions

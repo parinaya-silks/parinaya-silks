@@ -37,18 +37,18 @@ try:
     page.goto(origin+'/product/shopping-simple');page.get_by_role('heading',name='Shopping Simple',exact=True).wait_for()
     page.get_by_role('button',name='Add to Bag',exact=True).click();page.wait_for_url('**/login?returnTo=*')
     login(page);page.wait_for_url('**/product/shopping-simple')
-    page.get_by_role('status').filter(has_text='Added to your bag.').wait_for()
+    page.get_by_role('status').filter(has_text='Added to Bag').wait_for()
     assert len([x for x in writes if x['action']=='bag:add'])==1
     page.reload();page.get_by_role('heading',name='Shopping Simple',exact=True).wait_for();page.wait_for_timeout(500)
     assert len([x for x in writes if x['action']=='bag:add'])==1,'Refresh must not replay an intent'
-    page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Already in your bag.').wait_for()
-    page.goto(origin+'/bag');page.locator('[data-shopping-line]').wait_for();expect(page.get_by_role('heading',name='My Bag (1)',exact=True)).to_be_visible()
-    page.get_by_role('button',name='Increase quantity',exact=True).click();expect(page.get_by_role('heading',name='My Bag (2)',exact=True)).to_be_visible()
+    page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Already in Bag').wait_for()
+    page.goto(origin+'/bag');page.locator('[data-shopping-line]').wait_for();expect(page.locator('.shopping-bag-count').filter(has_text='1 item')).to_be_visible()
+    page.get_by_role('button',name='Increase quantity',exact=True).click();expect(page.locator('.shopping-bag-count').filter(has_text='2 items')).to_be_visible()
     # A second real Firebase context sees persisted items and listener updates.
     two=context();other=two.new_page();other.goto(origin+'/login?returnTo=%2Fbag');login(other)
-    expect(other.get_by_role('heading',name='My Bag (2)',exact=True)).to_be_visible()
-    other.get_by_role('button',name='Increase quantity',exact=True).click();expect(page.get_by_role('heading',name='My Bag (3)',exact=True)).to_be_visible()
-    page.goto(origin+'/product/shopping-simple');page.locator('[data-shopping-status="ready"]').wait_for();page.get_by_role('button',name='Save to Wishlist',exact=True).click();page.get_by_role('status').filter(has_text='Saved to your wishlist.').wait_for()
+    expect(other.locator('.shopping-bag-count').filter(has_text='2 items')).to_be_visible()
+    other.get_by_role('button',name='Increase quantity',exact=True).click();expect(page.locator('.shopping-bag-count').filter(has_text='3 items')).to_be_visible()
+    page.goto(origin+'/product/shopping-simple');page.locator('[data-shopping-status="ready"]').wait_for();page.get_by_role('button',name='Save to Wishlist',exact=True).click();page.get_by_role('status').filter(has_text='Saved to Wishlist').wait_for()
     page.goto(origin+'/wishlist');page.locator('[data-wishlist-product]').wait_for();assert page.locator('[data-wishlist-product]').count()==1
     # Failed mutation retains saved state; retry uses the same operation identity.
     failed={'once':True};operation_ids=[]
@@ -58,22 +58,21 @@ try:
             if failed['once']:
                 failed['once']=False;route.abort();return
         route.continue_()
-    page.route('**/api/catalog',fail_remove);page.get_by_role('button',name='Remove Shopping Simple from wishlist',exact=True).click()
-    page.get_by_role('button',name='Retry change',exact=True).wait_for();assert page.locator('[data-wishlist-product]').count()==1
-    page.get_by_role('button',name='Retry change',exact=True).click();page.get_by_role('heading',name='Your wishlist is empty',exact=True).wait_for()
+    page.route('**/api/catalog',fail_remove);page.get_by_role('button',name='Remove Shopping Simple from Wishlist',exact=True).click()
+    page.get_by_role('dialog',name='Remove from Wishlist?').get_by_role('button',name='Remove',exact=True).click();page.get_by_role('dialog',name='Remove from Wishlist?',exact=True).get_by_role('button',name='Retry change',exact=True).wait_for();assert page.locator('[data-wishlist-product]').count()==1
+    page.get_by_role('dialog',name='Remove from Wishlist?',exact=True).get_by_role('button',name='Retry change',exact=True).click();page.get_by_role('heading',name='Your wishlist is empty',exact=True).wait_for()
     assert operation_ids[0]==operation_ids[1]
     page.unroute('**/api/catalog',fail_remove)
     page.goto(origin+'/product/shopping-colours');expect(page.get_by_role('button',name='Add to Bag',exact=True)).to_be_disabled()
     assert page.get_by_text('Please select a colour before adding to your bag or buying now.',exact=True).count()>=1
-    page.get_by_role('button',name='Wine',exact=True).click();page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for()
-    page.locator('[data-shopping-status="ready"]').wait_for();page.get_by_role('button',name='Save to Wishlist',exact=True).click();page.get_by_role('status').filter(has_text='Saved to your wishlist.').wait_for()
+    page.get_by_role('button',name='Wine',exact=True).click();page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to Bag').wait_for()
+    page.locator('[data-shopping-status="ready"]').wait_for();page.get_by_role('button',name='Save to Wishlist',exact=True).click();page.get_by_role('status').filter(has_text='Saved to Wishlist').wait_for()
     page.goto(origin+'/wishlist');expect(page.locator('[data-wishlist-product]')).to_have_count(1)
-    page.get_by_role('button',name='Select colour',exact=True).click();page.wait_for_url('**/product/shopping-colours?select=colour')
-    page.get_by_role('button',name='Wine',exact=True).click();page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Already in your bag.').wait_for()
+    page.get_by_role('button',name='Select Colour',exact=True).click();colour=page.get_by_role('dialog',name='Select Colour',exact=True);colour.get_by_role('radio',name='Wine',exact=False).check();colour.get_by_role('button',name='View Bag',exact=True).click();page.wait_for_url('**/bag')
     page.goto(origin+'/bag');expect(page.locator('[data-shopping-line]')).to_have_count(2)
     fixture('price-stock');page.reload();page.get_by_text('Only 1 available.',exact=False).wait_for()
     assert '2,000.05' in page.locator('body').inner_text()
-    fixture('hide');page.reload();page.get_by_role('button',name='Product unavailable',exact=True).first.wait_for();assert 'Shopping Simple' not in page.locator('body').inner_text()
+    fixture('hide');page.reload();page.get_by_role('heading',name='Product unavailable',exact=True).first.wait_for();assert 'Shopping Simple' not in page.locator('body').inner_text()
     # Layout and fixed navigation at all requested widths, populated + unavailable.
     for width in [320,375,390,768,1024,1440]:
         for route in ['/bag','/wishlist']:
@@ -85,7 +84,7 @@ try:
     def fail_read(route):
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='shopping:get':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture unavailable"}')
         else:route.continue_()
-    page.route('**/api/catalog',fail_read);page.goto(origin+'/bag');page.get_by_role('heading',name='Unable to load your bag',exact=True).wait_for();page.unroute('**/api/catalog',fail_read)
+    page.route('**/api/catalog',fail_read);page.goto(origin+'/bag');page.get_by_role('button',name='Retry bag',exact=True).wait_for();assert page.get_by_role('heading',name='Your bag is empty',exact=True).count()==0;page.unroute('**/api/catalog',fail_read)
     page.get_by_role('button',name='Retry bag',exact=True).click();expect(page.locator('[data-shopping-line]')).to_have_count(2)
     page.goto(origin+'/account');page.get_by_role('button',name='Sign out',exact=True).click();page.goto(origin+'/bag');page.get_by_role('heading',name='Sign in to view your bag',exact=True).wait_for();assert page.locator('[data-shopping-line]').count()==0
     page.goto(origin+'/login?returnTo=%2Fbag');login(page,'legacy-customer@example.test');page.get_by_role('heading',name='Your bag is empty',exact=True).wait_for();assert page.locator('[data-shopping-line]').count()==0
@@ -101,9 +100,8 @@ try:
     new.get_by_label('Password',exact=True).fill('ShoppingPassword9!')
     new.get_by_label('Confirm password',exact=True).fill('ShoppingPassword9!')
     new.get_by_role('button',name='Create account',exact=True).click()
-    new.get_by_role('status').filter(has_text='Saved to your wishlist.').wait_for();new.goto(origin+'/wishlist');expect(new.locator('[data-wishlist-product]')).to_have_count(1)
-    new.get_by_role('button',name='Select colour',exact=True).click();new.wait_for_url('**/product/shopping-colours?select=colour')
-    new.get_by_text('Please select a colour before adding to your bag or buying now.',exact=True).wait_for()
+    new.wait_for_url('**/product/shopping-colours');expect(new.get_by_role('button',name='Save to Wishlist',exact=True)).to_have_attribute('aria-pressed','true');new.goto(origin+'/wishlist');expect(new.locator('[data-wishlist-product]')).to_have_count(1)
+    new.get_by_role('button',name='Select Colour',exact=True).click();colour=new.get_by_role('dialog',name='Select Colour',exact=True);expect(colour.get_by_role('button',name='Add to Bag',exact=True)).to_be_disabled();expect(colour.get_by_role('radio',name='Wine',exact=False)).to_be_enabled();expect(colour.get_by_role('radio',name='Gold',exact=False)).to_be_disabled();colour.get_by_role('radio',name='Wine',exact=False).check();colour.get_by_role('button',name='Add to Bag',exact=True).click();expect(colour).not_to_be_visible();new.goto(origin+'/bag');expect(new.locator('[data-shopping-line]')).to_have_count(1)
     assert not errors,errors
     browser.close()
     print('Shopping browser checks passed: intent/login/registration, replay, cross-device, writes/retry, stock/privacy and six widths.')

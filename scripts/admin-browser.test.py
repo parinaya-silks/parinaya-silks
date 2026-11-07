@@ -1,5 +1,5 @@
 """Synthetic accounts on loopback Auth/Firestore emulators only. No live login."""
-import json, os, subprocess
+import json, os, subprocess, re
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -45,7 +45,7 @@ with sync_playwright() as p:
     for route, heading in [('/admin','Dashboard'),('/admin/orders','Orders'),('/admin/orders/test-order','Order details'),('/admin/products','Products'),('/admin/products/new','Add Product'),('/admin/products/edit/test-product','Edit Product'),('/admin/customers','Customers'),('/admin/coupons','Coupons'),('/admin/settings','Store Settings')]:
         page.goto(origin+route)
         try:
-            page.get_by_role('heading', name=heading, exact=True).wait_for(timeout=15000)
+            page.get_by_role('heading', name=re.compile(r'^Store Settings (Saved settings|Unsaved changes)$') if heading=='Store Settings' else heading, exact=True).wait_for(timeout=15000)
         except Exception:
             print('Failed route heading:',route,'Expected:',heading,'Actual:',page.locator('h1').all_text_contents())
             raise
@@ -74,7 +74,7 @@ with sync_playwright() as p:
 
     page.set_viewport_size({'width':1440,'height':900})
     page.get_by_role('button',name='View Website',exact=False).filter(visible=True).click()
-    page.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+    page.locator('main h1').filter(has_text='PARINAYA SAREES').wait_for()
     assert page.url==origin+'/'
     persistence_before=page.evaluate('({local:Object.keys(localStorage).filter(k=>k.startsWith("firebase:authUser:")).length,session:Object.keys(sessionStorage).filter(k=>k.startsWith("firebase:authUser:")).length})')
     page.goto(origin+'/login')
@@ -127,7 +127,7 @@ with sync_playwright() as p:
     production.get_by_role('heading',name='Administrator Sign In').wait_for()
     assert production.evaluate('typeof window.parinayaFirebase')=='undefined'
     production.goto('http://127.0.0.1:4200/')
-    production.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+    production.locator('main h1').filter(has_text='PARINAYA SAREES').wait_for()
     production.get_by_text('No products available yet.',exact=True).wait_for()
     assert production.get_by_role('link',name='Admin',exact=True).count()==0
     production.goto('http://127.0.0.1:3101/admin')
@@ -136,7 +136,7 @@ with sync_playwright() as p:
     production.get_by_role('heading',name='Administrator access unavailable').wait_for()
     assert production.get_by_role('heading',name='Dashboard',exact=True).count()==0
     production.goto('http://127.0.0.1:3101/')
-    production.locator('main h1').filter(has_text='PARINAYA SILKS').wait_for()
+    production.locator('main h1').filter(has_text='PARINAYA SAREES').wait_for()
     production.get_by_text('No products available yet.',exact=True).wait_for()
     print('Production direct/nested routing and public storefront passed locally; no hosted deployment was tested')
     browser.close()

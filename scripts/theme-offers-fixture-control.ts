@@ -16,6 +16,11 @@ try{
   const c={kind:'percent',value:10,enabled:true,discoverable:true,minimumPaise:0,capPaise:10000,globalLimit:null,perCustomerLimit:null,startsAt:null,endsAt:null,revision:1,uses:0};
   for(const [code,extra]of Object.entries({PUBLIC10:{},THIRD:{eligibleOrderNumber:3},PRIVATE10:{discoverable:false},DISABLED10:{enabled:false},EXPIRED10:{endsAt:1}}))await db.doc('coupons/'+code).set({...c,code,...extra});
   await db.doc('orders/theme-offers-first').set({uid,status:'Delivered',paymentStatus:'due'});
+ }else if(process.argv[2]==='maroon'){await db.doc('siteSettings/storefrontAppearance').set({theme:'light-maroon',schemaVersion:1,revision:1});
+ }else if(process.argv[2]==='cart-two'){await db.doc('customerShopping/'+uid+'/bag/'+pid+'--simple').update({quantity:2});
+ }else if(process.argv[2]==='cart-one'){await db.doc('customerShopping/'+uid+'/bag/'+pid+'--simple').update({quantity:1});
+ }else if(process.argv[2]==='minimum'){const c=(await db.doc('coupons/PUBLIC10').get()).data()!;await db.doc('coupons/CARTMIN').set({...c,code:'CARTMIN',minimumPaise:3000000});
+ }else if(process.argv[2]==='disable'){await db.doc('coupons/PUBLIC10').update({enabled:false});
  }else if(process.argv[2]==='assert'){
   if((await db.doc('coupons/PUBLIC10').get()).get('uses')!==0)throw Error('Discovery/review must not redeem');
   if((await db.doc('siteSettings/shipping').get()).get('revision')!==1)throw Error('Theme must preserve shipping');

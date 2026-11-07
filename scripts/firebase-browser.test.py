@@ -30,7 +30,10 @@ with sync_playwright() as p:
             route.fulfill(status=200, json=[{**result, 'readTime': '2026-01-01T00:00:00Z'}], headers={'Access-Control-Allow-Origin': '*'})
 
     context.route('https://firestore.googleapis.com/**', intercept)
-    page.goto('http://127.0.0.1:3000/')
+    # Probe only the developer module: normal storefront category reads are
+    # covered separately and are no longer part of SDK initialization.
+    context.route('http://127.0.0.1:3000/__firebase_probe', lambda route: route.fulfill(content_type='text/html', body='<script type="module">import {installFirebaseDeveloperTools} from "/src/services/firebase/developer.ts";installFirebaseDeveloperTools();</script>'))
+    page.goto('http://127.0.0.1:3000/__firebase_probe')
     page.wait_for_function('Boolean(window.parinayaFirebase)')
     status = page.evaluate('window.parinayaFirebase.status()')
     assert status['status'] == 'database-initialized'

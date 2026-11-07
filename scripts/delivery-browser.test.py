@@ -9,7 +9,7 @@ origin='http://127.0.0.1:3100'
 screens=Path('.cache/delivery-browser');screens.mkdir(parents=True,exist_ok=True)
 def fixture(command,script='delivery'):
     subprocess.run(['node','--import','tsx',f'scripts/{script}-fixture-control.ts',command],check=True,capture_output=True)
-fixture('seed','shopping');fixture('profile')
+fixture('seed','shopping');fixture('reset','shipping');fixture('profile')
 try:
   with sync_playwright() as p:
     browser=p.chromium.launch()
@@ -53,7 +53,7 @@ try:
     page.get_by_role('button',name=re.compile(r'^(?:\+ )?Add address$')).click();fill_address(page,'Recipient Two','Work');page.get_by_role('button',name='Save address',exact=True).click();expect(dialog).not_to_be_visible();expect(page.locator('[data-address-id]')).to_have_count(2)
     second=page.locator('[data-address-id]').filter(has_text='Recipient Two').get_attribute('data-address-id')
     # Existing catalog action adds an item; no direct guest Bag writes.
-    page.goto(origin+'/product/shopping-simple');page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to your bag.').wait_for();page.goto(origin+'/bag');page.get_by_role('button',name='Increase quantity',exact=True).click();page.get_by_role('heading',name='My Bag (2)',exact=True).wait_for();page.get_by_role('button',name='Review checkout',exact=True).click()
+    page.goto(origin+'/product/shopping-simple');page.get_by_role('button',name='Add to Bag',exact=True).click();page.get_by_role('status').filter(has_text='Added to Bag').wait_for();page.goto(origin+'/bag');page.get_by_role('button',name='Increase quantity',exact=True).click();page.locator('.shopping-bag-count').filter(has_text='2 items').wait_for();page.get_by_role('button',name='Proceed to Checkout',exact=True).click()
     page.get_by_role('heading',name='Where should we deliver?',exact=True).wait_for();summary=page.locator('[data-review-address]');expect(summary).to_have_attribute('data-review-address',first);
     if not page.locator('.checkout-summary details').evaluate('el=>el.open'):page.locator('.checkout-summary summary').click()
     page.locator('[data-checkout-line]').wait_for()
@@ -88,7 +88,11 @@ try:
     target=other.locator('[data-address-id="'+third+'"]');target.get_by_role('button',name='Edit address',exact=True).click();other.get_by_label('Recipient full name',exact=True).fill('Updated From Another Tab');other.get_by_role('button',name='Save address',exact=True).click();other.get_by_role('dialog').wait_for(state='hidden');page.get_by_role('radio',name='Updated From Another Tab',exact=False).wait_for();expect(summary).to_have_attribute('data-review-revision','2')
     target.get_by_role('button',name='Delete address',exact=True).click();expect(other.get_by_role('button',name='Cancel deletion',exact=True)).to_be_focused();other.get_by_role('button',name='Confirm deletion',exact=True).click();expect(page.locator('[data-address-id="'+third+'"]')).to_have_count(0);expect(summary).to_have_attribute('data-review-address',first)
     fixture('price');page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_text('Prices have changed.',exact=False).wait_for();page.get_by_role('button',name='I have reviewed the updated prices',exact=True).click();page.get_by_text('Prices have changed.',exact=False).wait_for(state='hidden')
-    fixture('stock');page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_text('Only 1 available.',exact=False).wait_for()
+    fixture('stock');page.get_by_role('button',name='Refresh checkout review',exact=True).click()
+    expect(page.get_by_role('button',name='Continue to Review',exact=True)).to_be_disabled()
+    # Delivery's mobile summary is collapsible; open it before inspecting line issues.
+    if not page.locator('.checkout-summary details').evaluate('el=>el.open'):page.locator('.checkout-summary summary').click()
+    page.get_by_text('Only 1 available.',exact=False).wait_for()
     for width in [320,375,390,768,1024,1440]:
         page.set_viewport_size({'width':width,'height':900});assert not page.evaluate('document.documentElement.scrollWidth>innerWidth+1'),width
         page.screenshot(path=str(screens/f'checkout-{width}.png'),full_page=True)
@@ -100,7 +104,7 @@ try:
     def fail_review(route):
         if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review':route.fulfill(status=503,content_type='application/json',body='{"code":"unavailable","message":"Fixture failure"}')
         else:route.continue_()
-    page.route('**/api/catalog',fail_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('button',name='Retry checkout review',exact=True).wait_for();assert page.locator('[data-checkout-line]').count()==0;page.unroute('**/api/catalog',fail_review);page.get_by_role('button',name='Retry checkout review',exact=True).click();
+    page.route('**/api/catalog',fail_review);page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.locator('.checkout-feedback').get_by_role('button',name='Retry',exact=True).wait_for();assert page.locator('[data-checkout-line]').count()==1;expect(page.get_by_role('button',name='Continue to Review',exact=True)).to_be_disabled();page.unroute('**/api/catalog',fail_review);page.locator('.checkout-feedback').get_by_role('button',name='Retry',exact=True).click();
     if not page.locator('.checkout-summary details').evaluate('el=>el.open'):page.locator('.checkout-summary summary').click()
     page.locator('[data-checkout-line]').wait_for()
     fixture('hide');page.get_by_role('button',name='Refresh checkout review',exact=True).click();page.get_by_role('heading',name='Product unavailable',exact=True).wait_for();assert 'Shopping Simple' not in page.locator('body').inner_text()
