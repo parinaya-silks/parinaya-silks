@@ -32,6 +32,8 @@ try:
         page.get_by_label('Email address',exact=True).fill('customer@example.test')
         page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD'])
         page.get_by_role('button',name='Sign In',exact=True).click(); page.wait_for_url('**/shop')
+        expect(page.get_by_role('region',name='Available Offers')).to_have_count(0)
+        page.goto(origin+'/bag')
         page.get_by_role('region',name='Available Offers').get_by_role('button',name='Apply PUBLIC10').click(); page.wait_for_url('**/checkout')
         page.get_by_role('button',name='Continue to Review',exact=True).click(); page.wait_for_url('**/checkout/summary')
         page.get_by_role('button',name='Remove coupon',exact=True).click()
