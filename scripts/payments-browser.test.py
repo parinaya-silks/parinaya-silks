@@ -29,7 +29,12 @@ try:
   page.route('**/api/payments/**',payments)
   def catalog(route):
    if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:review':
-    response=route.fetch();value=response.json();order.update(totalPaise=value['totalPaise'],subtotalPaise=value['subtotalPaise'],shippingPaise=value['shipping']['shippingPaise']);order['payment']['amountPaise']=int(value['totalPaise']);route.fulfill(response=response);return
+    response=route.fetch();value=response.json()
+    # Checkout also reviews before an address is selected. Forward that blocked
+    # review unchanged; only a payable review can define the gateway fixture.
+    if value.get('valid') and value.get('totalPaise') is not None:
+     order.update(totalPaise=value['totalPaise'],subtotalPaise=value['subtotalPaise'],shippingPaise=value['shipping']['shippingPaise']);order['payment']['amountPaise']=int(value['totalPaise'])
+    route.fulfill(response=response);return
    if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:get':route.fulfill(status=200,json=order);return
    if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:place':raise AssertionError('Online flow must never call COD placement')
    route.continue_()

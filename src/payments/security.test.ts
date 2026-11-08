@@ -9,6 +9,18 @@ import {paymentHandler} from '../../server/payments/http.ts';
 import {canCelebrate} from '../orders/customerPresentation.tsx';
 import {orderCommands} from '../admin/orders/detailModel.ts';
 import {publicPayment,type OrderPayment} from './model.ts';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {AdminPayment} from './AdminPayment.tsx';
+
+test('captured payment presentation distinguishes missing timestamps from earlier failures',()=>{
+ const payment:OrderPayment={mode:'test',state:'CAPTURED',reservation:'consumed',amountPaise:100,expiresAt:1,createdAt:1,updatedAt:3,capturedAt:3,failedAt:2};
+ const html=renderToStaticMarkup(createElement(AdminPayment,{order:{id:'a'.repeat(32),payment} as any,onRefresh:()=>{}}));
+ assert.match(html,/<dt>State<\/dt><dd[^>]*>CAPTURED<\/dd>/);
+ assert.match(html,/<dt>Authorization time<\/dt><dd[^>]*>Not recorded<\/dd>/);
+ assert.match(html,/<dt>Earlier failed attempt<\/dt>/);
+ assert.doesNotMatch(html,/<dt>Authorized<\/dt>/);
+});
 
 const fixture={RAZORPAY_MODE:'test',RAZORPAY_KEY_ID:'rzp_test_fixture123456',RAZORPAY_KEY_SECRET:'synthetic-secret-for-tests',RAZORPAY_WEBHOOK_SECRET:'synthetic-webhook-for-tests'};
 test('payment configuration fails closed, mode never falls back and production test access is explicit',()=>{

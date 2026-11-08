@@ -20,15 +20,14 @@ try:
    if body.get('action')=='orders:review':
     if network['mode']=='hold':held.append(route);return
     if network['mode']=='fail':route.fulfill(status=503,json={'code':'unavailable','message':'Private diagnostics omitted'});return
+    # Capture the authoritative response before forwarding it. Chromium may
+    # discard a completed response body as soon as the next navigation starts.
+    response=route.fetch()
+    if response.status==200:reviews.append(response.json())
+    route.fulfill(response=response);return
    route.continue_()
   page.route('**/api/catalog',read_network)
-  def completed_review(request):
-   # A response header can arrive before navigation aborts its body. Only a
-   # completed request can provide a quote for the later totals assertions.
-   if '/api/catalog' in request.url and request.method=='POST' and request.post_data_json.get('action')=='orders:review':
-    response=request.response()
-    if response and response.status==200:reviews.append(response.json())
-  page.on('requestfinished',completed_review);page.on('request',lambda r:places.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='orders:place' else None)
+  page.on('request',lambda r:places.append(r.post_data_json) if '/api/catalog' in r.url and r.method=='POST' and r.post_data_json.get('action')=='orders:place' else None)
   page.goto(origin+'/login?returnTo=%2Fcheckout');page.get_by_label('Email address',exact=True).fill('customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();page.wait_for_url('**/checkout')
   expect(page.locator('.store-loading-checkout')).to_be_visible()
   for width in [320,390,768,1440,1920]:
@@ -75,6 +74,7 @@ try:
   fixture('disable-loyalty');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.locator('.checkout-feedback')).to_contain_text('loyalty is disabled');expect(page.get_by_role('region',name='Loyalty points',exact=True)).to_have_count(0);expect(page.get_by_label('Price review')).not_to_contain_text('Loyalty savings');page.get_by_role('button',name='Remove Points',exact=True).click()
   fixture('price-change');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.get_by_role('button',name='I have reviewed the updated prices',exact=True)).to_be_visible();expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();page.get_by_role('button',name='I have reviewed the updated prices',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_enabled()
   fixture('stock-change');page.get_by_role('button',name='Refresh checkout review',exact=True).click();expect(page.get_by_role('button',name='Continue to Payment')).to_be_disabled();assert not places
+  page.unroute_all(behavior='wait');ctx.unroute_all(behavior='wait')
   assert not errors,errors;browser.close()
  print('Checkout design browser passed: all three stages at five widths, address dialog/edit/focus/validation, authoritative totals, coupon and points Apply/Remove/disabled, stage and refresh recovery, price acknowledgement, stock blocking, local Lora/SVGs and no order creation on reads.')
 finally:fixture('cleanup');fixture('cleanup','cod');fixture('cleanup','shopping')

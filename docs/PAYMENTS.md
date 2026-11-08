@@ -5,6 +5,10 @@ shipping, coupon and loyalty services. It does not create a second order system.
 COD continues working without Razorpay configuration. Real gateway TEST acceptance
 and LIVE activation are separate release gates; mocked tests do not establish either.
 
+For the current endpoint audit, exact Vercel variables, worker setup and first
+TEST transaction checklist, use [Razorpay TEST setup](RAZORPAY_TEST_SETUP.md).
+The dated implementation record below remains historical evidence.
+
 ## Credentials and activation
 
 Only these three Razorpay credentials are needed from the client, delivered through

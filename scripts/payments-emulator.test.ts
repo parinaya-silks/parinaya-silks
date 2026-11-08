@@ -109,6 +109,20 @@ test('online payments: authoritative existing checkout, reservations, capture, r
   await assert.rejects(paymentService(failing,catalog.paymentContext,env,provider).reconcile(r.id));assert.equal((await stored(r.id)).status,'Placed');assert.equal((await stored(r.id)).payment.reservation,'active');assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
   svc=service();await Promise.all([svc.reconcile(r.id),svc.reconcile(r.id)]);assert.equal((await stored(r.id)).status,'Confirmed');assert.equal((await stored(r.id)).history.filter((v:any)=>v.action==='Confirmed').length,1);
  });
+ await t.test('all seven signed webhook events process and duplicate delivery cannot repeat settlement',async()=>{
+  await seed('pay-events');const r=await call('pay-events','create-order',await input('pay-events')),p=await capture(r.id);
+  const types=['payment.authorized','payment.captured','payment.failed','order.paid','refund.created','refund.processed','refund.failed'];
+  for(const type of types){
+   const payload=type.startsWith('refund.')?{refund:{entity:{id:'rfnd_Event',payment_id:p.id}}}:type==='order.paid'?{order:{entity:{id:p.order_id}}}:{payment:{entity:p}};
+   const raw=Buffer.from(JSON.stringify({event:type,payload})),signature=createHmac('sha256',env.RAZORPAY_WEBHOOK_SECRET).update(raw).digest('hex');
+   await Promise.all([svc.webhook(raw,signature,'all-seven-'+type.replaceAll('.','-')),svc.webhook(raw,signature,'all-seven-'+type.replaceAll('.','-'))]);
+  }
+  await svc.work();
+  for(const type of types){const events=await db.collection('paymentEvents').where('eventId','==','all-seven-'+type.replaceAll('.','-')).get();assert.equal(events.size,1);assert.equal(events.docs[0].get('processing'),'processed');}
+  const order=await stored(r.id);assert.equal(order.payment.state,'CAPTURED');assert.equal(order.payment.reservation,'consumed');
+  assert.equal(order.history.filter((entry:any)=>entry.action==='Confirmed').length,1);assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
+  assert.equal(order.refundPaise,0,'A refund webhook cannot invent a refund absent from the provider');
+ });
  await t.test('full refunds, malformed webhook payloads and signed event-ID conflicts are handled',async()=>{
   await seed('pay-refund-full');const r=await call('pay-refund-full','create-order',await input('pay-refund-full'));const p=await capture(r.id);await svc.reconcile(r.id);
   refunds.set(p.id,[{id:'rfnd_Full',payment_id:p.id,amount:p.amount,currency:'INR',status:'processed',created_at:1}]);payments.get(p.id)!.status='refunded';payments.get(p.id)!.amount_refunded=p.amount;await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'REFUNDED');assert.equal((await stored(r.id)).paymentStatus,'refunded');
