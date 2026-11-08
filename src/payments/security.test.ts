@@ -8,10 +8,25 @@ import {razorpayProvider,signatureMatches} from '../../server/payments/provider.
 import {paymentHandler} from '../../server/payments/http.ts';
 import {canCelebrate} from '../orders/customerPresentation.tsx';
 import {orderCommands} from '../admin/orders/detailModel.ts';
-import {publicPayment,type OrderPayment} from './model.ts';
+import {publicPayment,orderStatusLabel,awaitsOnlinePayment,type OrderPayment} from './model.ts';
+import {orderProgress,OrderProgress} from '../orders/customerPresentation.tsx';
+import {historyPayment} from '../orders/historyModel.ts';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {AdminPayment} from './AdminPayment.tsx';
+
+test('reserved and failed online checkouts never present a confirmed fulfilment lifecycle',()=>{
+ const payment:OrderPayment={mode:'test',state:'FAILED',reservation:'active',amountPaise:100,expiresAt:9999999999999,createdAt:1,updatedAt:2};
+ const order={id:'a'.repeat(32),status:'Confirmed',payment,history:[{action:'Confirmed',at:1}]} as any;
+ for(const [state,label] of [['CREATED','Awaiting payment'],['PENDING','Awaiting payment'],['FAILED','Payment failed'],['AUTHORIZED','Awaiting capture'],['VERIFICATION_PENDING','Verifying payment'],['MANUAL_REVIEW','Payment needs review']] as const){
+  payment.state=state;assert.equal(orderStatusLabel(order),label);assert.equal(awaitsOnlinePayment(payment),true);assert.equal(canCelebrate(order),false);assert.deepEqual(orderProgress(order),[]);
+  const html=renderToStaticMarkup(createElement(OrderProgress,{order}));assert.match(html,/after your online payment is captured and verified/);assert.doesNotMatch(html,/Completed|Upcoming|Shipment Details/);
+  assert.equal(historyPayment(order).closed,true);
+ }
+ payment.state='CANCELLED';payment.reservation='released';assert.equal(orderStatusLabel(order),'Payment expired');
+ payment.state='CAPTURED';payment.reservation='consumed';payment.capturedAt=3;assert.equal(orderStatusLabel(order),'Confirmed');assert.equal(canCelebrate(order),true);assert.equal(orderProgress(order).length,5);
+ assert.equal(orderStatusLabel({...order,payment:undefined,status:'Placed'}),'Placed');assert.equal(orderProgress({...order,payment:undefined}).length,5);
+});
 
 test('captured payment presentation distinguishes missing timestamps from earlier failures',()=>{
  const payment:OrderPayment={mode:'test',state:'CAPTURED',reservation:'consumed',amountPaise:100,expiresAt:1,createdAt:1,updatedAt:3,capturedAt:3,failedAt:2};

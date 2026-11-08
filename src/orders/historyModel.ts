@@ -1,4 +1,4 @@
-import {publicPayment,paymentMessage,type OrderPayment} from '../payments/model.ts';
+import {publicPayment,paymentMessage,awaitsOnlinePayment,type OrderPayment} from '../payments/model.ts';
 import type {OrderRecord,OrderStatus} from './model.ts';
 export const historyFilters=['all','progress','delivered','cancelled'] as const;
 export type HistoryFilter=typeof historyFilters[number];
@@ -20,6 +20,6 @@ export function historyProjection(order:OrderRecord):HistoryOrder {
 }
 export function historyPayment(order:HistoryOrder) {
  const closed=['Cancelled','Rejected'].includes(order.status);
- if(order.payment)return {closed,label:'Order Total',message:paymentMessage(order.payment)};
+ if(order.payment)return {closed:closed||awaitsOnlinePayment(order.payment),label:'Order Total',message:paymentMessage(order.payment)};
  return {closed,label:closed?'Order Value':order.paymentStatus==='collected'||order.collectedPaise!==null?'Order Total':'Total Payable',message:order.paymentStatus==='collected'?'COD · Collection recorded':closed?'No delivery payment requested':'Cash on Delivery · Due at delivery'};
 }

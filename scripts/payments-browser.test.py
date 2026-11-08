@@ -36,6 +36,9 @@ try:
      order.update(totalPaise=value['totalPaise'],subtotalPaise=value['subtotalPaise'],shippingPaise=value['shipping']['shippingPaise']);order['payment']['amountPaise']=int(value['totalPaise'])
     route.fulfill(response=response);return
    if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:get':route.fulfill(status=200,json=order);return
+   if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:list':
+    item={**order,'collectedPaise':None,'refundPaise':None,'lineCount':1,'unitCount':1,'estimatedDeliveryDate':None}
+    route.fulfill(status=200,json={'items':[item],'nextCursor':None});return
    if route.request.method=='POST' and route.request.post_data_json.get('action')=='orders:place':raise AssertionError('Online flow must never call COD placement')
    route.continue_()
   page.route('**/api/catalog',catalog)
@@ -49,7 +52,15 @@ try:
   page.evaluate('window.paymentFixture.modal.ondismiss()');page.wait_for_url('**/order-tracking/'+oid);expect(page.get_by_role('region',name='Online payment status')).to_be_visible();assert page.locator('.order-greeting').count()==0;assert 'Cash on Delivery' not in page.locator('.customer-order-experience').inner_text()
   for width in [320,390,768,1440]:
    page.set_viewport_size({'width':width,'height':900});page.evaluate('document.fonts.ready');page.wait_for_timeout(150);assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(width,page.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+2).map(e=>[e.tagName,e.className,e.getBoundingClientRect().width]).slice(0,10)"));page.screenshot(path=str(out/f'pending-{width}.png'))
-  page.get_by_role('button',name='Continue existing payment').click();page.wait_for_function('window.paymentOpened===2');assert len([r for r in requests if r[0]=='create-order'])==1
+  # Real stored lifecycle remains Placed, but all customer surfaces must show
+  # failed payment rather than a completed order or fulfilment progress.
+  order['payment']['state']='FAILED'
+  for width in [390,1440]:
+   page.set_viewport_size({'width':width,'height':900});page.goto(origin+'/account/orders')
+   expect(page.locator('.history-status')).to_have_text('Payment failed');expect(page.get_by_role('link',name='Retry payment',exact=True)).to_be_visible();expect(page.locator('.history-shipment')).to_have_count(0)
+   page.get_by_role('link',name='Retry payment',exact=True).click();expect(page.locator('.order-status')).to_have_text('Payment failed');expect(page.locator('.order-progress ol')).to_have_count(0);expect(page.locator('.order-greeting')).to_have_count(0);expect(page.get_by_role('button',name='Retry payment',exact=True)).to_be_visible()
+   page.goto(origin+'/order-confirmed/'+oid);expect(page.locator('.order-greeting')).to_have_count(0);expect(page.locator('.order-notice')).to_contain_text('Payment is not confirmed')
+  page.goto(origin+'/order-tracking/'+oid);page.get_by_role('button',name='Retry payment',exact=True).click();page.wait_for_function('window.paymentOpened===1');assert len([r for r in requests if r[0]=='create-order'])==1
   state['fail']=True;page.evaluate("window.paymentFixture.handler({razorpay_order_id:'order_Fixture',razorpay_payment_id:'pay_Fixture',razorpay_signature:'synthetic'})");expect(page.get_by_role('alert').filter(has_text='verification is pending')).to_be_visible();assert page.locator('.order-greeting').count()==0
   state['fail']=False;page.evaluate("window.paymentFixture.handler({razorpay_order_id:'order_Fixture',razorpay_payment_id:'pay_Fixture',razorpay_signature:'synthetic'})");expect(page.get_by_role('status').filter(has_text='Payment successful!').first).to_be_visible()
   page.goto(origin+'/order-confirmed/'+oid);expect(page.locator('.order-greeting')).to_be_visible();assert 'Cash on Delivery' not in page.locator('.customer-order-experience').inner_text();assert not errors,errors

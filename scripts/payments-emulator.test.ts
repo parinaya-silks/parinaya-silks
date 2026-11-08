@@ -99,9 +99,25 @@ test('online payments: authoritative existing checkout, reservations, capture, r
  });
  await t.test('failed payments retain reservations until trusted expiry; authorized expiry remains held',async()=>{
   await seed('pay-decline');const r=await call('pay-decline','create-order',await input('pay-decline'));await capture(r.id,'failed');await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'FAILED');assert.equal((await stored(r.id)).payment.reservation,'active');
-  const before=creates,resume=await call('pay-decline','resume',{id:r.id});assert.equal(resume.checkout.order_id,(await stored(r.id)).payment.providerOrderId);assert.equal(creates,before);
+  const failed=await stored(r.id);assert.equal(failed.status,'Placed');assert.equal(failed.paymentStatus,'pending');assert.equal(failed.collectedPaise,0);assert.equal(failed.history.some((h:any)=>h.action==='Confirmed'),false);
+  const detail=await catalog.privileged('pay-decline',{action:'orders:get',id:r.id}) as any;assert.equal(detail.payment.state,'FAILED');assert.equal(detail.payment.capturedAt,undefined);
+  const page=await catalog.privileged('pay-decline',{action:'orders:list',view:'cards'}) as any;assert.equal(page.items[0].payment.state,'FAILED');assert.equal(page.items[0].paymentStatus,'pending');
+  await assert.rejects(catalog.privileged('owner',{action:'adminOrders:update',id:r.id,expectedRevision:failed.revision,operationId:op(),command:'Confirmed'}),{code:'conflict'});
+  const before=creates,resume=await call('pay-decline','resume',{id:r.id});assert.equal(resume.checkout.order_id,(await stored(r.id)).payment.providerOrderId);assert.equal(creates,before);assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
   await capture(r.id,'authorized');await db.doc('orders/'+r.id).update({'payment.expiresAt':Date.now()-1});await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'AUTHORIZED');assert.equal((await stored(r.id)).payment.reservation,'active');
   payments.clear();await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'MANUAL_REVIEW');assert.equal((await stored(r.id)).payment.reservation,'active');
+ });
+ await t.test('failed expiry releases stock, coupon and nonzero points once without breaking safe retry',async()=>{
+  await seed('pay-failed-expiry');await db.doc('loyaltyAccounts/pay-failed-expiry').set({schemaVersion:1,revision:1,net:100,reserved:0,pending:0});
+  const couponBefore=(await db.doc('coupons/PAY10').get()).get('uses'),r=await call('pay-failed-expiry','create-order',await input('pay-failed-expiry','PAY10',10)),before=creates;
+  await capture(r.id,'failed');await svc.reconcile(r.id);assert.equal((await stored(r.id)).status,'Placed');assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
+  await call('pay-failed-expiry','resume',{id:r.id});assert.equal(creates,before);assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
+  await db.doc('orders/'+r.id).update({'payment.expiresAt':Date.now()-1});await db.doc('paymentAttempts/'+r.id).update({nextCheckAt:Date.now()-1});await svc.work();await svc.reconcile(r.id);
+  const order=await stored(r.id),balance=(await db.doc('loyaltyAccounts/pay-failed-expiry').get()).data()!;
+  assert.equal(order.status,'Cancelled');assert.equal(order.paymentStatus,'failed');assert.equal(order.payment.reservation,'released');assert.equal(order.stockRestored,true);assert.equal(order.collectedPaise,0);
+  assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),20);assert.equal((await db.doc('coupons/PAY10').get()).get('uses'),couponBefore);assert.equal(balance.net,100);assert.equal(balance.reserved,0);assert.equal(balance.pending,0);
+  assert.equal((await db.collection('inventoryAudit').where('orderId','==',r.id).get()).size,2);assert.equal(order.history.filter((h:any)=>h.action==='Cancelled').length,1);
+  assert.equal((await call('pay-failed-expiry','resume',{id:r.id})).checkout,undefined);assert.equal(creates,before);
  });
  await t.test('captured payment survives an internal commit failure and a restarted service confirms once',async()=>{
   await seed('pay-commit');const r=await call('pay-commit','create-order',await input('pay-commit'));await capture(r.id);

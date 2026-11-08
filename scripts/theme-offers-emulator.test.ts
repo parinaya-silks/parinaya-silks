@@ -45,6 +45,14 @@ test('persistent storefront themes and public, token-owned coupon discovery use 
   const line=db.doc('customerShopping/'+prefix+'other/bag/'+pid+'--simple');await line.update({quantity:2});await db.doc('coupons/MINIMUM').update({minimumPaise:200000});assert.deepEqual((await list('other',true)).map(v=>v.code),['MINIMUM','PUBLIC']);await line.update({quantity:1});assert.deepEqual((await list('other',true)).map(v=>v.code),['PUBLIC']);await line.delete();assert.deepEqual(await list('other',true),[]);await line.set({productId:pid,variantId:null,quantity:1});
   await db.doc('coupons/PUBLIC/customers/'+prefix+'customer').set({uses:1});await db.doc('coupons/PUBLIC').update({perCustomerLimit:1});assert.deepEqual(await list('customer',true),[]);assert.equal((await list()).some(v=>v.code==='PUBLIC'),false);assert.equal((await list('other')).some(v=>v.code==='PUBLIC'),true);
   const reviewed=await post({action:'orders:review',addressId:null,couponCode:'PUBLIC'},'other');assert.equal(reviewed.status,200);assert.equal(reviewed.value.discountPaise,'10000');assert.equal((await db.doc('coupons/PUBLIC').get()).get('uses'),0);
+  // Production FIRST was active but explicitly private: manual use must work,
+  // discovery must respect that choice, and only an Admin save may publish it.
+  const first={...c,code:'FIRST',kind:'percent',value:30,minimumPaise:9900,capPaise:1000000,discoverable:false};
+  await db.doc('coupons/FIRST').set(first);assert.equal((await list('other',true)).some(v=>v.code==='FIRST'),false);
+  const firstReview=await post({action:'orders:review',addressId:null,couponCode:'FIRST'},'other');assert.equal(firstReview.status,200);assert.equal(firstReview.value.discountPaise,'30000');
+  const {revision:unusedRevision,uses:unusedUses,...firstInput}=first;
+  assert.equal((await post({action:'coupons:save',coupon:{...firstInput,discoverable:true},expectedRevision:1,operationId:op()})).status,200);
+  assert.equal((await list('other',true)).find(v=>v.code==='FIRST')?.state,'eligible');assert.equal((await db.doc('coupons/FIRST').get()).get('uses'),0);
   await db.doc('coupons/PUBLIC').update({enabled:false});assert.equal((await post({action:'orders:review',addressId:null,couponCode:'PUBLIC'},'other')).status,409);
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));for(const name of ['siteSettings','coupons','orders','categories','products','customerShopping','adminAccess'])for(const d of(await db.collection(name).get()).docs)await db.recursiveDelete(d.ref);}
 });

@@ -1,3 +1,4 @@
+import {orderStatusLabel} from '../../payments/model.ts';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Download,Search,X,ChevronLeft,ChevronRight,Phone,ArrowRight} from 'lucide-react';
 import {useAdminResource} from '../dashboard/resource.tsx';
@@ -24,7 +25,7 @@ export function OrdersList({state,onState,onNavigate}:{state:OrderListState;onSt
  const filtered=!!state.filters.search||state.filters.statuses.length>0||!!state.filters.paymentStatus||state.filters.period!=='all';
  const checkbox=(item:OrderListItem)=><input className="orders-check" type="checkbox" aria-label={'Select '+item.reference} checked={selection.rows.some(row=>row.id===item.id)} disabled={!allowed||busy||(!bulkEligible(item)||item.status!==source)} onChange={()=>selection.toggle(item)}/>;
  const selectAll=<input className="orders-check" type="checkbox" aria-label="Select all eligible orders on this page" checked={selection.all} ref={node=>{if(node)node.indeterminate=!selection.all&&selection.rows.length>0;}} disabled={!allowed||busy||!selection.eligible.length} onChange={selection.toggleAll}/>;
- const status=(item:OrderListItem)=><span className="orders-badge" data-status={item.status}>{item.status}</span>;
+ const status=(item:OrderListItem)=><span className="orders-badge" data-status={item.status}>{orderStatusLabel(item)}</span>;
  const payment=(item:OrderListItem)=><div className="orders-payment"><span className="orders-badge" data-payment={item.paymentStatus}>{codLabel(item)}</span>{item.paymentStatus==='due'&&BigInt(item.collectedPaise)>0n&&<small>{money(BigInt(item.collectedPaise))} recorded; {money(BigInt(item.totalPaise)-BigInt(item.collectedPaise))} remaining</small>}</div>;
  const viewButton=(item:OrderListItem)=><button className="orders-view admin-secondary" onClick={()=>view(item)}>View Order<ArrowRight size={13} aria-hidden="true"/></button>;
  const chip=(label:string,clear:()=>void)=><button className="orders-chip" disabled={busy} onClick={clear}>{label}<X size={12} aria-hidden="true"/><span className="sr-only">Remove filter</span></button>;
