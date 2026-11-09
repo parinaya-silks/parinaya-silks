@@ -197,7 +197,6 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               {product.name}
             </h1>
 
-            <AvailableCoupons onNavigate={onNavigate} slug={product.slug} source={{kind:'buy-now',productId:product.id,variantId:product.variants?.length?selectedVariant?.id??'unselected':null,quantity}} disabled={shoppingBusy||!selectedStock||quantity>selectedStock}/>
             {/* Pricing */}
             <div className="flex items-baseline gap-3 pt-1">
               <span className="font-sans text-[26px] sm:text-[28px] font-bold text-[#780D24]">
@@ -298,6 +297,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
             </div>
           </div>
+
+          <AvailableCoupons dropdown onNavigate={onNavigate} slug={product.slug} source={{kind:'buy-now',productId:product.id,variantId:product.variants?.length?selectedVariant?.id??'unselected':null,quantity}} disabled={shoppingBusy||!selectedStock||quantity>selectedStock}/>
 
           {safeProductVideo(product.videoUrl)&&<a className="product-reel-link" href={safeProductVideo(product.videoUrl)} target="_blank" rel="noopener noreferrer"><Play size={17}/>Watch Product Reel</a>}
           {/* Delivery Checker Card */}

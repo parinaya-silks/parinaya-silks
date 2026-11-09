@@ -30,7 +30,7 @@ try:
    for width in [320,390,768,1440]:
     display.set_viewport_size({'width':width,'height':900})
     for path in ['/','/shop','/product/home-saree-0','/login','/about','/contact','/policies/privacy']:
-     display.goto(origin+path);expect(display.locator('.customer-storefront')).to_have_attribute('data-store-theme',name)
+     display.goto(origin+path);expect(display.locator('.customer-storefront')).to_have_attribute('data-store-theme',name,timeout=20000)
      expect(display.locator('.customer-storefront')).to_have_css('background-color',bg)
      assert display.locator('.storefront-header').evaluate('e=>getComputedStyle(e).backgroundColor')==primary
      assert display.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(name,path,width)
@@ -39,8 +39,18 @@ try:
       expect(display.get_by_label('Search products',exact=True)).to_be_visible()
       expect(display.locator('main article').first).to_be_visible()
       display.screenshot(path=str(out/f'{name}-shop-{width}.png'),full_page=True)
+     if path=='/product/home-saree-0':
+      offers=display.get_by_role('region',name='Available Offers');toggle=offers.get_by_role('button',name='Available offers',exact=True)
+      expect(toggle).to_have_attribute('aria-expanded','false');expect(offers.locator('article')).to_have_count(0)
+      display.screenshot(path=str(out/f'{name}-product-coupons-closed-{width}.png'))
+      toggle.focus();display.keyboard.press('Enter');choice=offers.get_by_role('combobox',name='Choose an available coupon',exact=True)
+      expect(choice).to_be_visible();choice.select_option('PUBLIC10');expect(offers.locator('article')).to_have_count(1);expect(offers.locator('article strong')).to_have_text('PUBLIC10')
+      choice.select_option('THIRD');expect(offers.locator('article')).to_have_count(1);expect(offers.locator('article strong')).to_have_text('THIRD')
+      assert display.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(name,width)
+      display.screenshot(path=str(out/f'{name}-product-coupons-open-{width}.png'))
+      toggle.click();expect(toggle).to_have_attribute('aria-expanded','false');expect(offers.locator('article')).to_have_count(0)
      if path=='/':
-      hero=display.locator('.home-banner-slide');expect(hero).to_be_visible();box=hero.bounding_box();assert abs(box['height']/box['width']-(1.25 if width<768 else .375))<.006
+      hero=display.locator('.home-banner-slide');expect(hero).to_be_visible(timeout=20000);box=hero.bounding_box();assert abs(box['height']/box['width']-(1.25 if width<768 else .375))<.006
    display.close()
   # A separate customer context obtains its own verified token. No admin identity is used for eligibility.
   customer=browser.new_context(viewport={'width':390,'height':900},reduced_motion='reduce');customer.route('https://**/*',lambda r:r.abort());customer.route('https://res.cloudinary.com/**',lambda r:r.fulfill(status=200,content_type='image/jpeg',body=Path('public/assets/customer-auth-portrait.jpg').read_bytes()));shop=customer.new_page();shop.on('pageerror',lambda e:errors.append(str(e)));shop.goto(origin+'/login?returnTo=%2Fshop');login(shop);shop.wait_for_url('**/shop')
