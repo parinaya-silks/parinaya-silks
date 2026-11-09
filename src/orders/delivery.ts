@@ -7,8 +7,8 @@ export const deliveryEditable=(status:OrderStatus)=>['Placed','Confirmed','Proce
 export const deliveryTransitions=(status:OrderStatus)=>(transitions[status]||[]).filter(value=>!['Cancelled','Rejected'].includes(value));
 export function deliveryValues(value:Partial<DeliveryValues>):DeliveryValues{return {courier:value.courier||'',trackingNumber:value.trackingNumber||'',trackingUrl:value.trackingUrl||'',estimatedDeliveryDate:value.estimatedDeliveryDate||null};}
 export const indiaDate=(now=Date.now())=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-export function deliveryDateLabel(value?:string|null){if(!value)return 'Not set';const [year,month,day]=value.split('-');return `${day}/${month}/${year}`;}
-export function deliveryRecord(previous:Partial<DeliveryValues>,patch:Record<string,unknown>,status:OrderStatus,now=Date.now()):DeliveryValues{
+export function deliveryDateLabel(value?:string|null){if(!value)return 'Not provided';const [year,month,day]=value.split('-');return `${day}/${month}/${year}`;}
+export function deliveryRecord(previous:Partial<DeliveryValues>,patch:Record<string,unknown>,_status:OrderStatus,now=Date.now()):DeliveryValues{
  const old=deliveryValues(previous),result={...old};
  for(const field of ['courier','trackingNumber'] as const)result[field]=text(field in patch?patch[field]:old[field],100);
  if(result.trackingNumber&&!/^[\p{L}\p{N} ._/#()+-]+$/u.test(result.trackingNumber))throw new ProductError('invalid','Use letters, numbers and normal separators for the tracking number.');
@@ -22,7 +22,6 @@ export function deliveryRecord(previous:Partial<DeliveryValues>,patch:Record<str
   }
   result.estimatedDeliveryDate=value as string|null;
  }
- if(['Shipped','Delivered'].includes(status)&&!result.trackingNumber)throw new ProductError('invalid','Tracking number is required for dispatched orders.');
  return result;
 }
 export function deliveryChanged(old:Partial<DeliveryValues>,next:DeliveryValues){const previous=deliveryValues(old);return deliveryFields.some(field=>previous[field]!==next[field]);}

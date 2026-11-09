@@ -23,6 +23,7 @@ test('timeline maps actual states and timestamps; invalid shipment links are nev
  assert.deepEqual(orderProgress({...order,status:'Processing'}).map(step=>step.state),['completed','completed','current','upcoming','upcoming']);assert.equal(orderProgress(order)[0].at,0);assert.equal(orderProgress({...order,status:'Cancelled'})[0].state,'stopped');
  assert.match(ist(0),/05:30.*IST/);
  assert.match(renderToStaticMarkup(<OrderProgress order={order}/>),/Tracking details will appear here when available/);
+ for(const status of ['Shipped','Delivered'] as const){const empty=renderToStaticMarkup(<OrderProgress order={{...order,status}}/>);assert.match(empty,/Courier: Not assigned/);assert.match(empty,/Shipment details: Not provided/);assert.doesNotMatch(empty,/href=/);}
  for(const trackingUrl of ['javascript:alert(1)','https://user:pass@example.test'])assert.doesNotMatch(renderToStaticMarkup(<OrderProgress order={{...order,trackingUrl}}/>),/href=/);
  assert.match(renderToStaticMarkup(<OrderProgress order={{...order,trackingUrl:'https://courier.example/track'}}/>),/rel="noopener noreferrer"/);
 });

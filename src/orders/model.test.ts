@@ -10,15 +10,16 @@ test('delivery metadata validates resulting dispatch record, omission, clearing,
  assert.equal(deliveryRecord(old,{estimatedDeliveryDate:'2026-10-24'},'Shipped',now).estimatedDeliveryDate,'2026-10-24');
  for(const date of ['2026-10-23','2026-02-30','2030-01-01','2026-10-24T00:00:00Z',''])assert.throws(()=>deliveryRecord(old,{estimatedDeliveryDate:date},'Shipped',now));
  for(const url of ['javascript:alert(1)','http://courier.example','https://user:pass@courier.example'])assert.throws(()=>deliveryRecord(old,{trackingUrl:url},'Shipped',now));
- assert.throws(()=>deliveryRecord({}, {},'Shipped',now));
- for(const status of ['Processing','Shipped','Delivered'] as const){
-  const unassigned=deliveryRecord({}, {trackingNumber:'AWB-123/IN'},status,now);
+ for(const status of ['Placed','Confirmed','Processing','Shipped','Delivered'] as const){
+  const unassigned=deliveryRecord({}, {},status,now);
+  assert.deepEqual(unassigned,deliveryValues({}));
+  assert.deepEqual(deliveryRecord(old,{courier:'',trackingNumber:'',trackingUrl:'',estimatedDeliveryDate:null},status,now),deliveryValues({}),'Every shipment field may be cleared');
   assert.equal(unassigned.courier,'');assert.equal(unassigned.trackingUrl,'');
   assert.equal(deliveryRecord(old,{courier:'',trackingUrl:''},status,now).courier,'','Courier can be cleared without changing tracking');
  }
  assert.equal(deliveryRecord(old,{trackingNumber:'  BLR 123-45/IN_6  '},'Shipped',now).trackingNumber,'BLR 123-45/IN_6');
  assert.throws(()=>deliveryRecord(old,{trackingNumber:'<script>'},'Shipped',now));
- assert.equal(deliveryDateLabel('2026-10-24'),'24/10/2026');assert.equal(deliveryDateLabel(null),'Not set');assert.equal(deliveryChanged({},deliveryValues({})),false);
+ assert.equal(deliveryDateLabel('2026-10-24'),'24/10/2026');assert.equal(deliveryDateLabel(null),'Not provided');assert.equal(deliveryChanged({},deliveryValues({})),false);
  assert.deepEqual(deliveryTransitions('Processing'),['Shipped']);assert.deepEqual(deliveryTransitions('Shipped'),['Delivered']);
  for(const state of ['Delivered','Cancelled','Rejected'] as const)assert.equal(deliveryEditable(state),false);
 });
