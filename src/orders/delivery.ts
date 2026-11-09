@@ -22,7 +22,7 @@ export function deliveryRecord(previous:Partial<DeliveryValues>,patch:Record<str
   }
   result.estimatedDeliveryDate=value as string|null;
  }
- if(['Shipped','Delivered'].includes(status)&&(!result.courier||!result.trackingNumber))throw new ProductError('invalid','Courier and tracking number are required for dispatched orders.');
+ if(['Shipped','Delivered'].includes(status)&&!result.trackingNumber)throw new ProductError('invalid','Tracking number is required for dispatched orders.');
  return result;
 }
 export function deliveryChanged(old:Partial<DeliveryValues>,next:DeliveryValues){const previous=deliveryValues(old);return deliveryFields.some(field=>previous[field]!==next[field]);}

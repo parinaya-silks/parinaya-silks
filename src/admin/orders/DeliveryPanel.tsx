@@ -32,7 +32,7 @@ export function DeliveryPanel({id,onClose,onSaved}:{id:string;onClose:()=>void;o
   if(!deliveryEditable(base.status))fieldErrors.status='Delivery updates are read-only for this order state.';
   for(const field of deliveryFields){try{deliveryRecord(base,{[field]:values[field]},'Processing');}catch(error){fieldErrors[field]=error instanceof Error?error.message:'Review this field.';}}
   const target=mode==='status'?next:base.status;
-  if(['Shipped','Delivered'].includes(target)){if(!values.courier.trim())fieldErrors.courier='Courier is required for dispatch.';if(!values.trackingNumber.trim())fieldErrors.trackingNumber='Tracking number is required for dispatch.';}
+  if(['Shipped','Delivered'].includes(target)&&!values.trackingNumber.trim())fieldErrors.trackingNumber='Tracking number is required for dispatch.';
   if(Object.keys(fieldErrors).length){setErrors(fieldErrors);return;}
   try{const validated=deliveryRecord(base,values,target as DetailOrder['status']);if(mode==='details'&&!deliveryChanged(base,validated))throw new ProductError('invalid','No delivery details have changed.');setValues(validated);setErrors({});setPlan({action:'adminOrders:update',id,expectedRevision:base.revision,operationId:newOperation(),command:mode==='status'?next:'delivery-details',...validated});setStep('review');}catch(error){setError(error instanceof Error?error.message:'Review the delivery details.');}
  }
