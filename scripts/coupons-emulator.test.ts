@@ -34,6 +34,11 @@ test('coupon management and real checkout preserve usage, transaction limits, ex
   const both=await Promise.allSettled([call(place,remaining),save({...unlimited,value:15},1)]);assert.equal(both[1].status,'fulfilled');const result=both[0].status==='fulfilled'?both[0].value as any:null,uses=(await db.doc('coupons/MORE10').get()).get('uses');assert.equal(uses,result?.order?1:0);assert.ok(result?.order||result?.changed||both[0].status==='rejected');
   const fresh=await review(remaining,'MORE10');await save({...unlimited,value:25},2);const changed=await call({...place,operationId:op(),fingerprint:fresh.fingerprint},remaining) as any;assert.equal(changed.changed,true,'Changed settings require renewed review');assert.equal((await db.doc('coupons/MORE10').get()).get('uses'),uses);
   await db.doc('coupons/LEGACY').set({code:'LEGACY',kind:'fixed',value:100,enabled:true,revision:1,uses:0});assert.equal((await call({action:'coupons:get',code:'LEGACY'}) as any).endsAt,null);assert.equal((await review(remaining,'LEGACY')).discountPaise,'100');
+  const legacy=await call({action:'coupons:get',code:'LEGACY'}) as any;
+  const {uses:legacyUses,revision:legacyRevision,createdAt:legacyCreated,updatedAt:legacyUpdated,...legacyInput}=legacy;
+  await save({...legacyInput,title:'Public title',description:'Full description\nPreserved second paragraph'},legacyRevision);
+  const described=await call({action:'coupons:get',code:'LEGACY'}) as any;assert.equal(described.title,'Public title');assert.equal(described.description,'Full description\nPreserved second paragraph');assert.equal(described.uses,legacyUses);
+  await assert.rejects(save({...legacyInput,description:'x'.repeat(2001)},described.revision),{code:'invalid'});
   // Complete list uses deterministic ID pages; optional fields do not hide legacy rows.
   for(let i=0;i<28;i++)await db.doc('coupons/PAGE'+String(i).padStart(2,'0')).set({...coupon,code:'PAGE'+String(i).padStart(2,'0'),revision:1,uses:0});const first=await call({action:'coupons:list'}) as any,second=await call({action:'coupons:list',cursor:first.nextCursor}) as any;assert.equal(first.items.length,25);assert.equal(second.items.length,6);assert.equal(new Set([...first.items,...second.items].map(c=>c.code)).size,31);
   // Sequence restriction is derived from token-owned Delivered orders, irrespective of COD collection.

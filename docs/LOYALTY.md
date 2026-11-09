@@ -1,6 +1,6 @@
 # Loyalty Points
 
-Local implementation. No production activation, balances, settings, rules or indexes were changed for this feature. The existing COD checkout remains the only payment integration.
+Implementation notes for the existing COD and Razorpay checkout integration. The November coupon/loyalty audit changes no production activation, balances, settings, rules or indexes. See COUPON_LOYALTY_AUDIT.md for audit scope and verification.
 
 ## Sources and activation
 

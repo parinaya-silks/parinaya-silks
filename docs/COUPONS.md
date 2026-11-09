@@ -54,3 +54,44 @@ Example: THIRD with 3 requires exactly two `Delivered` orders owned by the authe
 Final acceptance reads both trusted Delivered records and the existing `coupons/{code}/customers/{uid}` usage record in the order transaction. Sequence coupons require zero prior accepted uses regardless of a looser configured per-customer limit. All existing dates, minimum, caps and total/per-customer limits still apply. Usage, stock, order and idempotency receipt commit atomically. Applying/reviewing, failed attempts and a changed review consume nothing. There is no separate coupon reservation. Exact accepted-operation retries recover the original order without another use. Accepted cancellations/rejections retain usage under the existing lifecycle, including sequence coupons; they do not release a use. Adding a restriction to an already-used coupon does not erase customer usage.
 
 Regression coverage extends the existing coupon unit, real-service emulator and responsive Admin browser suites. No production customers, coupons or orders are created for testing.
+
+
+## Coupon and loyalty audit - November 2026 (local changes)
+
+Customer discovery now requests all active, publicly listed coupons rather than
+eligible-only checkout results. `discoverable: true` is the existing publication
+switch; this model has no separate draft/published field. Private (`false` or
+missing), disabled, scheduled and expired codes stay hidden. Global/customer
+usage exhaustion and unmatched Delivered-order sequences remain visible as
+**Not Eligible**, with disabled Apply and a safe reason. Manual private-code
+entry remains supported and independently validated.
+
+Optional `title` (100 characters) and `description` (2,000 characters, plain text
+with paragraph breaks) round trip through the existing Admin editor, schema,
+revision-checked saves and public projection. Legacy missing text stays valid;
+no sample descriptions or production backfill are added. Only these explicitly
+public text fields and the existing offer terms are projected, never usage
+records, customer identifiers, internal notes or operation evidence.
+
+Product offers retain the compact, initially closed dropdown and display the
+selected coupon's full terms and description. Checkout retains its initially
+closed Available Coupons panel, now with both Eligible and Not Eligible cards
+and Copy for every displayed code. Applied invalid codes remain visible; the
+review shows the backend reason and blocks progression until the customer
+removes/replaces the code. Current items/session changes, focus/reconnect and
+the existing 15-second visible-page refresh recheck eligibility.
+
+Shared server validation remains authoritative for dates, limits, subtotal,
+percentage/fixed arithmetic, caps and exact Delivered-order sequence. Review
+and discovery do not consume coupons; COD acceptance and Razorpay reservation
+revalidate inside the stock/loyalty transaction. Exact retries preserve the
+accepted operation. COD accepted cancellations retain coupon usage. Uncaptured
+online reservation expiry releases usage once. No rule or index changes.
+
+Existing policies do not implement customer allowlists, product/category coupon
+targeting or an independent draft publication status. Per-customer usage and
+Delivered-order sequences are supported. Do not interpret unknown stored fields
+or client-supplied eligibility/discount values as a new targeting policy.
+
+See [COUPON_LOYALTY_AUDIT.md](COUPON_LOYALTY_AUDIT.md) for the verification report
+and current limitations. These local changes require owner-approved release.

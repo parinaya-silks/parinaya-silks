@@ -24,22 +24,32 @@ export function lowStock(inventory:ProductInput['inventory'],threshold:number):b
 export function newlyLowStock(before:ProductInput['inventory'],after:ProductInput['inventory'],threshold:number,beforeThreshold=threshold){const old=new Map(before.mode==='simple'?[['simple',before.quantity||0]]:(before.variants||[]).map(item=>[item.id,item.quantity]));return (after.mode==='simple'?[['simple',after.quantity||0] as const]:(after.variants||[]).map(item=>[item.id,item.quantity] as const)).some(([id,quantity])=>{const previous=old.get(id);return previous!==undefined&&((previous>beforeThreshold&&quantity<=threshold)||(previous>0&&quantity===0));});}
 export const csvCell=(value:unknown)=>'"'+String(value??'').replace(/^[\s]*([=+@-])/,'\'$1').replaceAll('"','""')+'"';
 
-export interface CouponInput {code:string;kind:'percent'|'fixed';value:number;enabled:boolean;startsAt:number|null;endsAt:number|null;minimumPaise:number;capPaise:number|null;globalLimit:number|null;perCustomerLimit:number|null;eligibleOrderNumber?:number|null;discoverable?:boolean}
+export interface CouponInput {code:string;title?:string;description?:string;kind:'percent'|'fixed';value:number;enabled:boolean;startsAt:number|null;endsAt:number|null;minimumPaise:number;capPaise:number|null;globalLimit:number|null;perCustomerLimit:number|null;eligibleOrderNumber?:number|null;discoverable?:boolean}
 // Missing optional legacy fields mean no restriction; required identity/value/state never default.
-export function storedCoupon(raw:Record<string,unknown>):CouponInput{return couponInput({discoverable:raw.discoverable??false,code:raw.code,kind:raw.kind,value:raw.value,enabled:raw.enabled,minimumPaise:raw.minimumPaise===undefined?0:raw.minimumPaise,...Object.fromEntries(['startsAt','endsAt','capPaise','globalLimit','perCustomerLimit','eligibleOrderNumber'].map(key=>[key,raw[key]===undefined?null:raw[key]]))});}
+export function storedCoupon(raw:Record<string,unknown>):CouponInput{return couponInput({discoverable:raw.discoverable??false,...Object.fromEntries(['title','description'].filter(key=>raw[key]!==undefined).map(key=>[key,raw[key]])),code:raw.code,kind:raw.kind,value:raw.value,enabled:raw.enabled,minimumPaise:raw.minimumPaise===undefined?0:raw.minimumPaise,...Object.fromEntries(['startsAt','endsAt','capPaise','globalLimit','perCustomerLimit','eligibleOrderNumber'].map(key=>[key,raw[key]===undefined?null:raw[key]]))});}
 export function couponUses(value:unknown):number{if(value===undefined)return 0;if(!Number.isSafeInteger(value)||(value as number)<0)throw new ProductError('schema','Coupon usage requires owner review.');return value as number;}
 export function couponInput(value:unknown):CouponInput{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new ProductError('invalid','Invalid coupon.');const raw=value as Record<string,unknown>;
-  exact(raw,['code','kind','value','enabled','startsAt','endsAt','minimumPaise','capPaise','globalLimit','perCustomerLimit'],['eligibleOrderNumber','discoverable']);
+  exact(raw,['code','kind','value','enabled','startsAt','endsAt','minimumPaise','capPaise','globalLimit','perCustomerLimit'],['eligibleOrderNumber','discoverable','title','description']);
   if(raw.discoverable!==undefined&&typeof raw.discoverable!=='boolean')throw new ProductError('invalid','Choose coupon visibility.');
   if(raw.eligibleOrderNumber!==undefined&&raw.eligibleOrderNumber!==null&&(!Number.isSafeInteger(raw.eligibleOrderNumber)||(raw.eligibleOrderNumber as number)<1||(raw.eligibleOrderNumber as number)>1000000000))throw new ProductError('invalid','Eligible order number must be a positive whole number.');
   const code=text(raw.code,32,true).toUpperCase();if(!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(code)||!['percent','fixed'].includes(raw.kind as string)||typeof raw.enabled!=='boolean')throw new ProductError('invalid','Use a valid unique coupon code and type.');
   for(const key of ['value','minimumPaise','capPaise','globalLimit','perCustomerLimit','startsAt','endsAt']){const n=raw[key];if(n===null&&!['value','minimumPaise'].includes(key))continue;if(!Number.isSafeInteger(n)||(n as number)<0||(n as number)>((key.endsWith('At'))?8640000000000000:1000000000))throw new ProductError('invalid','Invalid coupon amount, date or limit.');}
   if(!(raw.value as number)||(raw.kind==='percent'&&(raw.value as number)>100)||(raw.globalLimit!==null&&!(raw.globalLimit as number))||(raw.perCustomerLimit!==null&&!(raw.perCustomerLimit as number))||(raw.startsAt!==null&&raw.endsAt!==null&&(raw.startsAt as number)>=(raw.endsAt as number)))throw new ProductError('invalid','Check coupon value, dates and usage limits.');
-  return {...raw,code} as unknown as CouponInput;
+  return {...raw,code,...(raw.title!==undefined?{title:text(raw.title,100)}:{}),...(raw.description!==undefined?{description:noteText(raw.description,2000)}:{})} as unknown as CouponInput;
+}
+// Discovery and final acceptance share these reasons; only time/publication hides a public offer.
+export function couponEligibilityReason(coupon:CouponInput,subtotal:bigint,globalUses:number,customerUses:number,now=Date.now()):string|null{
+ if(!coupon.enabled)return 'This coupon is disabled. Remove it or use another code.';
+ if(coupon.startsAt!==null&&now<coupon.startsAt)return 'This coupon has not started yet. Remove it or use another code.';
+ if(coupon.endsAt!==null&&now>=coupon.endsAt)return 'This coupon has expired. Remove it or use another code.';
+ if(coupon.globalLimit!==null&&globalUses>=coupon.globalLimit)return 'This coupon has reached its total usage limit. Remove it or use another code.';
+ if(coupon.perCustomerLimit!==null&&customerUses>=coupon.perCustomerLimit)return 'You have reached the usage limit for this coupon. Remove it or use another code.';
+ if(subtotal<BigInt(coupon.minimumPaise))return 'Your current product subtotal does not meet this minimum order amount.';
+ return null;
 }
 export function couponDiscount(coupon:CouponInput,subtotal:bigint,globalUses:number,customerUses:number,now=Date.now()):bigint{
-  if(!coupon.enabled||(coupon.startsAt!==null&&now<coupon.startsAt)||(coupon.endsAt!==null&&now>=coupon.endsAt)||subtotal<BigInt(coupon.minimumPaise)||(coupon.globalLimit!==null&&globalUses>=coupon.globalLimit)||(coupon.perCustomerLimit!==null&&customerUses>=coupon.perCustomerLimit))throw new ProductError('conflict','This coupon is not eligible for this order. Remove it or use another code.');
+  const reason=couponEligibilityReason(coupon,subtotal,globalUses,customerUses,now);if(reason)throw new ProductError('conflict',reason);
   let amount=coupon.kind==='fixed'?BigInt(coupon.value):subtotal*BigInt(coupon.value)/100n;
   if(coupon.kind==='percent'&&coupon.capPaise!==null&&amount>BigInt(coupon.capPaise))amount=BigInt(coupon.capPaise);return amount>subtotal?subtotal:amount;
 }

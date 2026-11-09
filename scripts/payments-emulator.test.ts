@@ -89,6 +89,7 @@ test('online payments: authoritative existing checkout, reservations, capture, r
   assert.equal((await db.doc('loyaltyAccounts/pay-loyal').get()).get('reserved'),0);assert.equal((await db.collection('loyaltyAccounts/pay-loyal/ledger').where('kind','==','Earned').get()).size,1);await svc.reconcile(r.id);assert.equal((await db.collection('loyaltyAccounts/pay-loyal/ledger').where('kind','==','Earned').get()).size,1);
   refunds.set(p.id,[{id:'rfnd_Fixture1',payment_id:p.id,amount:1000,currency:'INR',status:'pending',created_at:1}]);await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'REFUND_PENDING');assert.equal((await stored(r.id)).payment.refundedPaise,0);
   refunds.get(p.id)![0].status='processed';payments.get(p.id)!.amount_refunded=1000;await Promise.all([svc.reconcile(r.id),svc.reconcile(r.id)]);assert.equal((await stored(r.id)).payment.state,'PARTIALLY_REFUNDED');assert.equal((await stored(r.id)).refundPaise,1000);assert.equal((await db.doc('loyaltyAccounts/pay-loyal').get()).get('paymentReviewRequired'),true);
+  await assert.rejects(input('pay-loyal',null,10),{code:'conflict'},'Provider refund review must prevent spending unallocated points');
   refunds.get(p.id)![0].status='failed';payments.get(p.id)!.amount_refunded=0;await svc.reconcile(r.id);assert.equal((await stored(r.id)).payment.state,'PARTIALLY_REFUNDED','Old processed refund cannot be downgraded');
  });
  await t.test('mismatched captures fail closed; payment unavailable preserves durable state; direct Firestore writes are denied',async()=>{
@@ -110,12 +111,13 @@ test('online payments: authoritative existing checkout, reservations, capture, r
  await t.test('failed expiry releases stock, coupon and nonzero points once without breaking safe retry',async()=>{
   await seed('pay-failed-expiry');await db.doc('loyaltyAccounts/pay-failed-expiry').set({schemaVersion:1,revision:1,net:100,reserved:0,pending:0});
   const couponBefore=(await db.doc('coupons/PAY10').get()).get('uses'),r=await call('pay-failed-expiry','create-order',await input('pay-failed-expiry','PAY10',10)),before=creates;
-  await capture(r.id,'failed');await svc.reconcile(r.id);assert.equal((await stored(r.id)).status,'Placed');assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
+  await capture(r.id,'failed');await svc.reconcile(r.id);assert.equal((await stored(r.id)).status,'Placed');assert.equal((await db.doc('loyaltyAccounts/pay-failed-expiry').get()).get('net'),90);assert.equal((await db.doc('loyaltyAccounts/pay-failed-expiry').get()).get('reserved'),10);assert.equal((await db.collection('loyaltyAccounts/pay-failed-expiry/ledger').where('kind','==','Earned').get()).size,0);assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
   await call('pay-failed-expiry','resume',{id:r.id});assert.equal(creates,before);assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),19);
   await db.doc('orders/'+r.id).update({'payment.expiresAt':Date.now()-1});await db.doc('paymentAttempts/'+r.id).update({nextCheckAt:Date.now()-1});await svc.work();await svc.reconcile(r.id);
   const order=await stored(r.id),balance=(await db.doc('loyaltyAccounts/pay-failed-expiry').get()).data()!;
   assert.equal(order.status,'Cancelled');assert.equal(order.paymentStatus,'failed');assert.equal(order.payment.reservation,'released');assert.equal(order.stockRestored,true);assert.equal(order.collectedPaise,0);
   assert.equal((await db.doc('products/'+pid).get()).get('inventory.quantity'),20);assert.equal((await db.doc('coupons/PAY10').get()).get('uses'),couponBefore);assert.equal(balance.net,100);assert.equal(balance.reserved,0);assert.equal(balance.pending,0);
+  const ledger=(await db.collection('loyaltyAccounts/pay-failed-expiry/ledger').get()).docs.map(doc=>doc.data());assert.equal(ledger.filter(e=>e.kind==='Released').length,1);assert.equal(100+ledger.reduce((sum,e)=>sum+e.points,0),balance.net);assert.equal(ledger.reduce((sum,e)=>sum+e.reservedDelta,0),balance.reserved);assert.equal(ledger.reduce((sum,e)=>sum+e.pendingDelta,0),balance.pending);
   assert.equal((await db.collection('inventoryAudit').where('orderId','==',r.id).get()).size,2);assert.equal(order.history.filter((h:any)=>h.action==='Cancelled').length,1);
   assert.equal((await call('pay-failed-expiry','resume',{id:r.id})).checkout,undefined);assert.equal(creates,before);
  });

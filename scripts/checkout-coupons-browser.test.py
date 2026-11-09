@@ -12,14 +12,14 @@ fixture('cleanup', 'homepage'); fixture('seed', 'homepage'); fixture('seed'); fi
 try:
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        ctx = browser.new_context(viewport={'width':390, 'height':900}, reduced_motion='reduce')
+        ctx = browser.new_context(viewport={'width':390, 'height':900}, reduced_motion='reduce', permissions=['clipboard-read','clipboard-write'])
         ctx.route('https://**/*', lambda r:r.abort())
         ctx.route('https://res.cloudinary.com/**', lambda r:r.fulfill(status=200, content_type='image/jpeg', body=Path('public/assets/customer-auth-portrait.jpg').read_bytes()))
         page = ctx.new_page(); errors=[]; reads=[]; mutations=[]; quotes=[]; held=[]; network={'mode':'live'}
         page.on('pageerror', lambda e:errors.append(str(e)))
         def intercept(route):
             body=route.request.post_data_json if route.request.method=='POST' else {}
-            if body.get('action')=='coupons:available' and body.get('eligibleOnly'):
+            if body.get('action')=='coupons:available':
                 reads.append(body)
                 if network['mode']=='hold': held.append(route); return
                 if network['mode']=='fail': route.fulfill(status=503,json={'code':'unavailable'}); return
@@ -35,6 +35,8 @@ try:
         expect(page.get_by_role('region',name='Available Offers')).to_have_count(0)
         page.goto(origin+'/bag')
         page.get_by_role('region',name='Available Offers').get_by_role('button',name='Apply PUBLIC10').click(); page.wait_for_url('**/checkout')
+        # Bag intentionally discovers offers; the closed checkout selector must make no new reads.
+        reads.clear()
         page.get_by_role('button',name='Continue to Review',exact=True).click(); page.wait_for_url('**/checkout/summary')
         page.get_by_role('button',name='Remove coupon',exact=True).click()
         expect(page.get_by_role('button',name='Continue to Payment',exact=True)).to_be_enabled()
@@ -48,9 +50,24 @@ try:
         network['mode']='live'
         for route in held: route.continue_()
         held.clear()
-        expect(selector.locator('article')).to_have_count(1)
+        expect(selector.locator('article')).to_have_count(3)
         expect(selector.get_by_role('button',name='Apply Coupon PUBLIC10')).to_be_enabled()
-        assert 'THIRD' not in selector.inner_text() and 'CARTMIN' not in selector.inner_text()
+        for code,reason in [('THIRD','Complete 1 more Delivered order'),('CARTMIN','minimum order amount')]:
+            card=selector.locator('[data-coupon-code='+code+']')
+            expect(card).to_contain_text('Not Eligible'); expect(card).to_contain_text(reason)
+            expect(card.get_by_role('button',name='Apply Coupon '+code,exact=True)).to_be_disabled()
+        expect(selector.locator('[data-coupon-code=PUBLIC10]')).to_contain_text('Eligible')
+        expect(selector).to_contain_text('Public savings'); expect(selector).to_contain_text('A complete public offer description.')
+        selector.get_by_role('button',name='Copy Code CARTMIN',exact=True).click()
+        expect(selector.get_by_text('CARTMIN copied.',exact=True)).to_be_visible()
+        assert page.evaluate('navigator.clipboard.readText()')=='CARTMIN'
+        assert all(not body.get('eligibleOnly',False) for body in reads)
+        # Own Delivered history refreshes eligibility without exposing any other customer.
+        fixture('second-delivered'); page.evaluate("dispatchEvent(new Event('focus'))")
+        expect(selector.get_by_role('button',name='Apply Coupon THIRD')).to_be_enabled()
+        fixture('third-delivered'); page.evaluate("dispatchEvent(new Event('focus'))")
+        expect(selector.get_by_role('button',name='Apply Coupon THIRD')).to_be_disabled()
+        expect(selector.locator('[data-coupon-code=THIRD]')).to_contain_text('third order after 2 delivered')
         selector.get_by_role('button',name='Apply Coupon PUBLIC10').click()
         expect(selector.get_by_role('button',name='Applied PUBLIC10')).to_be_disabled()
         expect(page.locator('.checkout-applied')).to_contain_text('Coupon applied.')
@@ -85,7 +102,8 @@ try:
         expect(page.get_by_role('button',name='Continue to Payment',exact=True)).to_be_disabled()
         page.get_by_role('button',name='Remove coupon',exact=True).click()
         expect(page.get_by_role('button',name='Continue to Payment',exact=True)).to_be_enabled()
-        expect(selector.get_by_role('button',name='Apply Coupon CARTMIN')).to_have_count(0)
+        expect(selector.get_by_role('button',name='Apply Coupon CARTMIN')).to_be_disabled()
+        expect(selector.locator('[data-coupon-code=CARTMIN]')).to_contain_text('minimum order amount')
         # Errors never masquerade as empty results and retry uses the same authenticated endpoint.
         network['mode']='fail'; page.evaluate("dispatchEvent(new Event('focus'))")
         expect(selector.get_by_role('button',name='Retry offers')).to_be_visible()
@@ -93,6 +111,9 @@ try:
         network['mode']='live'; selector.get_by_role('button',name='Retry offers').click()
         expect(selector.get_by_role('button',name='Apply Coupon PUBLIC10')).to_be_enabled()
         fixture('disable'); page.evaluate("dispatchEvent(new Event('focus'))")
+        expect(selector.locator('[data-coupon-code=PUBLIC10]')).to_have_count(0)
+        expect(selector.get_by_role('button',name='Apply Coupon THIRD')).to_be_disabled()
+        fixture('hide-all'); page.evaluate("dispatchEvent(new Event('focus'))")
         expect(selector.get_by_text('No offers available for this order right now.',exact=True)).to_be_visible()
         # Manual invalid entry remains recoverable; no acceptance or reservation happens on discovery.
         page.get_by_label('Coupon code',exact=True).fill('INVALID')

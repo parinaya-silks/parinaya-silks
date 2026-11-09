@@ -8,3 +8,7 @@
 .product-coupon-dropdown .offers-toggle{display:flex;align-items:center;gap:10px;width:100%;background:var(--store-surface,#fff);color:var(--store-primary,#6B2435);text-align:left}
 .product-coupon-dropdown .offers-toggle>span{flex:1}.product-coupon-dropdown .offers-panel{padding-top:12px;font-size:13px}.product-coupon-dropdown .offers-grid{grid-template-columns:minmax(0,1fr);margin-bottom:10px}.product-coupon-dropdown footer{flex-wrap:wrap}
 .offers-select-label{display:grid;gap:8px}.offers-select-label select{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid var(--store-border,#E4DCCD);border-radius:3px;background:var(--store-surface,#fff);color:var(--store-surface-text,#171511);font:inherit}.offers-select-label select:focus-visible{outline:2px solid var(--store-primary,#6B2435);outline-offset:2px}
+
+.offers-grid article h3{font-size:16px;line-height:1.4;margin:8px 0}.offers-grid .offer-description{white-space:pre-wrap}.offers-grid .offer-eligibility strong{letter-spacing:0;color:inherit}.offers-grid article[data-eligibility=eligible] .offer-eligibility{color:#1c6045}.offers-grid article:not([data-eligibility=eligible]) .offer-eligibility{color:var(--store-surface-text,#171511)}
+
+.offers-grid footer{flex-wrap:wrap}
