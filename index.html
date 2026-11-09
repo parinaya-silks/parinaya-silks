@@ -20,7 +20,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#FBF7F0] text-[#231919] font-sans antialiased selection:bg-[#780D24] selection:text-white">
-    <div id="root"></div>
+    <!-- Visible before the application bundle arrives; React replaces this on mount. -->
+    <style>
+      .parinaya-boot{min-height:65vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;color:#780d24;font:14px/1.5 Georgia,serif;text-align:center}.parinaya-boot svg{width:64px;height:64px}.parinaya-boot path{stroke-dasharray:22 12;animation:parinaya-boot-flow 3s linear infinite}.parinaya-boot a{color:inherit;text-decoration:underline}.parinaya-boot-help{opacity:0;animation:parinaya-boot-help .1s 12s forwards}.parinaya-boot-help:focus-within{opacity:1}@keyframes parinaya-boot-flow{to{stroke-dashoffset:-68}}@keyframes parinaya-boot-help{to{opacity:1}}@media(prefers-reduced-motion:reduce){.parinaya-boot path{animation:none}.parinaya-boot-help{animation:none;opacity:1}}
+    </style>
+    <div id="root"><div class="parinaya-boot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 12C14 8.5 19 8.5 19 12S14 15.5 12 12 5 8.5 5 12 10 15.5 12 12Z"/></svg><p role="status">Loading Parinaya Sarees…</p><p class="parinaya-boot-help">Taking longer than expected? Check your connection, then <a href="">reload this page</a>.</p></div></div>
+    <noscript>Enable JavaScript to browse Parinaya Sarees and use your account.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

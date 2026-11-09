@@ -1,3 +1,4 @@
+import {ButtonLoader} from '../../loading/Loading.tsx';
 import {openModal,closeModal} from '../../components/modalLayer.ts';
 import React,{useEffect,useRef,useState} from 'react';
 import {EyeOff,X} from 'lucide-react';
@@ -13,6 +14,6 @@ export function VisibilityConfirm({name,onClose,onConfirm}:{name:string;onClose:
   <header><EyeOff size={21}/><h2 id="category-disable-title">Disable category?</h2><button type="button" aria-label="Close disable confirmation" disabled={busy} onClick={onClose}><X size={18}/></button></header>
   <p className="category-confirm-name">{name}</p><p>Customers will no longer see this category or its products in the shop. You can enable it again later.</p><p className="category-muted">Product draft/publish states, stock and assignments stay unchanged.</p>
   {error&&<p role="alert" className="category-error">{error}</p>}
-  <footer><button autoFocus type="button" className="category-secondary" disabled={busy} onClick={onClose}>Keep Enabled</button><button type="button" className="category-primary" disabled={busy} onClick={()=>void confirm()}>{busy?'Saving...':'Disable Category'}</button></footer>
+  <footer><button autoFocus type="button" className="category-secondary" disabled={busy} onClick={onClose}>Keep Enabled</button><button type="button" className="category-primary" disabled={busy} onClick={()=>void confirm()}>{busy?<ButtonLoader label={'Saving...'}/>:'Disable Category'}</button></footer>
  </dialog>;
 }

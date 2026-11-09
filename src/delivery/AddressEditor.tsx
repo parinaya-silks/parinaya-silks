@@ -1,3 +1,4 @@
+import {ButtonLoader} from '../loading/Loading.tsx';
 import {openModal,closeModal} from '../components/modalLayer.ts';
 import {X} from 'lucide-react';
 import React,{useEffect,useRef,useState} from 'react';
@@ -44,7 +45,7 @@ export function AddressEditor({book,address,onClose,onSaved,checkout=false,profi
       {input('landmark','Landmark (optional)',{maxLength:160})}{input('label','Label (optional)',{maxLength:30,placeholder:'Home, Work or Other'})}
       <p className="text-sm">Country: India</p><p className="text-xs text-[#5F5552]">PIN format does not confirm delivery availability. Recipient details do not change your account profile.</p>
       {profile&&<label className="profile-default-check"><input type="checkbox" checked={makeDefault} onChange={event=>setMakeDefault(event.target.checked)} disabled={saving||address?.id===book.defaultAddressId}/>Set as default delivery address</label>}
-      <div className="address-editor-actions flex gap-3 flex-wrap pt-2"><button type="submit" disabled={saving} className="min-h-12 px-5 rounded bg-[#780D24] text-white disabled:opacity-50">{saving?'Saving…':'Save address'}</button><button type="button" disabled={saving} onClick={close} className="min-h-12 px-5 rounded border border-[#780D24] text-[#780D24]">Cancel</button></div>
+      <div className="address-editor-actions flex gap-3 flex-wrap pt-2"><button type="submit" disabled={saving} className="min-h-12 px-5 rounded bg-[#780D24] text-white disabled:opacity-50">{saving?<ButtonLoader label={'Saving…'}/>:'Save address'}</button><button type="button" disabled={saving} onClick={close} className="min-h-12 px-5 rounded border border-[#780D24] text-[#780D24]">Cancel</button></div>
     </form>}
   </dialog>;
 }

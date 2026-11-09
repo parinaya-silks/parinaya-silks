@@ -1,5 +1,5 @@
 import {AvailableCoupons} from '../offers/AvailableCoupons.tsx';
-import {ImageState} from '../loading/Loading.tsx';
+import {ImageState,ButtonLoader} from '../loading/Loading.tsx';
 import './product-detail.css';
 import {BusinessWhatsAppLink} from '../contact/ContactLinks.tsx';
 import React, { useState } from 'react';
@@ -537,7 +537,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             type="button"
           >
             <span className="material-symbols-outlined text-[20px]">shopping_bag</span>
-            <span>{shoppingBusy?'Saving…':'Add to Bag'}</span>
+            <span>{shoppingBusy?<ButtonLoader label={'Saving…'}/>:'Add to Bag'}</span>
           </button>
           <button
             onClick={handleBuyNow}

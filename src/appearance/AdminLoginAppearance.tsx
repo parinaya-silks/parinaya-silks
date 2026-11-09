@@ -1,3 +1,4 @@
+import {PreviewImage,Loading,ButtonLoader,ImageUploadLoader} from '../loading/Loading.tsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {catalogAction,newOperation,uploadSignedImage} from '../products/client.ts';
 import {MAX_IMAGE_BYTES} from '../products/model.ts';
@@ -39,7 +40,7 @@ export function AdminLoginAppearance(){
   }
   return <section className="max-w-5xl space-y-5">
     <header><h1 className="font-serif text-2xl">Store Settings</h1><h2 className="font-serif text-xl mt-5">Login Page Appearance</h2><p className="text-sm text-[#5F5552] mt-2">Choose separate photos for the tall desktop portrait and shallow mobile banner. Uploading only prepares an image; Save applies it to the customer pages. Shipping, homepage and policy controls are available below.</p></header>
-    {loading?<p role="status">Loading login appearance...</p>:<>
+    {loading?<Loading kind="form" label="Loading login appearance..."/>:<>
       {error&&<div role="alert" className="p-3 bg-red-50 border rounded-lg"><p>{error}</p><button className="min-h-11 underline" onClick={()=>void load()}>Retry loading saved appearance</button></div>}
       {notice&&<p role="status" className="p-3 bg-green-50 border rounded-lg">{notice}</p>}
       <fieldset disabled={!allowed||busy||!ready} className="grid md:grid-cols-2 gap-5 min-w-0">
@@ -48,7 +49,7 @@ export function AdminLoginAppearance(){
           setError('');setUploads(previous=>({...previous,[device]:{file,id:newOperation(),progress:0,state:'selected'}}));
         }} onUpload={verifyOnly=>void upload(device,verifyOnly)} onClear={()=>{edit(device,null);setUploads(previous=>{const next={...previous};delete next[device];return next;});}}/>)}
       </fieldset>
-      <div className="flex gap-3 flex-wrap"><button className="min-h-11 px-5 rounded-lg bg-[#780D24] text-white disabled:opacity-50" disabled={!allowed||busy||!ready||uploading||!dirty||Object.keys(uploads).length>0} onClick={()=>void save()}>{busy?'Saving...':'Save login appearance'}</button><button className="min-h-11 px-5 border rounded-lg" disabled={busy||uploading} onClick={()=>{setNotice('');void load();}}>Cancel</button></div>
+      <div className="flex gap-3 flex-wrap"><button className="min-h-11 px-5 rounded-lg bg-[#780D24] text-white disabled:opacity-50" disabled={!allowed||busy||!ready||uploading||!dirty||Object.keys(uploads).length>0} onClick={()=>void save()}>{busy?<ButtonLoader label={'Saving...'}/>:'Save login appearance'}</button><button className="min-h-11 px-5 border rounded-lg" disabled={busy||uploading} onClick={()=>{setNotice('');void load();}}>Cancel</button></div>
       <p className="text-xs text-[#5F5552]">JPEG, PNG or WebP, up to 10 MiB. No existing media is deleted. Resetting an image uses the approved fallback after Save. Customer pages refresh settings within 30 seconds while visible, or immediately on refresh/revisit.</p>
     </>}
   </section>;
@@ -59,9 +60,9 @@ function ImageEditor({device,value,upload,disabled,onSelect,onEdit,onUpload,onCl
   const label=device==='desktop'?'Desktop login image':'Mobile login image';
   return <section className="p-4 bg-white border rounded-xl min-w-0 space-y-3" aria-label={label}>
     <h3 className="font-semibold">{label}</h3><p className="text-xs text-[#5F5552]">{device==='desktop'?'Tall portrait: recommend 1200 x 1500 px (4:5). Keep the face near the centre.':'Shallow banner: recommend 1600 x 700 px (16:7). Keep the face within the central area; tablet banners can be wider.'}</p>
-    <div className={'overflow-hidden bg-[#FBF7F0] rounded-lg '+(device==='desktop'?'aspect-[4/5] max-h-80':'aspect-[16/7]')}><img alt={value?.alt||label+' preview'} src={preview||value?.url||fallback} className="w-full h-full object-cover" style={{objectPosition:value?`${value.focalX}% ${value.focalY}%`:device==='mobile'?'50% 0%':'50% 50%'}}/></div>
+    <div className={'overflow-hidden bg-[#FBF7F0] rounded-lg '+(device==='desktop'?'aspect-[4/5] max-h-80':'aspect-[16/7]')}><PreviewImage alt={value?.alt||label+' preview'} src={preview||value?.url||fallback} className="w-full h-full object-cover" style={{objectPosition:value?`${value.focalX}% ${value.focalY}%`:device==='mobile'?'50% 0%':'50% 50%'}}/></div>
     <label className="block text-sm font-semibold">Replace {device} image<input type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled} className="block w-full text-sm mt-2" onChange={event=>{const file=event.target.files?.[0];if(file)onSelect(file);event.target.value='';}}/></label>
-    {upload&&<div className="text-sm space-y-2"><p>{upload.file.name}</p>{upload.state==='uploading'?<><progress className="w-full" max="100" value={upload.progress} aria-label={`${device} upload progress`}/><p role="status">Uploading and verifying... {upload.progress}%</p></>:<><button type="button" className="min-h-11 underline mr-4" disabled={disabled} onClick={()=>onUpload(false)}>{upload.state==='error'?'Upload again':'Upload selected image'}</button>{upload.state==='error'&&<button type="button" className="min-h-11 underline" disabled={disabled} onClick={()=>onUpload(true)}>Retry verification</button>}</>}{upload.error&&<p role="alert">{upload.error}</p>}</div>}
+    {upload&&<div className="text-sm space-y-2"><p>{upload.file.name}</p>{upload.state==='uploading'?<><ImageUploadLoader value={upload.progress} label={`${device} upload progress`}/><p role="status">Uploading and verifying... {upload.progress}%</p></>:<><button type="button" className="min-h-11 underline mr-4" disabled={disabled} onClick={()=>onUpload(false)}>{upload.state==='error'?'Upload again':'Upload selected image'}</button>{upload.state==='error'&&<button type="button" className="min-h-11 underline" disabled={disabled} onClick={()=>onUpload(true)}>Retry verification</button>}</>}{upload.error&&<p role="alert">{upload.error}</p>}</div>}
     {value&&!upload&&<><label className="block text-sm">Alt text (optional)<input className="w-full border rounded p-2 mt-1" value={value.alt} maxLength={200} onChange={event=>onEdit({...value,alt:event.target.value})}/></label>{(['focalX','focalY'] as const).map((key,index)=><label key={key} className="block text-sm">{index===0?'Horizontal':'Vertical'} focal point: {value[key]}%<input className="w-full" type="range" min="0" max="100" value={value[key]} onChange={event=>onEdit({...value,[key]:Number(event.target.value)})}/></label>)}</>}
     <button type="button" className="min-h-11 text-sm underline" disabled={disabled||(!value&&!upload)} onClick={onClear}>Use approved fallback</button>
   </section>;

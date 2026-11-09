@@ -75,7 +75,7 @@ with sync_playwright() as p:
   mode['get']='live';release()
  # Real emulator authentication; private read skeletons keep the shell and never show false empty states.
  page.goto(origin+'/login');page.get_by_label('Email address',exact=True).fill('customer@example.test');page.get_by_label('Password',exact=True).fill(os.environ['PARINAYA_ADMIN_TEST_PASSWORD']);page.get_by_role('button',name='Sign In',exact=True).click();page.wait_for_url('**/account')
- for route,action,kind in [('/bag','shopping:get','bag'),('/wishlist','shopping:get','products'),('/account/orders','orders:list','orders'),('/account','addresses:list','text')]:
+ for route,action,kind in [('/bag','shopping:get','bag'),('/wishlist','shopping:get','products'),('/account/orders','orders:list','orders'),('/account','addresses:list','addresses')]:
   mode['post']='hold';mode['action']=action;page.goto(origin+route);expect(page.locator('.store-loading-'+kind).first).to_be_visible(timeout=15000);assert page.get_by_role('heading',name='Your bag is empty',exact=True).count()==0;assert page.get_by_role('heading',name='No orders yet',exact=True).count()==0;capture(kind+'-private-skeleton',390);mode['post']='live';release()
  # Bag read outage preserves loaded items, never signs out or silently retries writes.
  page.goto(origin+'/bag');expect(page.locator('[data-shopping-line]')).to_have_count(1,timeout=20000);mode['post']='fail';mode['action']='shopping:get';page.evaluate("window.dispatchEvent(new Event('online'))");expect(page.get_by_text('Unable to refresh. Showing the last loaded information.',exact=True)).to_be_visible();expect(page.locator('[data-shopping-line]')).to_have_count(1);assert page.get_by_role('heading',name='Your bag is empty',exact=True).count()==0

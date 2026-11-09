@@ -1,3 +1,4 @@
+import {ButtonLoader} from '../loading/Loading.tsx';
 import {BRAND_UPPER} from '../config/brand.ts';
 import {BrandLogo} from '../components/BrandLogo.tsx';
 import React, { useRef, useState } from 'react';
@@ -42,7 +43,7 @@ export function AdminLogin() {
           <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)} className="absolute inset-y-0 right-0 min-w-16 px-3 text-sm text-[#780D24]">{showPassword ? 'Hide' : 'Show'}</button></div></div>}
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-900 p-3 text-sm">{error}</p>}
       {message && <p role="status" className="rounded-lg bg-[#F4EEE5] p-3 text-sm">{message}</p>}
-      <button type="submit" disabled={busy} className="w-full min-h-12 rounded-lg bg-[#780D24] text-white font-semibold disabled:opacity-60">{busy ? 'Please wait…' : reset ? 'Send reset instructions' : 'Sign In'}</button>
+      <button type="submit" disabled={busy} className="w-full min-h-12 rounded-lg bg-[#780D24] text-white font-semibold disabled:opacity-60">{busy ? <ButtonLoader label={'Please wait…'}/> : reset ? 'Send reset instructions' : 'Sign In'}</button>
       <button type="button" disabled={busy} onClick={() => { setReset(!reset); setPassword(''); setError(''); setMessage(''); }} className="w-full min-h-11 text-sm text-[#780D24] underline">{reset ? 'Back to Sign In' : 'Forgot Password?'}</button>
     </form>
     <a href="/" className="block min-h-11 text-center text-sm text-[#5F5552] underline py-3">Back to store</a>

@@ -1,5 +1,5 @@
 import {openModal,closeModal} from '../components/modalLayer.ts';
-import {Loading,Recovery,Updating,Skeleton,ImageState} from '../loading/Loading.tsx';
+import {Loading,Recovery,Updating,Skeleton,ImageState,ButtonLoader} from '../loading/Loading.tsx';
 import './shop-cards.css';
 import './discovery.css';
 import React,{useEffect,useRef,useState} from 'react';
@@ -151,7 +151,7 @@ export const ShopView:React.FC<ShopViewProps>=({initialCategory,initialSearch=''
             })}
           </div>
  )}
- {page.hasMore&&<div className="discovery-more"><button disabled={page.busy} onClick={page.loadMore}>{page.busy?'Loading...':'Load more matching products'}</button></div>}
+ {page.hasMore&&<div className="discovery-more"><button disabled={page.busy} onClick={page.loadMore}>{page.busy?<ButtonLoader label={'Loading...'}/>:'Load more matching products'}</button></div>}
  </main>
  {drawer&&<div className="discovery-backdrop" onClick={()=>setDrawer(false)}><div ref={dialog} className="discovery-dialog" role="dialog" aria-modal="true" aria-label="Refine Collection" onClick={e=>e.stopPropagation()}><header><h2>Refine Collection</h2><button aria-label="Cancel filters" onClick={()=>{setDrawer(false);trigger.current?.focus();}}><X size={20}/></button></header><div className="discovery-fields">{error&&<p role="alert">{error}</p>}
  <label>Weave &amp; Category{requestedSlug?<span>{baseCategory?.name||'Current collection'}</span>:<select aria-label="Filter category" value={draft.category} onChange={e=>setDraft(d=>({...d,category:e.target.value}))}><option value="">All Sarees</option>{publicCategories.map(c=><option key={c.id} value={c.slug}>{c.name}</option>)}</select>}</label>

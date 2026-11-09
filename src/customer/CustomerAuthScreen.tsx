@@ -1,4 +1,4 @@
-import {Loading,Recovery} from '../loading/Loading.tsx';
+import {Loading,Recovery,ButtonLoader} from '../loading/Loading.tsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {MobileField} from './MobileField.tsx';
 import {normalizeMobile,type CountryCode} from './mobile.ts';
@@ -77,7 +77,7 @@ export function CustomerAuthScreen({mode,currentPath,onNavigate}:{mode:CustomerM
           {mode!=='reset'&&field('password','Password','Enter your password')}
           {mode==='register'&&field('confirm','Confirm password','Enter your password again')}
           {(mode==='login'||mode==='account')&&<div className="customer-auth-options"><label><input type="checkbox" checked={remember} onChange={event=>setRemember(event.target.checked)} disabled={busy}/>Remember me</label><a href={linked('/forgot-password')} onClick={event=>{event.preventDefault();onNavigate(linked('/forgot-password'));}}>Forgot password?</a></div>}
-          <button className="customer-auth-submit" type="submit" disabled={busy}>{busy?'Please wait…':mode==='register'?'Create account':mode==='reset'?'Send reset instructions':'Sign In'}</button>
+          <button className="customer-auth-submit" type="submit" disabled={busy}>{busy?<ButtonLoader label={'Please wait…'}/>:mode==='register'?'Create account':mode==='reset'?'Send reset instructions':'Sign In'}</button>
         </form>
         <p className="customer-auth-switch">{mode==='register'?'Already have an account?':mode==='reset'?'Remember your password?':'New to Parinaya?'}<a href={linked(mode==='login'||mode==='account'?'/register':'/login')} onClick={event=>{event.preventDefault();onNavigate(linked(mode==='login'||mode==='account'?'/register':'/login'));}}>{mode==='login'||mode==='account'?'Create an account':'Sign In'}</a></p>
       </>

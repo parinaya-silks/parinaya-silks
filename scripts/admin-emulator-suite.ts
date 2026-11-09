@@ -98,5 +98,7 @@ try {
   await browserRun('python', ['scripts/order-details-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await browserRun('python', ['scripts/orders-list-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   await browserRun('python', ['scripts/dashboard-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/loading-system-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
+  await browserRun('python', ['scripts/payments-browser.test.py'], { ...process.env, PARINAYA_ADMIN_TEST_PASSWORD: password });
   if(browserFailures.length)throw new Error('Browser regressions failed: '+browserFailures.join(', '));
 } finally { vite.kill(); preview.kill(); missingConfiguration.kill(); catalogApi.kill(); }

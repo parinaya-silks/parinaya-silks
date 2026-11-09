@@ -1,3 +1,4 @@
+import {Loading,type SkeletonKind} from '../loading/Loading.tsx';
 import {CustomerOrderHistory} from './CustomerOrderHistory.tsx';
 import {CustomerOrderPage} from './CustomerOrderPage.tsx';
 import {OrderPoints} from '../loyalty/OrderPoints.tsx';
@@ -19,7 +20,7 @@ export function useBusinessData<T>(body:Record<string,unknown>,customer=false){
  const current=state?.key===key?state:undefined;return {data:current?.value,error:current?.error,loading:!current,retry:()=>setAttempt(n=>n+1)};
 }
 function businessLoadMessage(action:string){const section=action==='reports:get'?'order reports':action.startsWith('inventory:')?'inventory':action.startsWith('notifications:')?'notifications':action.startsWith('customers:')?'customers':action.startsWith('coupons:')?'coupons':action.startsWith('content:')?'store content':action.startsWith('adminOrders:')?'orders':'this section';return `Unable to load ${section}. Please try again.`;}
-export function DataState({loading,error,retry}:{loading:boolean;error?:string;retry:()=>void}){return loading?<p role="status" className="py-4">Loading...</p>:error?<div role="alert" className="space-y-3 py-4"><p>{error}</p><button className={button} onClick={retry}>Retry</button></div>:null;}
+export function DataState({loading,error,retry,kind="table"}:{loading:boolean;error?:string;retry:()=>void;kind?:SkeletonKind}){return loading?<Loading kind={kind} label="Loading..." retry={retry}/>:error?<div role="alert" className="space-y-3 py-4"><p>{error}</p><button className={button} onClick={retry}>Retry</button></div>:null;}
 export function OrderSummary({order,admin=false}:{order:OrderRecord;admin?:boolean}){let tracking='';try{tracking=safeLink(order.trackingUrl||'');}catch{}return <div className="space-y-5 min-w-0">
  <header><h1 className="font-serif text-2xl text-[#780D24] break-all">{order.reference}</h1><p className="text-sm mt-2">{new Date(order.createdAt).toLocaleString('en-IN')} · {order.status}</p></header>
  <div className="rounded-xl border border-[#E8DDD6] bg-white p-4 space-y-3"><p className="font-semibold">Cash on Delivery · {order.paymentStatus==='collected'?'Collection recorded':'Payment due'}</p><p>{money(BigInt(order.totalPaise))}{order.paymentStatus==='due'&&!['Cancelled','Rejected'].includes(order.status)?' due on delivery':''}</p>{['Cancelled','Rejected'].includes(order.status)&&<p>No delivery payment is requested for this cancelled order.</p>}{order.collection&&<><p>Collection recorded on {new Date(order.collection.at).toLocaleString('en-IN')}.</p>{admin&&<p className="text-sm break-words">External reference: {order.collection.reference} ? {order.collection.actor}{order.collection.note?' ? '+order.collection.note:''}</p>}</>}</div>

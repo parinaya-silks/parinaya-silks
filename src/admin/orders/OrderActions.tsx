@@ -1,3 +1,4 @@
+import {InlineLoader} from '../../loading/Loading.tsx';
 import {openModal,closeModal} from '../../components/modalLayer.ts';
 import {loyaltyRefund} from '../../loyalty/model.ts';
 import {shippingAmount} from '../../shipping/model.ts';
@@ -46,7 +47,7 @@ export const OrderActions=forwardRef<OrderActionsHandle,{order:DetailOrder;refre
    <label>Reason / notes<textarea aria-label="Reason / notes" maxLength={1000} required={['Cancelled','Rejected','note','approve-request','reject-request','receive-restock','resolve-request'].includes(command)} value={note} onChange={event=>setNote(event.target.value)}/></label>
    <button className="admin-primary" disabled={!command||refreshing||conflict||!commands.includes(command)}>Save action</button>
   </fieldset>
-  {busy&&<p role="status">Saving action…</p>}{success&&<p role="status">{success}</p>}
+  {busy&&<p role="status"><InlineLoader label={'Saving action…'}/></p>}{success&&<p role="status">{success}</p>}
   {error&&<div role="alert"><p>{error}</p>{uncertain?<><p>Do not submit a new action. Retry this exact operation to confirm its receipt without duplicating side effects.</p><button type="button" className="admin-secondary" disabled={!allowed||busy} onClick={()=>void run(uncertain)}>Retry exact action safely</button></>:<button type="button" className="admin-secondary" disabled={busy} onClick={()=>{onRefresh();setConflict(false);}}>Reload current order</button>}</div>}
  </form>{plan&&<dialog ref={dialog} className="detail-confirm" aria-labelledby="order-confirm-title" onKeyDown={trapDialogFocus} onCancel={event=>{event.preventDefault();setPlan(null);}}><h2 id="order-confirm-title">Confirm order action</h2><p>{commandLabel(plan.command)} for {order.reference}?</p>{plan.command==='collect'&&<p>Record the external remaining collection of {money(finance.outstanding)}. This does not charge the customer.</p>}{plan.command==='manual-refund'&&<p>Record an external refund of {money(BigInt(plan.amountPaise as number))}. No money is transferred by the website.</p>}{plan.expectedRevision!==order.revision&&<p role="alert">The order changed while this confirmation was open. Cancel and review its current state.</p>}<p>The server checks the current revision and permissions before recording the change.</p><footer><button ref={cancel} className="admin-secondary" onClick={()=>setPlan(null)}>Cancel</button><button className="admin-primary" disabled={busy||!allowed||plan.expectedRevision!==order.revision} onClick={()=>void run(plan)}>Confirm action</button></footer></dialog>}</section>;
 });

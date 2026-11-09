@@ -34,7 +34,7 @@ try:
     bounds=box.bounding_box();assert bounds is None or (bounds['width']<=80 and bounds['height']<=106)
    assert page.locator('.storefront-header').count()==1
    assert 'Lora' in root.locator('h1').evaluate('(el)=>getComputedStyle(el).fontFamily')
-   page.add_style_tag(content='.history-card:not(:nth-child(1)):not(:nth-child(6)):not(:nth-child(7)){display:none!important}');page.screenshot(path=str(out/f'orders-{width}.png'),full_page=True);page.locator('style').last.evaluate('(el)=>el.remove()')
+   screenshot_style=page.add_style_tag(content='.history-card:not(:nth-child(1)):not(:nth-child(6)):not(:nth-child(7)){display:none!important}');page.screenshot(path=str(out/f'orders-{width}.png'),full_page=True);screenshot_style.evaluate('(el)=>el.remove()')
   page.keyboard.press('Tab');assert page.evaluate('document.activeElement.tagName') in ['A','BUTTON']
   # Bounded, duplicate-free append pages; failure leaves existing cards visible.
   mode['value']='more-failure';root.get_by_role('button',name='Load More Orders',exact=True).click();expect(root.get_by_role('alert')).to_contain_text('load more orders');expect(cards).to_have_count(25)

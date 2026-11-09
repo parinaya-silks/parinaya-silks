@@ -1,5 +1,5 @@
 import {CampaignProvider} from './home/campaigns.tsx';
-import {ConnectionNotice} from './loading/Loading.tsx';
+import {ConnectionNotice,PageLoader} from './loading/Loading.tsx';
 import {AnalyticsConsent} from './analytics/Consent.tsx';
 import {RemovalDialog} from './shopping/ShoppingDialogs.tsx';
 import {CustomerNotice} from './shopping/CustomerNotice.tsx';
@@ -89,7 +89,7 @@ export default function App() {
     }
     return () => { window.removeEventListener('popstate', update); window.removeEventListener('hashchange', update); };
   }, []);
-  if (adminPath) return <React.Suspense fallback={<main className="min-h-screen bg-[#FBF7F0] p-8" role="status">Loading administrator access…</main>}><SecureAdmin requestedPath={adminPath} /></React.Suspense>;
+  if (adminPath) return <React.Suspense fallback={<main className="min-h-screen bg-[#FBF7F0] p-8"><PageLoader label="Loading administrator access…"/></main>}><SecureAdmin requestedPath={adminPath} /></React.Suspense>;
 
   return <Storefront />;
 }
