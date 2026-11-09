@@ -35,6 +35,7 @@ await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/delivery-upda
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/customers-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/theme-offers-emulator.test.ts']);
 await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/payments-emulator.test.ts']);
+await run(process.execPath, ['--import', 'tsx', '--test', 'scripts/payment-cutover-emulator.test.ts']);
 const app = initializeApp({ projectId: 'parinaya-silks' }, 'admin-emulator-fixtures');
 const password = randomUUID() + 'aA7!';
 try {

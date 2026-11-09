@@ -5,6 +5,7 @@ import {ProductError} from '../../src/products/model.ts';
 import {loyaltyService} from '../loyalty.ts';
 import type {OrderPayment,PaymentState} from '../../src/payments/model.ts';
 import type {ProviderPayment,ProviderRefund} from './provider.ts';
+import {completedTestCapture} from './queue.ts';
 
 export interface Observation {state:PaymentState;payment?:ProviderPayment;refunds?:ProviderRefund[];reason?:string;expire?:boolean;unstarted?:boolean}
 export async function settlePayment(db:Firestore,id:string,seen:Observation){
@@ -77,7 +78,9 @@ export async function settlePayment(db:Firestore,id:string,seen:Observation){
   update.payment=payment;update.refundPaise=payment.refundedPaise||0;
   if(capture||release)update.history=[...order.history,{action:capture?'Confirmed':'Cancelled',actor:'payment-service',at,note:capture?'Provider capture and amount verified.':'Uncaptured reservation expired; no refund is implied.'}];
   if((capture||release)&&lock.data()?.orderId===id)tx.delete(lockRef);
-  tx.update(ref,update);tx.update(attemptRef,{refunds:[...refunds.values()],nextCheckAt:payment.state==='MANUAL_REVIEW'?at+3600000:payment.reservation==='active'?at+60000:at+86400000,updatedAt:at});
+  const refundEvidence=[...refunds.values()];
+  const retire=completedTestCapture({...attempt.data(),refunds:refundEvidence},{...order,payment});
+  tx.update(ref,update);tx.update(attemptRef,{refunds:refundEvidence,nextCheckAt:retire?FieldValue.delete():payment.state==='MANUAL_REVIEW'?at+3600000:payment.reservation==='active'?at+60000:at+86400000,updatedAt:at});
   return {state:payment.state,previous:old.state,reservation:payment.reservation,refundedPaise:payment.refundedPaise};
  });
  if(result)console.info(JSON.stringify({event:'payment_reconciled',orderId:id,...result}));

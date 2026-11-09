@@ -14,6 +14,11 @@ import assert from 'node:assert/strict';import {createHmac,createHash} from 'nod
 import {GET,POST} from './api/payments/[action].js';
 assert.equal(typeof GET,'function');assert.equal(typeof POST,'function');
 let r=await GET(new Request('https://www.parinayasarees.com/api/payments/status',{headers:{'x-forwarded-proto':'https'}}));assert.equal(r.status,401);
+process.env.VERCEL_ENV='preview';process.env.RAZORPAY_MODE='live';process.env.RAZORPAY_LIVE_ACTIVATED='true';
+for(const action of ['create-order','verify','worker','webhook']){
+ r=await POST(new Request('https://www.parinayasarees.com/api/payments/'+action,{method:'POST',headers:{'x-forwarded-proto':'https',Authorization:'Bearer synthetic','content-type':'application/json'},body:'{}'}));assert.equal(r.status,403);assert.equal((await r.json()).code,'permission');
+}
+delete process.env.VERCEL_ENV;delete process.env.RAZORPAY_MODE;delete process.env.RAZORPAY_LIVE_ACTIVATED;
 if(process.env.PAYMENT_RUNTIME_EMULATOR==='1'){
  process.env.PARINAYA_SERVER_EMULATORS='true';process.env.RAZORPAY_MODE='test';process.env.RAZORPAY_KEY_ID='rzp_test_fixture123456';process.env.RAZORPAY_KEY_SECRET='synthetic-secret-for-tests';process.env.RAZORPAY_WEBHOOK_SECRET='synthetic-webhook-for-tests';
  const raw='{ "event": "payment.captured", "payload": { "payment": {"entity":{"id":"pay_Runtime","order_id":"order_Runtime"}}}}\\n',id='runtime-raw-byte-fixture';

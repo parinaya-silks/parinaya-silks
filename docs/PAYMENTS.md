@@ -35,6 +35,11 @@ For Production TEST acceptance, set TEST credentials and **only** approved UIDs 
 `RAZORPAY_TEST_UIDS`. Ordinary production accounts remain excluded. The local test
 environment switch cannot enable public TEST checkout in Production. Preview
 origins are deliberately not allowed; use loopback or approved production domains.
+In addition, `VERCEL_ENV=preview` explicitly rejects all payment endpoints and
+service operations before authentication/rate-limit writes or provider calls,
+even if credentials, a production Origin or the LIVE activation flag are copied
+into that deployment. COD does not use this guard. Keep payment secrets scoped
+to Production; the guard is additional protection, not a reason to broaden scopes.
 
 LIVE remains disabled until the client has completed Razorpay account activation,
 provided LIVE keys, and explicitly confirmed activation. Then set
@@ -135,8 +140,14 @@ evidence. Additional private server-only collections are `paymentProviderOrders`
 `paymentReconciliation`, and `paymentOperations`. No credentials are stored there.
 The existing default-deny Firestore rules already deny browser reads/writes to
 these collections, including ordinary administrator SDK clients. Orders remain
-server-written. No rule publication or new composite index is required; worker
-due queries use the automatically indexed single `nextCheckAt` field.
+server-written. No rule publication is required. The mode-aware worker requires
+the two collection-scope composite indexes listed in `PAYMENT_LIVE_CUTOVER.md`:
+`mode ASC, keyId ASC, nextCheckAt ASC` on `paymentEvents` and `paymentAttempts`.
+Both indexes were created and verified READY in Production on 9 November 2026;
+their IDs and matching read-only query results are in `PAYMENT_LIVE_CUTOVER.md`.
+For another environment, create only missing exact definitions and wait for READY
+before deploying that worker change. Filtering before the batch limit prevents TEST or
+rotated-key backlog from consuming the active credential's processing capacity.
 
 Payment status is separate from fulfillment. States include CREATED, PENDING,
 AUTHORIZED, CAPTURED, FAILED, CANCELLED, VERIFICATION_PENDING, REFUND_PENDING,

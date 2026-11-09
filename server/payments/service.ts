@@ -5,7 +5,8 @@ import type {catalogService} from '../catalog.ts';
 import {ProductError} from '../../src/products/model.ts';
 import {exact,referenceId,type OrderRecord} from '../../src/orders/model.ts';
 import {publicPayment} from '../../src/payments/model.ts';
-import {paymentConfig,initiationAllowed} from './config.ts';
+import {paymentConfig,initiationAllowed,assertPaymentEnvironment} from './config.ts';
+import {duePayments} from './queue.ts';
 import {razorpayProvider,signatureMatches,type PaymentProvider,type ProviderOrder,type ProviderPayment} from './provider.ts';
 import {settlePayment} from './settlement.ts';
 
@@ -34,6 +35,7 @@ export function paymentService(db:Firestore,context:Context,env:NodeJS.ProcessEn
   console.info(JSON.stringify({event:'payment_provider_order_bound',orderId:id}));
  }
  async function reconcile(id:string){
+  assertPaymentEnvironment(env);
   let a=await sameMode(id);const order=await owned(a.uid,id),p=provider();
   if(!a.providerOrderId){
    if(a.creation==='new'){if(Date.now()>order.payment!.expiresAt)await settlePayment(db,id,{state:'PENDING',expire:true,unstarted:true});else await db.doc('paymentAttempts/'+id).update({nextCheckAt:Date.now()+60000});return;}
@@ -57,6 +59,7 @@ export function paymentService(db:Firestore,context:Context,env:NodeJS.ProcessEn
  }
  async function view(uid:string,id:string,admin=false){const order=await owned(uid,id,admin),p=order.payment!;return {id,reference:order.reference,status:order.status,payment:admin?p:publicPayment(p)};}
  async function customer(token:string,action:string,body:Record<string,unknown>){
+  assertPaymentEnvironment(env);
   const user=await context.authenticate(token);await limit(user.uid);
   if(action==='capabilities'){exact(body,[]);try{const c=config();return {online:await readyForInitiation(user.uid),mode:c.mode};}catch{return {online:false};}}
   if(action==='create-order'){
@@ -112,9 +115,9 @@ export function paymentService(db:Firestore,context:Context,env:NodeJS.ProcessEn
   console.info(JSON.stringify({event:duplicate?'payment_webhook_duplicate':'payment_webhook_accepted',eventType:payload.event,eventHash:hash(eventId)}));return {accepted:true};
  }
  async function work(){
-  const deadline=Date.now()+35000,c=config(),events=await db.collection('paymentEvents').where('nextCheckAt','<=',Date.now()).limit(20).get();let processed=0,pending=0,checked=0;
+  const deadline=Date.now()+35000,c=config(),events=await duePayments(db,'paymentEvents',c,Date.now()).get();let processed=0,pending=0,checked=0;
   for(const event of events.docs){if(Date.now()>deadline-18000)break;const e=event.data();if(e.processing==='processed'||e.mode!==c.mode||e.keyId!==c.keyId)continue;try{const remoteId=e.providerOrderId||(await provider().payment(e.paymentId)).order_id,mapping=await db.doc('paymentProviderOrders/'+providerId(remoteId,'order')).get();if(!mapping.exists)throw new Error('unmapped');await reconcile(mapping.data()!.orderId);await event.ref.update({processing:'processed',processedAt:Date.now(),nextCheckAt:FieldValue.delete()});processed++;}catch{await event.ref.update({lastError:'reconciliation-pending',nextCheckAt:Date.now()+60000});pending++;}}
-  const attempts=await db.collection('paymentAttempts').where('nextCheckAt','<=',Date.now()).limit(20).get();
+  const attempts=await duePayments(db,'paymentAttempts',c,Date.now()).get();
   for(const attempt of attempts.docs){if(Date.now()>deadline-18000)break;if(attempt.data().mode!==c.mode||attempt.data().keyId!==c.keyId)continue;checked++;try{await reconcile(attempt.id);}catch{await attempt.ref.update({lastError:'reconciliation-pending',nextCheckAt:Date.now()+60000});pending++;}}
   await db.doc('paymentOperations/worker').set({at:Date.now(),mode:c.mode,keyId:c.keyId,processed,pending});
   console.info(JSON.stringify({event:'payment_worker',processed,pending}));

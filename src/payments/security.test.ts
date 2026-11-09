@@ -14,6 +14,8 @@ import {historyPayment} from '../orders/historyModel.ts';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {AdminPayment} from './AdminPayment.tsx';
+import {completedTestCapture,duePayments} from '../../server/payments/queue.ts';
+import {readFileSync} from 'node:fs';
 
 test('reserved and failed online checkouts never present a confirmed fulfilment lifecycle',()=>{
  const payment:OrderPayment={mode:'test',state:'FAILED',reservation:'active',amountPaise:100,expiresAt:9999999999999,createdAt:1,updatedAt:2};
@@ -44,6 +46,38 @@ test('payment configuration fails closed, mode never falls back and production t
  assert.equal(initiationAllowed(c,'customer',{VERCEL_ENV:'production',RAZORPAY_TEST_UIDS:'customer'}),true);assert.equal(initiationAllowed(c,'other',{RAZORPAY_TEST_UIDS:'customer'}),false);
  assert.equal(initiationAllowed(c,'customer',{RAZORPAY_TEST_ENVIRONMENT:'true',NODE_ENV:'development'}),true);
  const live=paymentConfig({...fixture,RAZORPAY_MODE:'live',RAZORPAY_KEY_ID:'rzp_live_fixture123456'});assert.equal(initiationAllowed(live,'customer',{}),false);assert.equal(initiationAllowed(live,'customer',{RAZORPAY_LIVE_ACTIVATED:'true'}),true);
+});
+
+test('worker query restricts mode and credential identity before its batch limit and has exact manifest indexes',()=>{
+ const indexes=JSON.parse(readFileSync('firestore.indexes.json','utf8')).indexes;
+ for(const collection of ['paymentEvents','paymentAttempts'] as const)for(const mode of ['test','live'] as const){
+  const calls:unknown[]=[],query={where(...args:unknown[]){calls.push(['where',...args]);return query;},orderBy(...args:unknown[]){calls.push(['orderBy',...args]);return query;},limit(n:number){calls.push(['limit',n]);return query;}};
+  const config={...paymentConfig(fixture),mode,keyId:'rzp_'+mode+'_fixture123456'};
+  duePayments({collection:(name:string)=>{assert.equal(name,collection);return query;}} as any,collection,config,1234);
+  assert.deepEqual(calls,[['where','mode','==',mode],['where','keyId','==',config.keyId],['where','nextCheckAt','<=',1234],['orderBy','nextCheckAt'],['limit',20]]);
+  assert.ok(indexes.some((v:any)=>v.collectionGroup===collection&&v.queryScope==='COLLECTION'&&JSON.stringify(v.fields)===JSON.stringify([{fieldPath:'mode',order:'ASCENDING'},{fieldPath:'keyId',order:'ASCENDING'},{fieldPath:'nextCheckAt',order:'ASCENDING'}])));
+ }
+});
+
+test('only clean consumed TEST captures qualify for retiring periodic schedules',()=>{
+ const a={mode:'test',keyId:fixture.RAZORPAY_KEY_ID,orderId:'internal',uid:'fixture',creation:'known',providerOrderId:'order_fixture',refunds:[]};
+ const o={id:'internal',uid:'fixture',totalPaise:'100',payment:{mode:'test',state:'CAPTURED',reservation:'consumed',capturedAt:1,amountPaise:100,providerOrderId:'order_fixture',providerPaymentId:'pay_fixture'}};
+ assert.equal(completedTestCapture(a,o),true);
+ for(const patch of [{mode:'live'},{keyId:'rzp_test_other'},{orderId:'other'},{uid:'other'},{creation:'unknown'},{providerOrderId:'order_other'},{refunds:[{status:'pending'}]}])assert.equal(completedTestCapture({...a,...patch},o),false);
+ for(const patch of [{mode:'live'},{state:'MANUAL_REVIEW'},{state:'AUTHORIZED'},{state:'REFUND_PENDING'},{reservation:'active'},{reservation:'released'},{capturedAt:undefined},{amountPaise:101},{reason:'requires-review'},{refundReviewRequired:true},{refundedPaise:1},{refundState:'REFUND_FAILED'}])assert.equal(completedTestCapture(a,{...o,payment:{...o.payment,...patch}}),false);
+});
+
+test('Preview rejects payment HTTP actions even with approved origin, LIVE activation and worker authorization',async()=>{
+ for(const mode of ['test','live']){
+  const env={...fixture,VERCEL_ENV:'preview',VERCEL:'1',NODE_ENV:'production',RAZORPAY_MODE:mode,RAZORPAY_KEY_ID:'rzp_'+mode+'_fixture123456',RAZORPAY_LIVE_ACTIVATED:'true',RAZORPAY_TEST_UIDS:'fixture',PAYMENT_WORKER_SECRET:'synthetic-worker-secret-at-least-32'};
+  assert.throws(()=>paymentConfig(env),{code:'permission'});
+  assert.equal(initiationAllowed({...paymentConfig(fixture),mode} as any,'fixture',env),false);
+  let initializations=0;const server=createServer(paymentHandler(()=>{initializations++;throw Error('Must not initialize');},env)).listen(0,'127.0.0.1');await once(server,'listening');
+  try{for(const action of ['capabilities','create-order','resume','verify','status','reconcile','worker','webhook']){
+   const get=['status','capabilities'].includes(action),r=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/api/payments/'+action,{method:get?'GET':'POST',headers:{'x-forwarded-proto':'https',Origin:'https://www.parinayasarees.com',Authorization:'Bearer '+(action==='worker'?env.PAYMENT_WORKER_SECRET:'synthetic'),'Content-Type':'application/json'},...(!get?{body:'{}'}:{})});
+   assert.equal(r.status,403,action);assert.equal((await r.json()).code,'permission');
+  }assert.equal(initializations,0);}finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
+ }
 });
 test('HMAC verifies original bytes, rejects malformed signatures and tampering',()=>{
  const raw=Buffer.from('{ "event": "payment.captured" }\n'),sig=createHmac('sha256',fixture.RAZORPAY_WEBHOOK_SECRET).update(raw).digest('hex');

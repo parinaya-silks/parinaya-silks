@@ -4,6 +4,7 @@ import {Readable} from 'node:stream';
 import {ProductError} from '../../src/products/model.ts';
 import {CatalogConfigurationError} from '../errors.ts';
 import type {paymentService} from './service.ts';
+import {assertPaymentEnvironment} from './config.ts';
 
 const allowedOrigins=new Set(['https://parinayasarees.com','https://www.parinayasarees.com']);
 export function paymentHandler(initialize:()=>ReturnType<typeof paymentService>|Promise<ReturnType<typeof paymentService>>,env:NodeJS.ProcessEnv=process.env){
@@ -17,6 +18,7 @@ export function paymentHandler(initialize:()=>ReturnType<typeof paymentService>|
    if(url.searchParams.getAll('action').length===1&&url.searchParams.get('action')===action)url.searchParams.delete('action');
    const get=['status','capabilities'].includes(action);
    if(req.method!==(get?'GET':'POST')){res.statusCode=405;res.setHeader('Allow',get?'GET':'POST');res.end(JSON.stringify({code:'method',message:'Method not allowed.'}));return;}
+   assertPaymentEnvironment(env);
    const local=env.PARINAYA_SERVER_EMULATORS==='true'||env.NODE_ENV!=='production'&&!env.VERCEL;
    if(!local&&req.headers['x-forwarded-proto']!=='https')throw new ProductError('permission','HTTPS is required.');
    if(action!=='webhook'&&action!=='worker'){
