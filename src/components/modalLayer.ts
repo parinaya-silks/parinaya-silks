@@ -10,13 +10,14 @@ function scrollable(target:EventTarget|null,delta:number){const layer=top();if(!
  for(let el:HTMLElement|null=target as HTMLElement;el&&layer.element.contains(el);el=el.parentElement){const style=getComputedStyle(el);if(/auto|scroll/.test(style.overflowY)&&el.scrollHeight>el.clientHeight+1&&((delta<0&&el.scrollTop>0)||(delta>0&&el.scrollTop+el.clientHeight<el.scrollHeight-1)))return true;}
  return false;
 }
-function wheel(e:WheelEvent){if(!top()||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;if(!scrollable(e.target,e.deltaY))e.preventDefault();}
+function wheel(e:WheelEvent){if(e.target instanceof Element&&top()?.element.contains(e.target)&&e.target.closest('.leaflet-container'))return;if(!top()||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;if(!scrollable(e.target,e.deltaY))e.preventDefault();}
 function touchStart(e:TouchEvent){touchY=e.touches[0]?.clientY??0;touchX=e.touches[0]?.clientX??0;}
-function touchMove(e:TouchEvent){if(e.touches.length!==1)return;const next=e.touches[0].clientY,delta=touchY-next,horizontal=e.touches[0].clientX-touchX;touchY=next;touchX=e.touches[0].clientX;if(e.target instanceof Element&&top()?.element.contains(e.target)&&e.target.closest('input[type=range]'))return;if(Math.abs(horizontal)>Math.abs(delta)&&e.target instanceof Element&&top()?.element.contains(e.target))return;if(!scrollable(e.target,delta))e.preventDefault();}
+function touchMove(e:TouchEvent){if(e.target instanceof Element&&top()?.element.contains(e.target)&&e.target.closest('.leaflet-container'))return;if(e.touches.length!==1)return;const next=e.touches[0].clientY,delta=touchY-next,horizontal=e.touches[0].clientX-touchX;touchY=next;touchX=e.touches[0].clientX;if(e.target instanceof Element&&top()?.element.contains(e.target)&&e.target.closest('input[type=range]'))return;if(Math.abs(horizontal)>Math.abs(delta)&&e.target instanceof Element&&top()?.element.contains(e.target))return;if(!scrollable(e.target,delta))e.preventDefault();}
 function focus(e:FocusEvent){const layer=top();if(layer&&e.target instanceof Node&&!layer.element.contains(e.target))focusLayer(layer);}
 function key(e:KeyboardEvent){const layer=top();if(!layer)return;
  if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();if(layer.dismiss)layer.dismiss();else if(layer.native)layer.element.dispatchEvent(new Event('cancel',{cancelable:true}));return;}
  if(e.key==='Tab'){const items=focusables(layer.element),first=items[0],last=items.at(-1);if(!first){e.preventDefault();layer.element.focus();}else if(e.shiftKey&&(document.activeElement===first||!layer.element.contains(document.activeElement))){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}return;}
+ if(e.target instanceof Element&&layer.element.contains(e.target)&&e.target.closest('.leaflet-container'))return;
  if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(e.key)&&!(e.target instanceof Element&&e.target.closest('input,textarea,select,button,a,[contenteditable=true]'))&&!scrollable(e.target,['ArrowUp','PageUp','Home'].includes(e.key)?-1:1))e.preventDefault();
 }
 function freezePage(){const body=document.body,root=document.documentElement,x=scrollX,y=scrollY,style=body.getAttribute('style'),gutter=root.style.scrollbarGutter,behavior=root.style.scrollBehavior;

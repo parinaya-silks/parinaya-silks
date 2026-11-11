@@ -1,3 +1,4 @@
+import {coordinates,type Coordinates} from '../shipping/distance.ts';
 import type {ShippingQuote} from '../shipping/model.ts';
 import {ProductError,type PublicProductRecord} from '../products/model.ts';
 import {normalizeMobile,mobileCountry} from '../customer/mobile.ts';
@@ -5,13 +6,13 @@ import {normalizeMobile,mobileCountry} from '../customer/mobile.ts';
 export const ADDRESS_LIMIT=3;
 // Government directory: https://www.india.gov.in/directory/web-directory/state-uts
 export const indiaStates=['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'].sort();
-export interface AddressInput {recipientName:string;mobileNumber:string;pinCode:string;line1:string;locality:string;city:string;state:string;landmark:string;label:string;country:'India'}
+export interface AddressInput {recipientName:string;mobileNumber:string;pinCode:string;line1:string;locality:string;city:string;state:string;landmark:string;label:string;country:'India';coordinates?:Coordinates}
 export interface DeliveryAddress extends AddressInput {id:string;revision:number;createdAt:number;updatedAt:number}
 export interface AddressBook {addresses:DeliveryAddress[];defaultAddressId:string|null;revision:number}
 export const blankAddress=():AddressInput=>({recipientName:'',mobileNumber:'',pinCode:'',line1:'',locality:'',city:'',state:'',landmark:'',label:'',country:'India'});
 export function addressId(value:unknown):string {if(typeof value!=='string'||!/^[a-f0-9]{32}$/.test(value))throw new ProductError('invalid','Invalid address reference.');return value;}
 export function validateAddress(value:unknown):AddressInput {
-  const allowed=Object.keys(blankAddress());
+  const allowed=[...Object.keys(blankAddress()),'coordinates'];
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!allowed.includes(key)))throw new ProductError('invalid','Unsupported address fields.');
   const raw=value as Record<string,unknown>,result=blankAddress(),fields:Record<string,string>={};
   const limits={recipientName:100,mobileNumber:40,pinCode:6,line1:180,locality:100,city:100,state:80,landmark:160,label:30};
@@ -25,7 +26,8 @@ export function validateAddress(value:unknown):AddressInput {
   if(!indiaStates.includes(result.state))fields.state='Select a State or Union Territory.';
   if(raw.country!=='India')fields.country='Delivery addresses must be in India for this phase.';
   if(Object.keys(fields).length)throw new ProductError('invalid','Please check the address fields.',fields);
+  if(raw.coordinates!=null)result.coordinates=coordinates(raw.coordinates);
   return result;
 }
 export interface CheckoutLine {id:string;productId:string;variantId:string|null;quantity:number;product:PublicProductRecord|null;variantName:string;issues:string[]}
-export interface CheckoutReview {loyalty?:import('../loyalty/model.ts').LoyaltyQuote;source?:import('../checkout/source.ts').CheckoutSource;shipping:ShippingQuote;fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[];discountPaise?:string;couponCode?:string|null;totalPaise?:string|null}
+export interface CheckoutReview {codEnabled?:boolean;deliverySnapshot?:import('../shipping/distance.ts').DeliverySnapshot|null;loyalty?:import('../loyalty/model.ts').LoyaltyQuote;source?:import('../checkout/source.ts').CheckoutSource;shipping:ShippingQuote;fingerprint:string;address:DeliveryAddress|null;items:CheckoutLine[];subtotalPaise:string;subtotalComplete:boolean;valid:boolean;issues:string[];discountPaise?:string;couponCode?:string|null;totalPaise?:string|null}

@@ -1,3 +1,5 @@
+> **Current shipping status (11 November 2026):** `DISTANCE_DELIVERY_ENABLED=false` by default. New checkout uses the existing saved flat shipping configuration, before coupons/points, with free shipping strictly above its saved threshold. Google Routes, dispatch coordinates, slabs and distance quotes are inactive. Historical order charges are unchanged. Distance-specific material below describes a retained, inactive implementation until a future explicitly approved re-enable. See [current flat shipping reference](FLAT_SHIPPING.md).
+
 # Store Settings
 
 `/admin/settings` now uses the approved responsive card arrangement, Lora, maroon/ivory/gold, existing 192px sidebar and approximately 58px header. No shared-shell scaling changed. The old separate shipping and login editors remain source-compatible but are no longer mounted by this route.

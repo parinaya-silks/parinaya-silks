@@ -1,3 +1,5 @@
+> **Current shipping status (11 November 2026):** `DISTANCE_DELIVERY_ENABLED=false` by default. New checkout uses the existing saved flat shipping configuration, before coupons/points, with free shipping strictly above its saved threshold. Google Routes, dispatch coordinates, slabs and distance quotes are inactive. Historical order charges are unchanged. Distance-specific material below describes a retained, inactive implementation until a future explicitly approved re-enable. See [current flat shipping reference](FLAT_SHIPPING.md).
+
 # Customer addresses and checkout review (local implementation)
 
 Follow-on local phase: [configurable shipping settings](SHIPPING.md) supplies the newly specified flat-fee policy. Its saved configuration replaces the shipping placeholder when valid; payment and order placement remain unavailable.

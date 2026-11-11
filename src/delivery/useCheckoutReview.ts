@@ -23,12 +23,13 @@ export function useCheckoutReview(shopping:Shopping,book:AddressBookState,select
   if(baseline.current.uid!==uid)baseline.current={uid,prices:new Map()};
   const bagKey=source.kind==='buy-now'?JSON.stringify(source):JSON.stringify(shopping.bag.map(item=>[item.id,item.quantity,item.product?.pricePaise,item.product?.status,item.stock,item.reason]));
   const key=JSON.stringify([uid,selected,couponCode,points,book.addresses.find(address=>address.id===selected)?.revision,book.status,source.kind==='bag'?[shopping.status,shopping.pendingBag]:'ready',bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading',attempt]);
-  const identity=JSON.stringify([uid,selected,couponCode,points,source,bagKey]),last=useRef<{identity:string;value:CheckoutReview}|undefined>(undefined);
+  const identity=JSON.stringify([uid,selected,book.addresses.find(a=>a.id===selected)?.revision,couponCode,points,source,bagKey,shippingSignal.uid===uid?shippingSignal.value:'loading']),last=useRef<{identity:string;value:CheckoutReview}|undefined>(undefined);
   const latest=useRef(key);latest.current=key;
   useEffect(()=>{
     if(!uid||book.status!=='ready'||source.kind==='bag'&&(shopping.status!=='ready'||shopping.pendingBag))return;
     let live=true;const controller=new AbortController();
-    void customerAction<CheckoutReview>(uid,{action:'orders:review',addressId:selected||null,couponCode,source,points},controller.signal).then(value=>{
+    const cachedQuote=last.current?.identity===identity&&Number(last.current.value.shipping.expiresAt)>Date.now()+30000?last.current.value.shipping.quoteId:undefined;
+    void customerAction<CheckoutReview>(uid,{action:'orders:review',addressId:selected||null,couponCode,source,points,...(cachedQuote?{deliveryQuoteId:cachedQuote}:{})},controller.signal).then(value=>{
       if(!live||latest.current!==key)return;
       const prior=previousShipping.current;
       const shippingChanged=!!prior&&prior.uid===uid&&value.shipping.state==='ready'&&(prior.revision!==value.shipping.revision||prior.fee!==value.shipping.shippingPaise||prior.total!==value.shipping.totalPaise);
@@ -36,9 +37,10 @@ export function useCheckoutReview(shopping:Shopping,book:AddressBookState,select
       last.current={identity,value};setResult({key,status:'ready',value,shippingChanged});
       // First observation after a hard refresh has no prior displayed price.
       for(const item of value.items)if(item.product&&!baseline.current.prices.has(item.id))baseline.current.prices.set(item.id,item.product.pricePaise);
-    }).catch(error=>{if(live&&latest.current===key)setResult({key,status:'error',error:error instanceof Error?error.message:'Unable to load checkout review.'});});
+    }).catch(error=>{if(live&&latest.current===key){if(cachedQuote&&(error as {code?:string}).code==='conflict')last.current=undefined;setResult({key,status:'error',error:error instanceof Error?error.message:'Unable to load checkout review.'});}});
     return()=>{live=false;controller.abort();};
   },[key,uid,selected,book.status,shopping.status]);
+  useEffect(()=>{const expires=result?.value?.shipping.expiresAt;if(!expires)return;const timer=setTimeout(()=>setAttempt(n=>n+1),Math.max(1000,expires-Date.now()-15000));return()=>clearTimeout(timer);},[result?.value?.shipping.expiresAt]);
   useReconnect(()=>setAttempt(n=>n+1),!!uid);
   const current=result?.key===key?result:undefined,cached=last.current?.identity===identity?last.current.value:undefined;
   const changes=current?.value?.items.filter(item=>item.product&&baseline.current.prices.has(item.id)&&baseline.current.prices.get(item.id)!==item.product.pricePaise).map(item=>({id:item.id,name:item.product!.name,previous:baseline.current.prices.get(item.id)!,current:item.product!.pricePaise}))||[];

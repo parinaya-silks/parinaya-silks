@@ -7,7 +7,7 @@ import type {AddressBookState} from './useAddressBook.ts';
 import {deliveryOperation} from './client.ts';
 import {AddressEditor} from './AddressEditor.tsx';
 
-export function AddressManager({book,selected,onSelect,onSaved,checkout=false,profile=false}:{book:AddressBookState;selected?:string;onSelect?:(id:string)=>void;onSaved?:(id:string,revision:number)=>void;checkout?:boolean;profile?:boolean}){
+export function AddressManager({book,selected,onSelect,onSaved,checkout=false,profile=false,allowMap=false}:{book:AddressBookState;selected?:string;onSelect?:(id:string)=>void;onSaved?:(id:string,revision:number)=>void;checkout?:boolean;profile?:boolean;allowMap?:boolean}){
   const [editor,setEditor]=useState<DeliveryAddress|null|undefined>(undefined),[deleting,setDeleting]=useState<DeliveryAddress|null>(null),[error,setError]=useState('');
   const attempt=useRef<{signature:string;operationId:string}|null>(null),lock=useRef(false),active=useRef(true);
   useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
@@ -33,7 +33,7 @@ export function AddressManager({book,selected,onSelect,onSaved,checkout=false,pr
     </article>)}
     {book.status==='ready'&&(checkout?<button className="checkout-add-address" disabled={book.busy||book.addresses.length>=ADDRESS_LIMIT} onClick={()=>{setError('');setEditor(null);}}>+ Add address</button>:<p className="text-xs text-[#5F5552]">{book.addresses.length} of {ADDRESS_LIMIT} addresses saved.</p>)}
     {book.status==='ready'&&book.addresses.length>=ADDRESS_LIMIT&&<p className="profile-address-limit">You can save up to {ADDRESS_LIMIT} delivery addresses. Edit or remove an existing address before adding another. Existing addresses are kept.</p>}
-    {editor!==undefined&&<AddressEditor checkout={checkout} profile={profile} book={book} address={editor} onClose={()=>setEditor(undefined)} onSaved={(id,revision)=>{setEditor(undefined);onSaved?.(id,revision);}}/>}
+    {editor!==undefined&&<AddressEditor allowMap={allowMap} checkout={checkout} profile={profile} book={book} address={editor} onClose={()=>setEditor(undefined)} onSaved={(id,revision)=>{setEditor(undefined);onSaved?.(id,revision);}}/>}
     {deleting&&<DeleteAddress profile={profile} address={deleting} busy={book.busy} error={error} onCancel={()=>setDeleting(null)} onConfirm={()=>void change('addresses:delete',deleting)}/>}
   </section>;
 }

@@ -1,13 +1,14 @@
 import {createHash} from 'node:crypto';
+import {distanceDeliveryEnabled} from './deliveryMode.ts';
+import {savedShipping,quoteShipping} from '../src/shipping/model.ts';
 import {FieldValue,type Firestore,type Transaction} from 'firebase-admin/firestore';
 import {ProductError,type PublicProductRecord} from '../src/products/model.ts';
 import {ADDRESS_LIMIT,addressId,validateAddress,type AddressBook,type DeliveryAddress,type CheckoutReview,type CheckoutLine} from '../src/delivery/model.ts';
-import {savedShipping,quoteShipping} from '../src/shipping/model.ts';
 import type {CheckoutSource} from '../src/checkout/source.ts';
 import {SHOPPING_LIMIT,resolveItem} from '../src/shopping/model.ts';
 
 const fields=(body:Record<string,unknown>,allowed:string[])=>{if(Object.keys(body).some(key=>!allowed.includes(key))||allowed.some(key=>!(key in body)))throw new ProductError('invalid','Unsupported or missing request fields.');};
-function presentAddress(doc:FirebaseFirestore.DocumentSnapshot):DeliveryAddress {const data=doc.data()!;return {...validateAddress(Object.fromEntries(Object.keys(validateAddressFields).map(key=>[key,data[key]]))),id:doc.id,revision:data.revision,createdAt:data.createdAt.toMillis(),updatedAt:data.updatedAt.toMillis()};}
+function presentAddress(doc:FirebaseFirestore.DocumentSnapshot):DeliveryAddress {const data=doc.data()!;return {...validateAddress(Object.fromEntries([...Object.keys(validateAddressFields),...(data.coordinates!=null?['coordinates']:[])].map(key=>[key,data[key]]))),id:doc.id,revision:data.revision,createdAt:data.createdAt.toMillis(),updatedAt:data.updatedAt.toMillis()};}
 const validateAddressFields={recipientName:1,mobileNumber:1,pinCode:1,line1:1,locality:1,city:1,state:1,landmark:1,label:1,country:1};
 
 export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFirestore.DocumentSnapshot,name?:string)=>Promise<PublicProductRecord>) {
@@ -34,7 +35,7 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
       if(!save&&!old)throw new ProductError('not-found','This saved address is no longer available.');
       if(save&&!old&&all.size>=ADDRESS_LIMIT)throw new ProductError('conflict',`You can save up to ${ADDRESS_LIMIT} addresses. Delete an address before adding another.`);
       let defaultId=preferences.data()?.defaultAddressId||null;
-      if(save){tx.set(ref,{...address,revision:(old?.data().revision||0)+1,updatedAt:FieldValue.serverTimestamp(),createdAt:old?.data().createdAt||FieldValue.serverTimestamp()},{merge:true});if(body.makeDefault===true||!defaultId||!all.docs.some(doc=>doc.id===defaultId))defaultId=id;}
+      if(save){tx.set(ref,{...address,coordinates:address?.coordinates??FieldValue.delete(),revision:(old?.data().revision||0)+1,updatedAt:FieldValue.serverTimestamp(),createdAt:old?.data().createdAt||FieldValue.serverTimestamp()},{merge:true});if(body.makeDefault===true||!defaultId||!all.docs.some(doc=>doc.id===defaultId))defaultId=id;}
       else if(remove){tx.delete(ref);if(defaultId===id||!all.docs.some(doc=>doc.id===defaultId))defaultId=all.docs.map(doc=>doc.id).filter(value=>value!==id).sort()[0]||null;}
       else defaultId=id;
       // One pointer, serialized by the same transaction: never competing flags.
@@ -71,8 +72,7 @@ export function deliveryService(db:Firestore,presentProduct:(doc:FirebaseFiresto
       });
       const issues=!entries.length?['Your bag is empty.']:!address?['Select a saved delivery address to complete the delivery review.']:[];
       const valid=!issues.length&&complete&&items.every(item=>!item.issues.length);
-      let shipping;
-      try{shipping=quoteShipping(savedShipping((await tx.get(db.doc('siteSettings/shipping'))).data()),subtotal,valid);}catch{shipping={state:'unavailable' as const,revision:null,shippingPaise:null,totalPaise:null,free:false,freeShippingEnabled:false,freeThresholdPaise:null};}
+      const shipping=distanceDeliveryEnabled()?{state:'blocked' as const,revision:null,shippingPaise:null,totalPaise:null,free:false,freeShippingEnabled:false,freeThresholdPaise:null}:quoteShipping(savedShipping((await tx.get(db.doc('siteSettings/shipping'))).data()),subtotal,valid);
       const value={source,address,items,subtotalPaise:String(subtotal),subtotalComplete:complete,valid,issues,shipping};
       return {...value,fingerprint:createHash('sha256').update(JSON.stringify(value)).digest('hex')};
   }

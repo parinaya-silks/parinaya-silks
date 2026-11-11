@@ -1,3 +1,4 @@
+import type {RouteCalculator} from './routes.ts';
 import {publicPayment} from '../src/payments/model.ts';
 import {couponDiscoveryService} from './couponDiscovery.ts';
 import {categoryService} from './categories.ts';
@@ -28,13 +29,13 @@ import {customerDirectoryService} from './customerDirectory.ts';
 import {ordersService} from './orders.ts';
 import {shippingService} from './shipping.ts';
 
-type Dependencies={database:Firestore;auth:Pick<Auth,'verifyIdToken'>&Partial<Pick<Auth,'getUser'>>;media:CloudinaryMedia};
+type Dependencies={routeCalculator?:RouteCalculator;database:Firestore;auth:Pick<Auth,'verifyIdToken'>&Partial<Pick<Auth,'getUser'>>;media:CloudinaryMedia};
 const idPattern=/^[A-Za-z0-9]{20}$/;
 function id(value:unknown):string {if(typeof value!=='string'||!idPattern.test(value)) throw new ProductError('invalid','Invalid product ID.');return value;}
 function keys(value:Record<string,unknown>,allowed:string[]) {if(Object.keys(value).some(key=>!allowed.includes(key))) throw new ProductError('invalid','Unsupported request fields.');}
 function mediaId(value:unknown):string {if(typeof value!=='string'||!/^[a-f0-9]{32}$/.test(value))throw new ProductError('invalid','Invalid media ID.');return value;}
 
-export function catalogService({database:db,auth,media}:Dependencies) {
+export function catalogService({database:db,auth,media,routeCalculator}:Dependencies) {
   async function authenticate(token:string) {
     let user;
     try { user=await auth.verifyIdToken(token,true); } catch(error) {
@@ -173,7 +174,7 @@ export function catalogService({database:db,auth,media}:Dependencies) {
     return {...metadata,mediaId:imageId,alt:''};
   }
   const delivery=deliveryService(db,async(document,name)=>publicProduct(await present(document,name)));
-  const orders=ordersService(db,transactionAccess,delivery.reviewInTransaction);
+  const orders=ordersService(db,transactionAccess,delivery.reviewInTransaction,routeCalculator);
   const availableOffers=couponDiscoveryService(db,orders.review);
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {

@@ -14,7 +14,7 @@ const media=cloudinaryMedia({CLOUDINARY_CLOUD_NAME:'parinaya-emulator',CLOUDINAR
   if(!uploaded.has(publicId))return new Response('{}',{status:404});
   return new Response(JSON.stringify({public_id:publicId,asset_id:'fixture-'+publicId,resource_type:'image',type:'upload',bytes:1000,width:300,height:400,format:'png',version:1,secure_url:`https://res.cloudinary.com/parinaya-emulator/image/upload/v1/${publicId}.png`}),{status:200});
 });
-const service=catalogService({...serverFirebase(),media});
+const service=catalogService({...serverFirebase(),media,routeCalculator:async(_origin,address)=>({distanceMeters:5000,destination:address.coordinates||{latitude:17.5,longitude:78.5}})});
 const handler=catalogHandler(()=>service);
 const payments=paymentHandler(()=>paymentService(serverFirebase().database,service.paymentContext,{}));
 createServer(async(request,response)=>{

@@ -63,7 +63,7 @@ export function paymentService(db:Firestore,context:Context,env:NodeJS.ProcessEn
   const user=await context.authenticate(token);await limit(user.uid);
   if(action==='capabilities'){exact(body,[]);try{const c=config();return {online:await readyForInitiation(user.uid),mode:c.mode};}catch{return {online:false};}}
   if(action==='create-order'){
-   exact(body,['addressId','couponCode','fingerprint','operationId'],['source','points']);const c=config();if(!await readyForInitiation(user.uid))throw new ProductError('permission','Online payments are not enabled for this account.');
+   exact(body,['addressId','couponCode','fingerprint','operationId'],['source','points','deliveryQuoteId']);const c=config();if(!await readyForInitiation(user.uid))throw new ProductError('permission','Online payments are not enabled for this account.');
    const result=await context.orders.reserve(user.uid,user.email||'',{...body,action:'orders:place'},c);
    if(!result.order)return result;
    const id=result.order.id;await sameMode(id);console.info(JSON.stringify({event:'payment_attempt_reserved',orderId:id,mode:c.mode}));

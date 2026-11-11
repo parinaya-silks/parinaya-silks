@@ -26,7 +26,7 @@ export function useOnlinePayment(review:CheckoutReview|undefined,onNavigate:(pat
    let operationId=readAttempt();if(!operationId){operationId=crypto.randomUUID().replaceAll('-','');localStorage.setItem(key,operationId);}
    if(pending){const r=await paymentRequest<PaymentResult>(uid,'status',{operationId});if(current.current===target)openOrder(r);return;}
    setPending(true);
-   const r=await paymentRequest<PaymentResult>(uid,'create-order',{operationId,addressId:review.address!.id,couponCode:review.couponCode||null,fingerprint:review.fingerprint,source:review.source||{kind:'bag'},points:review.loyalty?.requestedPoints??0});
+   const r=await paymentRequest<PaymentResult>(uid,'create-order',{operationId,addressId:review.address!.id,deliveryQuoteId:review.shipping.quoteId,couponCode:review.couponCode||null,fingerprint:review.fingerprint,source:review.source||{kind:'bag'},points:review.loyalty?.requestedPoints??0});
    if(current.current!==target)return;
    if(r.id)localStorage.setItem(key+':order',r.id);
    if(r.changed){localStorage.removeItem(key);setPending(false);setMessage('Checkout changed. Refresh your checkout review and approve the updated totals.');return;}

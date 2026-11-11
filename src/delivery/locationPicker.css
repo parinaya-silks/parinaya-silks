@@ -1,0 +1,4 @@
+.delivery-map-picker{min-width:0;margin:12px 0}.delivery-map-picker>button{min-height:44px;padding:8px 12px;border:1px solid #bdb6ae;border-radius:4px;background:#fff;color:#780d24}.delivery-map-picker p{font-size:13px;line-height:1.5;margin:8px 0}.delivery-map-picker input{max-width:100%;min-height:44px;background:white;color:#2a0810;border:1px solid #bdb6ae;padding:8px}.delivery-map-picker label{flex:1;min-width:110px}.delivery-map-pin{color:#780d24;font-size:28px;line-height:28px;text-align:center;text-shadow:0 0 2px white,0 0 3px white}.delivery-map-picker .leaflet-container{font-family:inherit}.delivery-map-picker .leaflet-control-attribution{font-size:10px}
+
+
+.delivery-map-coordinates{display:flex;gap:8px;flex-wrap:wrap}.delivery-map-coordinates input{width:100%}.delivery-map-pin span{display:block;width:22px;height:22px;margin:3px;border:3px solid white;border-radius:50%;background:#780d24;box-shadow:0 1px 4px #333}
