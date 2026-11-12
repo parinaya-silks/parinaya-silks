@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';import {randomUUID} from 'node:crypto';import {createServer} from 'node:http';import {once} from 'node:events';
 import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import {catalogService} from '../server/catalog.ts';
 import handler from '../api/catalog.ts';import {serverFirebase} from '../server/firebase.ts';import {customRange} from '../src/admin/dashboard/model.ts';
 if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099')throw new Error('Loopback emulators required.');
 process.env.PARINAYA_SERVER_EMULATORS='true';
@@ -22,6 +23,28 @@ test('orders list handler: dual admin authorization, narrow snapshots, exact sea
   assert.equal((await call({...request,search:ref,status:'Placed'})).data.items.length,0);
   assert.equal((await call({...request,from:range.from,to:range.from})).data.items.length,1);assert.equal((await call({...request,from:range.to,to:range.to})).data.items.length,0);
   for(const change of [{statuses:[]},{statuses:['Placed','Placed']},{statuses:['Packed']},{status:'Placed',statuses:['Confirmed']},{view:'private'},{search:'private@example.test'},{from:10,to:0},{paymentStatus:'paid'},{pageSize:26}])assert.equal((await call({...request,...change})).status,400);
+  // The emulator does not enforce composite indexes. Inject only that exact
+  // failure and let the fallback perform real Firestore reads and pagination.
+  let rejectedQueries=0;
+  function missingIndexQuery(query:any,fields:string[]=[],ordered=false):any{return new Proxy(query,{get(target,key){
+   if(key==='where')return (field:string,...args:any[])=>missingIndexQuery(target.where(field,...args),[...fields,field],ordered);
+   if(key==='orderBy')return (...args:any[])=>missingIndexQuery(target.orderBy(...args),fields,true);
+   if(key==='limit'||key==='startAfter')return (...args:any[])=>missingIndexQuery(target[key](...args),fields,ordered);
+   if(key==='get')return async()=>{if(ordered&&fields.some(field=>field!=='createdAt')){rejectedQueries++;throw Object.assign(Error('The query requires an index.'),{code:9});}return target.get();};
+   const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;
+  }});}
+  const faultDb=new Proxy(db,{get(target,key){if(key==='collection')return (path:string)=>path==='orders'?missingIndexQuery(target.collection(path)):target.collection(path);const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;}});
+  const faultService=catalogService({database:faultDb,auth,media:{} as any}),faultCall=(body:Record<string,unknown>,role='owner')=>faultService.privileged(tokens[role],body) as Promise<any>;
+  const before=(await db.collection('orders').get()).docs.map(doc=>doc.data());
+  for(const filter of [{paymentStatus:'due'},{paymentStatus:'collected'},{paymentStatus:'due',status:'Confirmed'},{paymentStatus:'due',statuses:['Placed','Confirmed'],from:range.from,to:range.to},{paymentStatus:'due',search:ref},{paymentStatus:'collected',status:'Confirmed'}]){
+   let cursor:string|null=null;const expected:any[]=[],actual:any[]=[];
+   do{const page:any=(await call({...request,...filter,...(cursor?{cursor}:{})})).data;expected.push(...page.items);cursor=page.nextCursor;}while(cursor);
+   do{const page:any=await faultCall({...request,...filter,...(cursor?{cursor}:{})});actual.push(...page.items);cursor=page.nextCursor;}while(cursor);
+   assert.deepEqual(actual,expected,'Missing index fallback must match indexed filtering and complete pagination');
+  }
+  assert.ok(rejectedQueries>6);for(const role of ['customer','claim','record'])await assert.rejects(faultCall({...request,paymentStatus:'due'},role),{code:'permission'});
+  await assert.rejects(faultCall({...request,paymentStatus:'paid'}),{code:'invalid'});
+  assert.deepEqual((await db.collection('orders').get()).docs.map(doc=>doc.data()),before,'Filtering never writes order/payment/inventory snapshots');
   await db.doc('adminAccess/list-owner').update({enabled:false});assert.equal((await call(request)).status,403);
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));for(const uid of users)await auth.deleteUser(uid);await env.clearFirestore();await env.cleanup();}
 });

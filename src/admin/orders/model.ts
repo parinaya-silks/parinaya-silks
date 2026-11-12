@@ -4,6 +4,11 @@ import {ProductError} from '../../products/model.ts';
 
 export interface OrderListItem extends DashboardOrder {payment?:OrderRecord['payment'];paymentStatus:OrderRecord['paymentStatus'];collectedPaise:string}
 export interface OrderPage {items:OrderListItem[];nextCursor:string|null}
+export function orderLoadError(error:unknown){
+ const e=error as {code?:string;requestId?:string}|null;
+ const message=e?.code==='index-required'?'This order filter needs a ready Firestore index. Contact the maintainer.':e?.code==='configuration'?'The order service cannot access its configured Firebase service. Contact the maintainer.':'Unable to load orders. Please try again.';
+ return message+(typeof e?.requestId==='string'&&/^[a-f0-9-]{36}$/.test(e.requestId)?' Request ID: '+e.requestId:'');
+}
 export interface OrderFilters {search:string;statuses:OrderStatus[];paymentStatus:string;period:string;start:string;end:string}
 export interface OrderListState {filters:OrderFilters;cursors:(string|null)[];scroll:number}
 export const blankFilters=():OrderFilters=>({search:'',statuses:[],paymentStatus:'',period:'all',start:'',end:''});

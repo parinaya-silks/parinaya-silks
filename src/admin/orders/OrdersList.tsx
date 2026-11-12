@@ -8,14 +8,14 @@ import {useAdminWritePermission} from '../permission.tsx';
 import {money} from '../../shopping/model.ts';
 import {BulkActions,useOrderSelection} from './BulkActions.tsx';
 import {OrderFiltersControl} from './Filters.tsx';
-import {blankFilters,periods,codLabel,orderDate,orderQuery,pageCsv,type OrderFilters,type OrderListItem,type OrderListState,type OrderPage} from './model.ts';
+import {blankFilters,periods,codLabel,orderLoadError,orderDate,orderQuery,pageCsv,type OrderFilters,type OrderListItem,type OrderListState,type OrderPage} from './model.ts';
 import './orders.css';
 
 const empty:OrderListItem[]=[];
 export function OrdersList({state,onState,onNavigate}:{state:OrderListState;onState:(value:OrderListState)=>void;onNavigate:(path:string)=>void}){
  const [search,setSearch]=useState(state.filters.search),[error,setError]=useState(''),[busy,setBusy]=useState(false),allowed=useAdminWritePermission();
  const page=state.cursors.length,cursor=state.cursors.at(-1),body={action:'adminOrders:list',view:'summary',pageSize:10,...orderQuery(state.filters),...(cursor?{cursor}:{})},context=JSON.stringify(body);
- const resource=useAdminResource<OrderPage>(body,'Unable to load orders. Please try again.'),items=resource.data?.items||empty,source=state.filters.statuses.length===1?state.filters.statuses[0]:'',selection=useOrderSelection(items,context,source),restored=useRef(false);
+ const resource=useAdminResource<OrderPage>(body,'Unable to load orders. Please try again.',orderLoadError),items=resource.data?.items||empty,source=state.filters.statuses.length===1?state.filters.statuses[0]:'',selection=useOrderSelection(items,context,source),restored=useRef(false);
  useEffect(()=>setSearch(state.filters.search),[state.filters.search]);
  useLayoutEffect(()=>{if(resource.data&&!restored.current){restored.current=true;window.scrollTo(0,state.scroll);}},[resource.data]);
  function apply(filters:OrderFilters){try{orderQuery(filters);setError('');selection.clear();onState({filters,cursors:[null],scroll:0});}catch(error){setError(error instanceof Error?error.message:'Choose valid filters.');}}

@@ -99,3 +99,7 @@ Production release and read-only hosted acceptance remain separate, owner-author
 - `src/categories/repository.ts`
 - `src/enquiries/model.ts`
 - `src/products/response.ts`
+
+## Orders COD filter follow-up
+
+The 12 November follow-up adds bounded missing-index recovery for the Orders summary and safe error/request-ID guidance. See [Orders COD filter recovery](ORDER_FILTER_RECOVERY.md) for scope, validation and the unresolved hosted exception.

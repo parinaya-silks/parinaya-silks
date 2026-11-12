@@ -1,3 +1,4 @@
+import {readOrderList,type OrderListConstraint} from './orderListQuery.ts';
 import {assertStoreOpen} from './maintenance.ts';
 import {deliveryQuotes} from './deliveryQuotes.ts';
 import {distanceDeliveryEnabled} from './deliveryMode.ts';
@@ -94,17 +95,19 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     if(body.statuses!==undefined&&(!Array.isArray(body.statuses)||!body.statuses.length||body.statuses.length>7||new Set(body.statuses).size!==body.statuses.length||body.statuses.some(value=>!orderStatuses.includes(value as never))||body.status))throw new ProductError('invalid','Invalid order status filters.');
     if(body.from!==undefined&&body.to!==undefined&&Number(body.from)>Number(body.to))throw new ProductError('invalid','Date range is reversed.');
     if(body.view==='summary'&&body.search&&!/^PS-[A-Z0-9_-]+$/i.test(String(body.search)))throw new ProductError('invalid','Enter an exact PS- order reference.');
-    let query:Query=db.collection('orders');
-    if(!admin)query=query.where('uid','==',uid);else if(body.customerUid)query=query.where('uid','==',text(body.customerUid,128,true));
-    if(body.status){if(!orderStatuses.includes(body.status as never))throw new ProductError('invalid','Invalid order status.');query=query.where('status','==',body.status);}
-    if(body.statuses)query=query.where('status','in',body.statuses);
-    const statuses=cards?historyStatuses[(body.filter||'all') as HistoryFilter]:[];if(statuses.length)query=query.where('status','in',statuses);
-    if(body.paymentStatus){if(!['due','collected'].includes(body.paymentStatus as string))throw new ProductError('invalid','Invalid COD status.');query=query.where('paymentStatus','==',body.paymentStatus);}
-    if(body.search){const search=text(body.search,254,true);query=query.where(search.toUpperCase().startsWith('PS-')?'reference':'email','==',search.toUpperCase().startsWith('PS-')?search.toUpperCase():search.toLowerCase());}
-    for(const [key,operator]of [['from','>='],['to','<=']] as const)if(body[key]!==undefined){if(!Number.isSafeInteger(body[key])||(body[key] as number)<0)throw new ProductError('invalid','Invalid date filter.');query=query.where('createdAt',operator,Timestamp.fromMillis(body[key] as number));}
+    let query:Query=db.collection('orders');const filters:OrderListConstraint[]=[];
+    const where=(field:string,operator:OrderListConstraint[1],value:unknown)=>{filters.push([field,operator,value]);return query.where(field,operator,value);};
+    if(!admin)query=where('uid','==',uid);else if(body.customerUid)query=where('uid','==',text(body.customerUid,128,true));
+    if(body.status){if(!orderStatuses.includes(body.status as never))throw new ProductError('invalid','Invalid order status.');query=where('status','==',body.status);}
+    if(body.statuses)query=where('status','in',body.statuses);
+    const statuses=cards?historyStatuses[(body.filter||'all') as HistoryFilter]:[];if(statuses.length)query=where('status','in',statuses);
+    if(body.paymentStatus){if(!['due','collected'].includes(body.paymentStatus as string))throw new ProductError('invalid','Invalid COD status.');query=where('paymentStatus','==',body.paymentStatus);}
+    if(body.search){const search=text(body.search,254,true);query=where(search.toUpperCase().startsWith('PS-')?'reference':'email','==',search.toUpperCase().startsWith('PS-')?search.toUpperCase():search.toLowerCase());}
+    for(const [key,operator]of [['from','>='],['to','<=']] as const)if(body[key]!==undefined){if(!Number.isSafeInteger(body[key])||(body[key] as number)<0)throw new ProductError('invalid','Invalid date filter.');query=where('createdAt',operator,Timestamp.fromMillis(body[key] as number));}
     query=query.orderBy('createdAt','desc').orderBy(FieldPath.documentId(),'desc');
-    if(body.cursor){const after=await db.doc('orders/'+referenceId(body.cursor)).get();if(!after.exists||(!admin&&after.data()?.uid!==uid))throw new ProductError('invalid','Invalid order cursor.');query=query.startAfter(after);}
-    const pageSize=body.pageSize===undefined?25:body.pageSize;if(!Number.isInteger(pageSize)||(pageSize as number)<1||(pageSize as number)>25)throw new ProductError('invalid','Invalid order page size.');const summary=body.view==='summary',lookahead=cards||summary||body.view==='history',docs=await query.limit((pageSize as number)+(lookahead?1:0)).get(),page=docs.docs.slice(0,pageSize as number);return {items:page.map(doc=>projection(present(doc),admin)),nextCursor:(lookahead?docs.size>(pageSize as number):docs.size===pageSize)?page.at(-1)!.id:null};
+    let after:DocumentSnapshot|undefined;
+    if(body.cursor){after=await db.doc('orders/'+referenceId(body.cursor)).get();if(!after.exists||(!admin&&after.data()?.uid!==uid))throw new ProductError('invalid','Invalid order cursor.');query=query.startAfter(after);}
+    const pageSize=body.pageSize===undefined?25:body.pageSize;if(!Number.isInteger(pageSize)||(pageSize as number)<1||(pageSize as number)>25)throw new ProductError('invalid','Invalid order page size.');const summary=body.view==='summary',lookahead=cards||summary||body.view==='history',docs=await readOrderList(query,(pageSize as number)+(lookahead?1:0),admin&&summary?{collection:db.collection('orders'),filters,after}:undefined),page=docs.slice(0,pageSize as number);return {items:page.map(doc=>projection(present(doc),admin)),nextCursor:(lookahead?docs.length>(pageSize as number):docs.length===pageSize)?page.at(-1)!.id:null};
   }
   function projection(order:OrderRecord,admin:boolean){if(admin)return order;const {internalNotes,history,...safe}=order;return {...safe,...(safe.payment?{payment:publicPayment(safe.payment)}:{}),history:history.filter(item=>!['Note','Manual refund'].includes(item.action)).map(({action,at})=>({action,at})),refunds:order.refunds.map(({amountPaise,at})=>({amountPaise,at})),collection:order.collection?{at:order.collection.at}:null};}
   async function get(uid:string,body:Record<string,unknown>,admin=false){exact(body,['action','id']);const raw=typeof body.id==='string'&&/^PS-[A-F0-9]{32}$/.test(body.id)?body.id.slice(3).toLowerCase():referenceId(body.id),doc=await db.doc('orders/'+raw).get();if(!doc.exists||(!admin&&doc.data()?.uid!==uid))throw new ProductError('not-found','Order not found.');return projection(present(doc),admin);}

@@ -18,7 +18,7 @@ export function AdminDataProvider({children}:{children:React.ReactNode}){
  },[uid]);
  return <Pulse.Provider value={pulse}>{children}</Pulse.Provider>;
 }
-export function useAdminResource<T>(body:Record<string,unknown>,message:string){
+export function useAdminResource<T>(body:Record<string,unknown>,message:string,errorMessage?:(error:unknown)=>string){
  const uid=getAdminClients().auth.currentUser?.uid||'',key=JSON.stringify([uid,body]),pulse=useContext(Pulse),[attempt,setAttempt]=useState(0);
  const [state,setState]=useState<{key:string;data?:T;error?:string;errorCode?:string;refreshing:boolean;updatedAt?:number}>();
  const flight=useRef<{key:string;controller:AbortController}|null>(null),generation=useRef(0),queued=useRef(false);
@@ -29,7 +29,7 @@ export function useAdminResource<T>(body:Record<string,unknown>,message:string){
   void catalogAction<T>(body,controller.signal).then(data=>{if(generation.current===run)setState({key,data,refreshing:false,updatedAt:Date.now()});}).catch(error=>{
    if(generation.current!==run||controller.signal.aborted)return;
    const denied=error instanceof ProductError&&['unauthorized','permission'].includes(error.code);
-   setState(old=>({key,...(!denied&&old?.key===key?{data:old.data,updatedAt:old.updatedAt}:{}),refreshing:false,errorCode:error instanceof ProductError?error.code:'unavailable',error:denied?'Administrator access must be checked again.':message}));
+   setState(old=>({key,...(!denied&&old?.key===key?{data:old.data,updatedAt:old.updatedAt}:{}),refreshing:false,errorCode:error instanceof ProductError?error.code:'unavailable',error:denied?'Administrator access must be checked again.':errorMessage?errorMessage(error):message}));
    if(denied)window.dispatchEvent(new CustomEvent('parinaya:admin-api-denied',{detail:uid}));
   }).finally(()=>{if(generation.current===run){flight.current=null;if(queued.current){queued.current=false;setAttempt(value=>value+1);}}});
  },[key,pulse,attempt]);
