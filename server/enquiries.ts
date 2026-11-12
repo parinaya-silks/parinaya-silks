@@ -22,10 +22,15 @@ export function enquiriesService(db:Firestore,access:(tx:Transaction,uid:string)
  },async admin(uid:string,body:Record<string,unknown>){
   if(body.action==='enquiries:get'){exact(body,['action','id']);return get(referenceId(body.id));}
   if(body.action==='enquiries:list'){
-   exact(body,['action','search','status'],['cursor']);const f=enquiryFilters(body.search,body.status),key=digest(f);let query=collection.orderBy('createdAt','desc').orderBy(FieldPath.documentId(),'desc');
-   if(f.search)query=query.where('searchPrefixes','array-contains',f.search);if(f.status!=='All')query=query.where('status','==',f.status);
-   if(body.cursor!==undefined){try{if(typeof body.cursor!=='string'||body.cursor.length>1500)throw Error();const c=JSON.parse(Buffer.from(body.cursor,'base64url').toString());if(!Array.isArray(c)||c.length!==4||c[0]!==key||!Number.isSafeInteger(c[1])||!Number.isInteger(c[2])||c[2]<0||c[2]>999999999)throw Error();query=query.startAfter(new Timestamp(c[1],c[2]),referenceId(c[3]));}catch{throw new ProductError('invalid','This enquiry page no longer matches the filters. Refresh the list.');}}
-   const docs=await query.limit(21).get(),page=docs.docs.slice(0,20),last=page.at(-1);return {items:page.map(doc=>present(doc.id,doc.data())),nextCursor:docs.size>20&&last?Buffer.from(JSON.stringify([key,last.get('createdAt').seconds,last.get('createdAt').nanoseconds,last.id])).toString('base64url'):null};
+   exact(body,['action','search','status'],['cursor','sort']);const f=enquiryFilters(body.search,body.status,body.sort),key=digest(f);
+   // One indexed predicate only; no composite status/search/date index dependency.
+   // Read the complete bounded source before filtering or paging; never label a partial scan complete.
+   const query=f.search?collection.where('searchPrefixes','array-contains',f.search):f.status!=='All'?collection.where('status','==',f.status):collection;
+   const docs=await query.limit(5001).get();if(docs.size>5000)throw new ProductError('unavailable','Enquiry results exceed the supported 5,000-record scope. Narrow the search or contact the owner.');
+   const rows=docs.docs.filter(doc=>f.status==='All'||doc.get('status')===f.status).map(doc=>present(doc.id,doc.data()) as EnquiryRow).sort((a,b)=>(f.sort==='oldest'?a.createdAt-b.createdAt:b.createdAt-a.createdAt)||(f.sort==='oldest'?a.id.localeCompare(b.id):b.id.localeCompare(a.id)));
+   const version=digest(rows.map(row=>[row.id,row.revision,row.createdAt]));let offset=0;
+   if(body.cursor!==undefined){try{if(typeof body.cursor!=='string'||body.cursor.length>1500)throw Error();const c=JSON.parse(Buffer.from(body.cursor,'base64url').toString());if(!Array.isArray(c)||c.length!==3||c[0]!==key)throw Error();if(c[1]!==version)throw new ProductError('conflict','Enquiries changed. Refresh the list before loading more.');const index=rows.findIndex(row=>row.id===c[2]);if(index<0)throw Error();offset=index+1;}catch(e){if(e instanceof ProductError)throw e;throw new ProductError('invalid','This enquiry page no longer matches the filters. Refresh the list.');}}
+   const page=rows.slice(offset,offset+20),last=page.at(-1);return {items:page,total:rows.length,nextCursor:offset+20<rows.length&&last?Buffer.from(JSON.stringify([key,version,last.id])).toString('base64url'):null};
   }
   if(!['enquiries:update','enquiries:delete'].includes(String(body.action)))throw new ProductError('invalid','Unsupported enquiry action.');
   const deleting=body.action==='enquiries:delete';exact(body,['action','id','expectedRevision','operationId'],deleting?[]:['status']);const id=referenceId(body.id),operationId=referenceId(body.operationId),status=body.status as EnquiryStatus;if(!deleting&&!['Read','Replied'].includes(status)||!Number.isSafeInteger(body.expectedRevision)||(body.expectedRevision as number)<1)throw new ProductError('invalid','Choose a valid enquiry update.');

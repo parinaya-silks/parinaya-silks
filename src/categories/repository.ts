@@ -8,6 +8,7 @@ export function categoryError(error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : '';
   if (code === 'permission-denied'||code==='forbidden'||code==='permission') return 'Permission denied. Refresh your permissions or contact the store owner.';
   if (code === 'category/duplicate-slug'||code==='duplicate') return 'That URL slug is already in use. Choose another slug.';
+  if ((code==='conflict'||code==='invalid')&&error instanceof Error)return error.message;
   if (code === 'category/conflict'||code==='conflict') return 'This category changed while you were editing. Close this editor and reopen the latest category before saving again.';
   if (code === 'category/missing') return 'This category is no longer available. Reload the list.';
   return 'Categories could not be saved or loaded. Check your connection and try again.';

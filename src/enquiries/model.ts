@@ -6,7 +6,7 @@ export interface EnquiryInput {name:string;email:string;phone:string;country:Cou
 export type EnquiryStatus='New'|'Read'|'Replied';
 export interface EnquiryRow {id:string;name:string;email:string;phone:string;preview:string;status:EnquiryStatus;createdAt:number;revision:number}
 export interface Enquiry extends EnquiryRow {message:string}
-export interface EnquiryPage {items:EnquiryRow[];nextCursor:string|null}
+export interface EnquiryPage {total?:number;items:EnquiryRow[];nextCursor:string|null}
 export const blankEnquiry=():EnquiryInput=>({name:'',email:'',phone:'',country:'IN',message:''});
 export function validateEnquiry(value:unknown):EnquiryInput {
  if(!value||typeof value!=='object'||Array.isArray(value))throw new ProductError('invalid','Check the contact form fields.');
@@ -19,5 +19,7 @@ export function validateEnquiry(value:unknown):EnquiryInput {
  return {name,email,phone,country:r.country,message};
 }
 export function enquiryTerm(value:string){const v=value.normalize('NFKC').trim().toLowerCase().replace(/\s+/g,' ');return /^[+\d\s().-]+$/.test(v)?v.replace(/\D/g,''):v;}
-export function enquiryFilters(search:unknown,status:unknown){if(typeof search!=='string'||search.length>100||typeof status!=='string'||!['All','New','Read','Replied'].includes(status))throw new ProductError('invalid','Choose valid enquiry filters.');return {search:enquiryTerm(search),status:status as 'All'|EnquiryStatus};}
+export function enquiryFilters(search:unknown,status:unknown,sort:unknown='newest'){if(typeof search!=='string'||search.length>100||typeof status!=='string'||!['All','New','Read','Replied'].includes(status)||!['newest','oldest'].includes(sort as string))throw new ProductError('invalid','Choose valid enquiry filters.');return {search:enquiryTerm(search),status:status as 'All'|EnquiryStatus,sort:sort as 'newest'|'oldest'};}
 export const enquiryDate=(value:number)=>new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'}).format(value)+' IST';
+
+export function enquiryLoadError(error:unknown){const e=error as {code?:string;requestId?:string};const advice=e.code==='index-required'?'The enquiry query requires a Firestore index. Contact the maintainer.':e.code==='configuration'?'The server cannot access its configured Firebase service. Contact the maintainer.':e.code==='permission'||e.code==='unauthorized'?'Administrator access must be checked again.':['conflict','invalid'].includes(e.code||'')?'Enquiries changed or the page expired. Refresh the list.':'Unable to load enquiries. Please try again.';return advice+(e.requestId?' Request ID: '+e.requestId:'');}

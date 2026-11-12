@@ -1,3 +1,5 @@
+> Latest local Admin filter/layout follow-up: [ADMIN_FILTER_REPAIR.md](ADMIN_FILTER_REPAIR.md), 12 November 2026. This supersedes earlier implicit category-rank projection and restrictive sidebar-entry behaviour.
+
 > **Current shipping status (11 November 2026):** `DISTANCE_DELIVERY_ENABLED=false` by default. New checkout uses the existing saved flat shipping configuration, before coupons/points, with free shipping strictly above its saved threshold. Google Routes, dispatch coordinates, slabs and distance quotes are inactive. Historical order charges are unchanged. Distance-specific material below describes a retained, inactive implementation until a future explicitly approved re-enable. See [current flat shipping reference](FLAT_SHIPPING.md).
 
 # Parinaya Sarees documentation

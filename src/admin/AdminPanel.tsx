@@ -4,7 +4,7 @@ import {AboutEditor} from './about/AboutEditor.tsx';
 import {CampaignManager} from './campaigns/CampaignManager.tsx';
 import {CustomersList} from './customers/CustomersList.tsx';
 import {CustomerDetails} from './customers/CustomerDetails.tsx';
-import {restoreCustomers,customerPath,customerUid} from './customers/model.ts';
+import {initialCustomers,restoreCustomers,customerPath,customerUid} from './customers/model.ts';
 import {getAdminClients} from '../services/firebase/adminAuth.ts';
 import {OrdersList} from './orders/OrdersList.tsx';
 import {initialOrderList} from './orders/model.ts';
@@ -29,14 +29,15 @@ function unavailableWrite(): never { throw new Error('This module is not connect
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
   const [customersState,setCustomersState]=useState(()=>restoreCustomers(window.history.state,getAdminClients().auth.currentUser?.uid||''));
   const [ordersState,setOrdersState]=useState(initialOrderList);
-  const [,refreshNavigation]=useState(0);
+  const [navigationVersion,refreshNavigation]=useState(0);
   const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
-    const target=new URL(destination,window.location.origin),status=target.searchParams.get('status');
-    if(target.pathname==='/admin/orders'&&['Placed','Confirmed','Processing','Shipped','Delivered'].includes(status||''))setOrdersState({...initialOrderList(),filters:{...initialOrderList().filters,statuses:[status as any]}});
+    const target=new URL(destination,window.location.origin),status=target.searchParams.get('status'),reset=target.searchParams.get('reset')==='1';
+    if(reset&&target.pathname==='/admin/customers')setCustomersState(initialCustomers());
+    if(target.pathname==='/admin/orders'){if(['Placed','Confirmed','Processing','Shipped','Delivered'].includes(status||''))setOrdersState({...initialOrderList(),filters:{...initialOrderList().filters,statuses:[status as any]}});else if(reset||path==='/admin/orders'||!path.startsWith('/admin/orders/'))setOrdersState(initialOrderList());}
     const next = destination === '/' ? '/' : safeAdminDestination(target.pathname);
-    window.history.pushState({attentionQuery:target.search,productsContext:window.history.state?.productsContext,customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
+    window.history.pushState({attentionQuery:target.search,productsContext:reset&&target.pathname==='/admin/products'?undefined:window.history.state?.productsContext,customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:reset&&target.pathname==='/admin/customers'?initialCustomers():path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
     window.dispatchEvent(new PopStateEvent('popstate', { state: { skipUnsaved: true } }));
     refreshNavigation(n=>n+1);
     window.scrollTo(0, 0);
@@ -70,7 +71,7 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     content = <ModuleUnavailable title={title} />;
   }
   return <AdminLayout currentPath={path} onNavigate={navigate} onSignOut={onSignOut} email={email} headerActions={['/admin','/admin/dashboard','/admin/login'].includes(path)?<DashboardDates value={range} onChange={setRange}/>:undefined}>
-    <div key={path}>{content}</div>
+    <div key={path+':'+navigationVersion}>{content}</div>
   </AdminLayout>;
 }
 

@@ -1,3 +1,5 @@
+> Follow-up repairs: [ADMIN_FILTER_REPAIR.md](ADMIN_FILTER_REPAIR.md). Category reads now show exact saved ranks; normal sidebar entry uses neutral filters. The earlier dated implementation/evidence below is retained.
+
 # Admin panel and storefront improvements
 
 Prepared 12 November 2026. Local implementation only. No commit, push, deployment, production Firestore change, migration, credential change or billing operation was performed. Production acceptance is **Pending confirmation**.

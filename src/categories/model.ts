@@ -28,9 +28,7 @@ export function validateCategory(input: CategoryInput): CategoryInput {
   return { ...(homepageImage!==undefined?{homepageImage}:{}),name, slug: input.slug, description, enabled: input.enabled, displayOrder: input.displayOrder };
 }
 export function orderCategories(items: Category[]) {
-  const sorted=[...items].sort((a,b)=>(Number.isFinite(a.displayOrder)?a.displayOrder:0)-(Number.isFinite(b.displayOrder)?b.displayOrder:0)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
-  const legacy=sorted.some(c=>!Number.isInteger(c.displayOrder)||c.displayOrder<1)||new Set(sorted.map(c=>c.displayOrder)).size!==sorted.length;
-  return legacy?sorted.map((c,i)=>({...c,storedDisplayOrder:c.displayOrder,displayOrder:i+1})):sorted;
+  return [...items].sort((a,b)=>(Number.isFinite(a.displayOrder)?a.displayOrder:0)-(Number.isFinite(b.displayOrder)?b.displayOrder:0)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
 }
-
-export function nextCategoryOrder(items:Category[]){return Math.max(0,...orderCategories(items).map(c=>c.displayOrder))+1;}
+export function categoryOrderNeedsReview(items:Category[]){return items.some(c=>!Number.isInteger(c.displayOrder)||c.displayOrder<1)||new Set(items.map(c=>c.displayOrder)).size!==items.length;}
+export function nextCategoryOrder(items:Category[]){const maximum=Math.max(0,...items.map(c=>c.displayOrder));return (maximum||items.length)+1;}

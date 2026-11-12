@@ -90,3 +90,7 @@ Catalog errors expose safe `code`, `message`, field details and a request ID for
 Cursors are opaque module-owned references. Never synthesize a cursor from another user's document or assume one action's cursor fits another. Keep the same operation ID and unchanged semantic input when recovering a mutation. A fresh operation ID can represent a second business operation. Re-read/review after conflicts; distinguish transport failure from a confirmed rejection.
 
 Sources: `api/catalog.ts`, `api/payments/[action].ts`, `server/handler.ts`, `server/catalog.ts`, `server/payments/http.ts`, `server/payments/service.ts` and named modules. Existing detailed [payment reference](../PAYMENTS.md) and [diagnostics guide](../CATALOG_API_DIAGNOSTICS.md) are retained. Current live response sampling was not performed for documentation.
+
+## Admin filter repair ? 12 November 2026
+
+`enquiries:list` retains the shared authenticated catalog endpoint, requires search/status, and accepts optional sort (`newest` default or `oldest`) and cursor. It returns items, total and nextCursor. Both filters and sort are bound into the opaque cursor; source changes reject stale continuations. A complete bounded single-field candidate scan replaces compound status/search/date ordering. See [repair report](../ADMIN_FILTER_REPAIR.md) for limits and evidence. Category expectedUpdatedAt uses the precise browser millisecond token, including fractional milliseconds; writes and category deletion compare that same precision.

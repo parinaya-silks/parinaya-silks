@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import {Timestamp} from 'firebase-admin/firestore';
+import type {DecodedIdToken} from 'firebase-admin/auth';
+import {serverFirebase} from '../server/firebase.ts';
+import {catalogService} from '../server/catalog.ts';
+import {catalogHandler} from '../server/handler.ts';
+import {enquiryPrefixes} from '../server/enquiries.ts';
+import {categoryRevision} from '../server/categories.ts';
+import {orderCategories,nextCategoryOrder,type Category} from '../src/categories/model.ts';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099'||process.env.VERCEL)throw Error('Loopback emulators required.');process.env.PARINAYA_SERVER_EMULATORS='true';
+test('category rank writes persist exactly with fractional timestamps, duplicates and concurrent edits are safe',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database;
+ const service=catalogService({database:db,auth:{verifyIdToken:async uid=>({uid,aud:'parinaya-silks',admin:uid==='owner'}) as unknown as DecodedIdToken},media:{} as any}),call=(body:Record<string,unknown>)=>service.privileged('owner',body),ids=['a','b','c'].map(v=>v.repeat(20)),time=new Timestamp(1700000000,123456789);
+ const rows=async()=>orderCategories((await db.collection('categories').get()).docs.map(d=>({...d.data(),id:d.id,createdAt:d.get('createdAt').toMillis(),updatedAt:categoryRevision(d.get('updatedAt'))})) as Category[]);
+ const save=(id:string,old:any,displayOrder:number)=>call({action:'categories:save',id,expectedUpdatedAt:categoryRevision(old.updatedAt),category:{name:old.name,slug:old.slug,description:old.description,enabled:old.enabled,displayOrder}});
+ try{await env.clearFirestore();await db.doc('adminAccess/owner').set({enabled:true});for(const [i,id]of ids.entries()){const slug='category-'+i;await db.doc('categories/'+id).set({name:'Category '+i,description:'KEEP',slug,enabled:i!==2,displayOrder:0,createdAt:time,updatedAt:time});await db.doc('categorySlugs/'+slug).set({categoryId:id});}await db.doc('products/untouched').set({categoryId:ids[0],inventory:{mode:'simple',quantity:228}});const untouched=(await db.doc('products/untouched').get()).data();
+ let old=(await db.doc('categories/'+ids[0]).get()).data()!;assert.equal(Number.isInteger(categoryRevision(time)),false);await assert.rejects(call({action:'categories:save',id:ids[0],expectedUpdatedAt:old.updatedAt.toMillis(),category:{name:old.name,slug:old.slug,description:old.description,enabled:old.enabled,displayOrder:10}}),{code:'conflict'});await save(ids[0],old,10);assert.equal((await db.doc('categories/'+ids[0]).get()).get('displayOrder'),10);assert.equal((await rows()).find(c=>c.id===ids[0])!.displayOrder,10);assert.equal(nextCategoryOrder(await rows()),11);
+ const second=(await db.doc('categories/'+ids[1]).get()).data()!;await assert.rejects(save(ids[1],second,10),{code:'conflict'});assert.equal((await db.doc('categories/'+ids[1]).get()).get('displayOrder'),0);
+ old=(await db.doc('categories/'+ids[0]).get()).data()!;const race=await Promise.allSettled([save(ids[0],old,11),save(ids[0],old,12)]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);assert.equal(race.filter(r=>r.status==='rejected').length,1);
+ const current=await rows();await call({action:'categories:normalize',expected:current.map(c=>({id:c.id,updatedAt:c.updatedAt}))});assert.deepEqual((await rows()).map(c=>c.displayOrder),[1,2,3]);await assert.rejects(call({action:'categories:normalize',expected:current.map(c=>({id:c.id,updatedAt:c.updatedAt}))}),{code:'conflict'});
+ for(const [i,id]of ids.entries()){const data=(await db.doc('categories/'+id).get()).data()!;assert.equal(data.name,'Category '+i);assert.equal(data.slug,'category-'+i);assert.equal(data.description,'KEEP');assert.equal(data.enabled,i!==2);}assert.deepEqual((await db.doc('products/untouched').get()).data(),untouched);
+ }finally{await env.cleanup();}
+});
+test('HTTP enquiry list: single-index filtering, both sorts, all pages, safe retry, status persistence and dual authorization',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database,diagnostics:unknown[]=[],op=()=>randomUUID().replaceAll('-','');
+ const service=catalogService({database:db,auth:{verifyIdToken:async uid=>({uid,aud:'parinaya-silks',admin:['owner','claim'].includes(uid)}) as unknown as DecodedIdToken},media:{} as any}),server=createServer(catalogHandler(()=>service,d=>diagnostics.push(d))).listen(0,'127.0.0.1');await once(server,'listening');const url='http://127.0.0.1:'+(server.address() as {port:number}).port;
+ const post=async(body:Record<string,unknown>,role='owner')=>{const r=await fetch(url+'/api/catalog',{method:'POST',headers:{'Content-Type':'application/json',...(role==='guest'?{}:{Authorization:'Bearer '+role})},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
+ const list=(extra:Record<string,unknown>={})=>post({action:'enquiries:list',search:'',status:'All',...extra});
+ try{await env.clearFirestore();await db.doc('adminAccess/owner').set({enabled:true});await db.doc('adminAccess/record').set({enabled:true});for(let i=0;i<47;i++){const name='Visitor '+String(i).padStart(2,'0'),email='visitor'+i+'@example.test',phone='+919876543210';await db.doc('enquiries/'+String(i).padStart(32,'0')).set({schemaVersion:1,revision:1,name,email,phone,message:'Message '+i,status:['New','Read','Replied'][i%3],createdAt:Timestamp.fromMillis(1700000000000+i*1000),searchPrefixes:enquiryPrefixes(name,email,phone)});}await db.doc('orders/untouched').set({payment:{state:'CAPTURED'},shippingPaise:'9900',history:['KEEP']});const history=(await db.doc('orders/untouched').get()).data();
+ for(const role of ['guest','customer','claim','record'])assert.equal((await post({action:'enquiries:list',search:'',status:'All'},role)).status,role==='guest'?401:403);
+ const first=await list();assert.equal(first.status,200);assert.equal(first.body.total,47);assert.equal(first.body.items.length,20);assert.equal(first.body.items[0].name,'Visitor 46');const retry=await list();assert.deepEqual(retry.body,first.body);let all=first.body.items,cursor=first.body.nextCursor;while(cursor){const page=await list({cursor});assert.equal(page.status,200);all=[...all,...page.body.items];cursor=page.body.nextCursor;}assert.equal(all.length,47);assert.equal(new Set(all.map((v:any)=>v.id)).size,47);
+ const oldest=await list({sort:'oldest'});assert.equal(oldest.body.items[0].name,'Visitor 00');for(const status of ['New','Read','Replied']){const filtered=await list({status,search:'VISITOR',sort:'oldest'});assert.equal(filtered.status,200);assert.ok(filtered.body.items.every((row:any)=>row.status===status));assert.equal(filtered.body.total,status==='Replied'?15:16);}
+ assert.equal((await list({search:'visitor46@'})).body.total,1);assert.equal((await list({search:'987654'})).body.total,47);assert.equal((await list({search:'no-match'})).body.total,0);assert.equal((await list({sort:'wrong'})).status,400);assert.equal((await list({sort:'oldest',cursor:first.body.nextCursor})).status,400);
+ const row=first.body.items[1],update={action:'enquiries:update',id:row.id,expectedRevision:row.revision,operationId:op(),status:'Read'};await post(update);await post(update);assert.equal((await db.doc('enquiries/'+row.id).get()).get('revision'),2);const stale=await list({cursor:first.body.nextCursor});assert.equal(stale.status,409);const record=await db.doc('enquiries/'+row.id).get();assert.equal((await post({action:'enquiries:update',id:row.id,expectedRevision:record.get('revision'),operationId:op(),status:'Replied'})).status,200);assert.equal((await list({search:row.email,status:'Replied'})).body.total,1);assert.equal((await list()).body.total,47);assert.deepEqual((await db.doc('orders/untouched').get()).data(),history);assert.equal(diagnostics.length,0);
+ }finally{server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));await env.cleanup();}
+});

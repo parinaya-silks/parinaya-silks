@@ -6,7 +6,7 @@ For fulfilment, customer support and authorized store operators. Baseline: inspe
 
 Dashboard cards show current New (Placed), To Pack (Confirmed), To Dispatch (Processing), Out for Delivery (Shipped) and Delivered counts across all dates. Click a card to filter Orders. Each order has one saved status; Shipped is the stored status behind the Out for Delivery label. The selected-period new-order count remains separate. Visible Admin data refreshes about every 30 seconds and after supported changes.
 
-Orders supports its existing search, status/payment/date filters and pagination. Open details to confirm items, saved address, totals, payment and request history before changing an order. A cancelled/rejected order can retain a historical order value; that is not collected revenue.
+Opening Orders from the sidebar shows all orders. Dashboard cards explicitly apply their selected status. Deliberate filters remain when returning from order details; Clear filters restores all orders. Orders supports exact-reference search, status/payment/date filters and pagination. Open details to confirm items, saved address, totals, payment and request history before changing an order. A cancelled/rejected order can retain a historical order value; that is not collected revenue.
 
 ## Delivery updates
 

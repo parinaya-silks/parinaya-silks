@@ -27,7 +27,7 @@
 .product-chips .product-clear{background:transparent;border:0;color:#780d24;text-decoration:underline;padding-left:0}
 .product-table-panel{background:white;border:1px solid var(--product-border);border-radius:7px;overflow:visible}
 .product-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px}
-.product-table th{text-align:left;background:#f4f0f7;padding:13px 10px;color:#807562;text-transform:uppercase;letter-spacing:.04em;font-size:10px;font-weight:500;border-bottom:1px solid #ddd1c1}
+.product-table th{text-align:left;background:#FBF7F0;padding:13px 10px;color:#807562;text-transform:uppercase;letter-spacing:.04em;font-size:10px;font-weight:500;border-bottom:1px solid #ddd1c1}
 .product-table td{padding:14px 10px;border-bottom:1px solid #f0eae3;vertical-align:middle;overflow-wrap:anywhere}
 .product-table tr:last-child td{border-bottom:0}
 .product-table th:nth-child(1){width:30px}
@@ -319,3 +319,8 @@
 .product-variant-fields .product-hex-field input{min-width:110px;flex:1}
 .product-variant-fields small{font-size:11px;overflow-wrap:normal}
 @media(max-width:767px){.product-variant-fields{grid-template-columns:minmax(0,1fr) 104px;gap:12px}.product-variant-fields>.product-label:first-child{grid-column:1/-1}}
+
+/* Action labels must never inherit character wrapping from fixed-width cells. */
+.product-table th:nth-child(1){width:4%}.product-table th:nth-child(2){width:28%}.product-table th:nth-child(3){width:14%}.product-table th:nth-child(4){width:14%}.product-table th:nth-child(5){width:14%}.product-table th:nth-child(6){width:10%}.product-table th:last-child{width:16%}
+.product-actions{flex-wrap:nowrap;min-width:0}.product-actions>button,.product-menu-wrap{flex-shrink:0}.product-actions button{white-space:nowrap;overflow-wrap:normal;word-break:normal}.product-menu{width:210px;max-width:calc(100vw - 32px)}.product-menu button{white-space:normal;overflow-wrap:normal;word-break:normal}.product-menu .coupon-dialog button{white-space:normal}.product-table .product-price strong{overflow-wrap:normal;font-variant-numeric:tabular-nums}.product-table .product-category>span{max-width:100%;overflow-wrap:break-word}
+@media(min-width:1024px) and (max-width:1250px){.product-table .product-actions>.product-secondary span{display:none}}

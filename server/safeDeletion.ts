@@ -1,3 +1,4 @@
+import {categoryRevision} from './categories.ts';
 import {createHash} from 'node:crypto';
 import {FieldValue,type Firestore,type Transaction} from 'firebase-admin/firestore';
 import {ProductError} from '../src/products/model.ts';
@@ -6,12 +7,12 @@ export type DeleteKind='categories'|'products'|'coupons'|'campaigns';
 export function containsReference(value:unknown,id:string):boolean {return value===id||Array.isArray(value)&&value.some(v=>containsReference(v,id))||!!value&&typeof value==='object'&&Object.values(value).some(v=>containsReference(v,id));}
 export function safeDeletion(db:Firestore,access:(tx:Transaction,uid:string)=>Promise<void>){return async(uid:string,body:Record<string,unknown>)=>{
  exact(body,['action','kind','id','expectedRevision','confirmation','operationId']);const kind=body.kind as DeleteKind,id=body.id as string,operationId=referenceId(body.operationId);
- if(!['categories','products','coupons','campaigns'].includes(kind)||typeof id!=='string'||!(kind==='coupons'?/^[A-Z0-9][A-Z0-9_-]{2,31}$/:kind==='campaigns'?/^[a-f0-9]{32}$/:/^[A-Za-z0-9]{20}$/).test(id)||body.confirmation!=='DELETE'||!Number.isSafeInteger(body.expectedRevision)||Number(body.expectedRevision)<1)throw new ProductError('invalid','Identify the current record and type DELETE to confirm.');
+ if(!['categories','products','coupons','campaigns'].includes(kind)||typeof id!=='string'||!(kind==='coupons'?/^[A-Z0-9][A-Z0-9_-]{2,31}$/:kind==='campaigns'?/^[a-f0-9]{32}$/:/^[A-Za-z0-9]{20}$/).test(id)||body.confirmation!=='DELETE'||(kind==='categories'?(typeof body.expectedRevision!=='number'||!Number.isFinite(body.expectedRevision)):!Number.isSafeInteger(body.expectedRevision))||Number(body.expectedRevision)<1)throw new ProductError('invalid','Identify the current record and type DELETE to confirm.');
  const hash=createHash('sha256').update(JSON.stringify([kind,id,body.expectedRevision])).digest('hex');
  return db.runTransaction(async tx=>{
   await access(tx,uid);const receipt=db.doc('deletionOperations/'+operationId),tombstone=db.doc('deletedRecords/'+kind+'_'+id),[accepted,removed,doc]=await tx.getAll(receipt,tombstone,db.doc(kind+'/'+id));
   if(accepted.exists){if(accepted.data()?.hash!==hash||accepted.data()?.actor!==uid)throw new ProductError('conflict','Deletion operation changed.');return {deleted:true,recovered:true};}
-  if(!doc.exists||removed.exists)throw new ProductError('not-found','Record no longer exists. Refresh this section.');const raw=doc.data()!,revision=kind==='categories'?raw.updatedAt?.toMillis?.():raw.revision;
+  if(!doc.exists||removed.exists)throw new ProductError('not-found','Record no longer exists. Refresh this section.');const raw=doc.data()!,revision=kind==='categories'?categoryRevision(raw.updatedAt):raw.revision;
   if(revision!==body.expectedRevision)throw new ProductError('conflict','Record changed. Reload before deleting.');
   if(kind==='categories'&&raw.enabled!==false)throw new ProductError('deletion-blocked','Disable this category first. Products and campaigns must not depend on it.');
   // Published products/campaigns can have external analytics or shared URLs which cannot be exhaustively audited here.

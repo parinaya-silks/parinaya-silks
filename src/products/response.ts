@@ -10,7 +10,9 @@ export async function catalogResponse(result:Response,development=false) {
   if(!data || typeof data!=='object' || Array.isArray(data))throw new ProductError('unavailable',productLoadFailure);
   if(!result.ok) {
     const message=!development && result.status>=500?productLoadFailure:typeof data.message==='string'?data.message:'Catalog request failed.';
-    throw new ProductError(typeof data.code==='string'?data.code:'unavailable',message,data.fields && typeof data.fields==='object'?data.fields:{});
+    const error=new ProductError(typeof data.code==='string'?data.code:'unavailable',message,data.fields&&typeof data.fields==='object'?data.fields:{});
+    if(typeof data.requestId==='string'&&/^[a-f0-9-]{36}$/.test(data.requestId))Object.assign(error,{requestId:data.requestId});
+    throw error;
   }
   return data;
 }
