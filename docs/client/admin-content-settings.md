@@ -16,7 +16,7 @@ For authorized content editors and store owners. Baseline: inspected local code,
 
 **Policies:** enter business-approved nonempty wording and confirm approval before saving. Policy UI is implemented, but legal/commercial approval must come from the owner. Do not publish historical sample/draft text as a final policy.
 
-**Contact Information:** maintain public phone/email, effective WhatsApp number/message, address/map link, hours and supported Instagram/Facebook URLs. Public projection/validation omits invalid or unavailable values. Review visibility on the customer site after an authorized release/save. Support links open the appropriate external application; they are not outbound messaging services. The public contact address is separate from the private dispatch origin.
+**Contact Information:** maintain public phone/email, effective WhatsApp number/message, address/map link, hours and up to 20 ordered social platforms. Add/edit/remove a name, HTTPS URL, icon identifier, visibility and display order. Existing Instagram/Facebook fields are projected into the initial list without a data migration; an explicitly saved empty list removes all public profiles. Public projection/validation omits invalid or unavailable values. Review visibility on the customer site after an authorized release/save. Support links open the appropriate external application; they are not outbound messaging services. The public contact address is separate from the private dispatch origin.
 
 **About Us:** use the existing story/founder/image fields and verified media workflow. Confirm rights and factual business claims with the client.
 
@@ -52,7 +52,7 @@ Google Routes configuration is required before this checkout cutover can accept 
 
 **Enable COD for new orders** controls new COD acceptance. Accepted historical COD orders and operation recovery remain valid when COD is later disabled. Missing legacy COD configuration preserves availability; malformed saved configuration fails closed.
 
-Online availability is reported from trusted Razorpay mode/credential/activation/account/worker checks. There is no independent Admin Online Payments OFF toggle. Do not interpret a configuration label as proof of a successful payment. Maintenance mode is not implemented as an operational store switch.
+Online availability is reported from trusted Razorpay mode/credential/activation/account/worker checks. There is no independent Admin Online Payments OFF toggle. Do not interpret a configuration label as proof of a successful payment. Website Maintenance Mode defaults OFF and has a separate Save Availability action. ON closes normal customer pages and shopping/catalog/new-order APIs while preserving Admin and existing payment verification/recovery/webhooks. OFF restores server access immediately and updates connected pages through a minimal public signal; polling is the fallback. See [maintenance behaviour and limits](../OWNER_IMPROVEMENTS.md).
 
 ## Save, cancel and conflicting edits
 

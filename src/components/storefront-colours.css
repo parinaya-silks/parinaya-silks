@@ -1,7 +1,7 @@
 /* Approved customer palette. Keep Admin's shared Tailwind/theme values intact.
    Colours only: no sizing, opacity, image filters or layout rules belong here. */
 html:has(.customer-storefront), body:has(.customer-storefront), .customer-storefront {
-  --store-canvas:#FAF7F0; --store-surface:#FFFFFF; --store-primary:#6B2435;
+  --store-canvas:#FAF7F0; --store-surface:#FFFFFF; --store-primary:#6B2435; --store-header:#780D24;
   --store-heading:#171511; --store-body:#171511; --store-surface-text:#171511;
   --store-deep:#4F0818; --store-gold:#B68A3A; --store-border:#E4DCCD;
 }
@@ -182,3 +182,5 @@ body:has(.customer-storefront) dialog :is(input:not([type=checkbox]):not([type=r
 .customer-storefront [class~="border-[#780D24]"] {border-color:var(--store-primary)}
 .customer-storefront [class~="text-[#B88A44]"] {color:var(--store-gold)}
 .customer-storefront :is(.storefront-drawer,.storefront-bottom-nav,.discovery-search,.discovery-toolbar>*,.profile-dialog,.customer-shopping-dialog) {border-color:var(--store-border)}
+
+.customer-storefront[data-store-theme=classic-cream] .storefront-header{background-color:var(--store-header);}

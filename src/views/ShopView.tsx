@@ -83,19 +83,7 @@ export const ShopView:React.FC<ShopViewProps>=({initialCategory,initialSearch=''
                         <span className="font-sans text-[11px] uppercase tracking-widest text-[#FBF7F0] bg-[#392E2E]/90 px-3 py-1 rounded-sm border border-white/20 font-medium">
                           Sold Out
                         </span>
-                        <button
-                          disabled={!demoEnabled}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            alert('Stock notifications are not connected. No subscription was created.');
-                          }}
-                          className="mt-2.5 w-full bg-white text-[#231919] font-sans text-[10px] font-semibold py-1.5 px-2 rounded-lg shadow-sm border border-[#E8DDD6] active:scale-95 transition-transform flex items-center justify-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px] text-[#780D24]">
-                            notifications
-                          </span>
-                          <span className="truncate">Notifications unavailable</span>
-                        </button>
+
                       </div>
                     )}
                   </div>

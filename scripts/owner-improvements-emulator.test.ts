@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
+import {doc,getDoc,setDoc,setLogLevel} from 'firebase/firestore';
+import type {DecodedIdToken} from 'firebase-admin/auth';
+import {serverFirebase} from '../server/firebase.ts';
+import {catalogService} from '../server/catalog.ts';
+import {emptyProduct} from '../src/products/model.ts';
+import {blankAddress} from '../src/delivery/model.ts';
+import {initialShipping} from '../src/shipping/model.ts';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080'||process.env.FIREBASE_AUTH_EMULATOR_HOST!=='127.0.0.1:9099'||process.env.VERCEL)throw Error('Loopback emulators required.');
+process.env.PARINAYA_SERVER_EMULATORS='true';process.env.DISTANCE_DELIVERY_ENABLED='false';setLogLevel('silent');
+test('owner improvements: maintenance, permissions, safe deletion, ordering, counts, history, social CRUD and COD',async()=>{
+ const env=await initializeTestEnvironment({projectId:'parinaya-silks',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}}),db=serverFirebase().database,op=()=>randomUUID().replaceAll('-','');
+ const service=catalogService({database:db,auth:{verifyIdToken:async uid=>({uid,email:uid+'@example.test',aud:'parinaya-silks',admin:['owner','claim'].includes(uid)}) as unknown as DecodedIdToken},media:{} as any});
+ const call=(body:Record<string,unknown>,uid='owner')=>service.privileged(uid,body) as Promise<any>;
+ const pid='p'.repeat(20),cid='c'.repeat(20),aid='a'.repeat(32),stamp=new Date();
+ const remove=(kind:string,id:string,revision:number)=>({action:'records:delete',kind,id,expectedRevision:revision,confirmation:'DELETE',operationId:op()});
+ const maintenance=(enabled:boolean,expectedRevision:number)=>call({action:'maintenance:save',enabled,expectedRevision,operationId:op()});
+ try{
+ await env.clearFirestore();await db.doc('adminAccess/owner').set({enabled:true});await db.doc('adminAccess/record').set({enabled:true});
+ assert.equal((await service.publicAvailability()).enabled,false);
+ for(const uid of ['customer','claim','record'])for(const action of ['maintenance:get','maintenance:save','records:delete','categories:normalize'])await assert.rejects(call({action},uid),{code:'permission'});
+ await db.doc('categories/'+cid).set({name:'Silk',slug:'silk',enabled:true,displayOrder:0,createdAt:stamp,updatedAt:stamp});await db.doc('categorySlugs/silk').set({categoryId:cid,createdAt:stamp});
+ const second='d'.repeat(20);await db.doc('categories/'+second).set({name:'Cotton',slug:'cotton',enabled:false,displayOrder:0,createdAt:stamp,updatedAt:stamp});await db.doc('categorySlugs/cotton').set({categoryId:second,createdAt:stamp});
+ const expected=[{id:cid,updatedAt:stamp.getTime()},{id:second,updatedAt:stamp.getTime()}];await call({action:'categories:normalize',expected});assert.equal((await db.doc('categories/'+second).get()).get('displayOrder'),1);assert.equal((await db.doc('categories/'+cid).get()).get('displayOrder'),2);await assert.rejects(call({action:'categories:normalize',expected}),{code:'conflict'});
+ const product={...emptyProduct(),schemaVersion:1,revision:1,status:'Published',name:'Silk fixture',description:'Local only',slug:'silk-fixture',sku:'SILK',categoryId:cid,pricePaise:100000,inventory:{mode:'simple',quantity:10},lowStockThreshold:10,coverMediaId:'f'.repeat(32),images:[{mediaId:'f'.repeat(32),alt:'Fixture',url:'https://res.cloudinary.com/parinaya-emulator/image/upload/v1/fixture.jpg',width:300,height:400}],createdAt:stamp,updatedAt:stamp};await db.doc('products/'+pid).set(product);
+ await db.doc('siteSettings/shipping').set({...initialShipping(),schemaVersion:1,revision:1});await db.doc(`customerShopping/customer/addresses/${aid}`).set({...blankAddress(),recipientName:'Local Customer',mobileNumber:'+919876543210',pinCode:'500072',line1:'Flat 1',locality:'KPHB',city:'Hyderabad',state:'Telangana',revision:1,createdAt:stamp,updatedAt:stamp});await db.doc(`customerShopping/customer/bag/${pid}--simple`).set({productId:pid,variantId:null,quantity:1,createdAt:stamp});
+ const review:any=await call({action:'orders:review',addressId:aid,couponCode:null},'customer'),body={action:'orders:place',addressId:aid,couponCode:null,fingerprint:review.fingerprint,operationId:op()};
+ assert.equal(review.shipping.shippingPaise,'9900');const accepted=(await call(body,'customer')).order;
+ let order=accepted;for(const command of ['Confirmed','Delivered'])order=await call({action:'adminOrders:update',id:order.id,expectedRevision:order.revision,operationId:op(),command});assert.equal(order.status,'Delivered');assert.equal(order.courier,'');assert.equal(order.paymentStatus,'due');
+ await assert.rejects(call({action:'adminOrders:update',id:order.id,expectedRevision:order.revision,operationId:op(),command:'collect',reference:'disallowed'}),{code:'permission'});
+ const before=(await db.doc('orders/'+order.id).get()).data();
+ await db.doc('enquiries/new').set({status:'New'});await db.doc('enquiries/read').set({status:'Read'});let attention=await call({action:'dashboard:attention'});assert.equal(attention.statuses.Delivered,1);assert.equal(attention.orders,0);assert.equal(attention.enquiries,1);assert.equal(attention.inventory,1);
+ await db.doc('inventoryAudit/legacy').set({productId:pid,actor:'legacy',before:{mode:'simple',quantity:3},after:{mode:'simple',quantity:4}});await db.doc('inventoryAudit/manual').set({productId:pid,createdAt:stamp,source:'manual',variantId:null,before:{mode:'simple',quantity:4},after:{mode:'simple',quantity:5}});const audit=await call({action:'inventory:history',productId:pid,complete:true});assert.ok(audit.items.some((r:any)=>r.id==='legacy'));assert.equal(audit.nextCursor,null);
+ let contact=await call({action:'contact:get'});await call({action:'contact:save',expectedRevision:contact.revision,operationId:op(),contact:{...contact.contact,instagram:'https://instagram.com/store',socials:[{id:'youtube',name:'YouTube',url:'https://youtube.com/@store',icon:'youtube',enabled:true,displayOrder:1}]}});const publicContent=await service.publicContent();assert.equal(publicContent.contact.socials![0].name,'YouTube');contact=await call({action:'contact:get'});await call({action:'contact:save',expectedRevision:contact.revision,operationId:op(),contact:{...contact.contact,socials:[]}});assert.deepEqual((await service.publicContent()).contact.socials,[]);
+ // Safe deletes never cascade; unchanged category/product/order records survive denied operations.
+ await assert.rejects(call(remove('products',pid,(await db.doc('products/'+pid).get()).get('revision'))),{code:'deletion-blocked'});await db.doc('categories/'+cid).update({enabled:false});const category=(await db.doc('categories/'+cid).get()).data()!;await assert.rejects(call(remove('categories',cid,category.updatedAt.toMillis())),{code:'deletion-blocked'});
+ const unused='u'.repeat(20);await db.doc('categories/'+unused).set({name:'Unused',slug:'unused',enabled:false,displayOrder:3,createdAt:stamp,updatedAt:stamp});await db.doc('categorySlugs/unused').set({categoryId:unused});const deletion=remove('categories',unused,stamp.getTime());await assert.rejects(call({...deletion,confirmation:'wrong'}),{code:'invalid'});assert.equal((await call(deletion)).deleted,true);assert.equal((await call(deletion)).recovered,true);assert.equal((await db.doc('categorySlugs/unused').get()).exists,true);
+ const draft='x'.repeat(20);await db.doc('products/'+draft).set({...product,status:'Draft',name:'Untouched draft',slug:'draft',categoryId:''});assert.equal((await call(remove('products',draft,1))).deleted,true);
+ await db.doc('coupons/UNUSED').set({enabled:false,uses:0,revision:1,code:'UNUSED'});assert.equal((await call(remove('coupons','UNUSED',1))).deleted,true);await db.doc('coupons/USED').set({enabled:false,uses:1,revision:1,code:'USED'});await assert.rejects(call(remove('coupons','USED',1)),{code:'deletion-blocked'});
+ const campaign='e'.repeat(32);await db.doc('campaigns/'+campaign).set({name:'Unused draft',slug:'draft-sale',intent:'draft',revision:1});await db.doc('siteSettings/testBanner').set({link:'/sale/draft-sale'});await assert.rejects(call(remove('campaigns',campaign,1)),{code:'deletion-blocked'});await db.doc('siteSettings/testBanner').delete();assert.equal((await call(remove('campaigns',campaign,1))).deleted,true);
+ // Atomic new-order gate, client rules, public APIs and immediate OFF recovery.
+ await db.doc('categories/'+cid).update({enabled:true});await maintenance(true,0);assert.equal((await service.publicAvailability()).enabled,true);assert.equal((await db.doc('storefrontAvailability/current').get()).get('enabled'),true);
+ for(const run of [()=>service.publicList(),()=>service.publicGet('silk-fixture'),()=>service.publicBrowse({browse:'1'}),()=>service.publicContent(),()=>service.publicAppearance(),()=>call({action:'shopping:get'},'customer'),()=>call({action:'orders:review',addressId:aid,couponCode:null},'customer')])await assert.rejects(run,{code:'unavailable'});
+ await assert.rejects(call({...body,operationId:op()},'customer'),{code:'unavailable'});assert.equal((await call(body,'customer')).order.id,order.id,'Accepted order recovery remains available during maintenance');assert.equal((await call({action:'adminOrders:get',id:order.id})).id,order.id);
+ const publicDb=env.unauthenticatedContext().firestore(),customer=env.authenticatedContext('customer').firestore(),admin=env.authenticatedContext('owner',{admin:true}).firestore();await assertSucceeds(getDoc(doc(publicDb,'storefrontAvailability/current')));await assertFails(setDoc(doc(publicDb,'storefrontAvailability/current'),{enabled:false}));await assertFails(getDoc(doc(publicDb,'categories/'+cid)));await assertFails(getDoc(doc(publicDb,'products/'+pid)));await assertFails(getDoc(doc(customer,`customerShopping/customer/bag/${pid}--simple`)));await assertSucceeds(getDoc(doc(admin,'categories/'+cid)));await assertFails(setDoc(doc(customer,'siteSettings/maintenance'),{enabled:false}));
+ await maintenance(false,1);assert.equal((await service.publicAvailability()).enabled,false);assert.equal((await service.publicBrowse({browse:'1'})).total,1);await assertSucceeds(getDoc(doc(publicDb,'categories/'+cid)));assert.deepEqual((await db.doc('orders/'+order.id).get()).data(),before);
+ }finally{await env.cleanup();}
+});

@@ -33,7 +33,7 @@ test('floating social links use only validated existing public fields and empty 
  assert.deepEqual(socialLinks(publicContact()),[]);assert.deepEqual(socialLinks({...publicContact(),instagram:'https://instagram.com.evil.test/private'}),[]);
  const saved=storedContact({instagram:'https://www.instagram.com/parinaya_3999/',facebook:'https://facebook.com/local',address:'PRIVATE',showAddress:false});
  const view=publicContact(saved);assert.equal(view.address,'');assert.equal(socialLinks(view).length,2);assert.ok(!JSON.stringify(socialLinks(view)).includes('PRIVATE'));
- assert.deepEqual(socialLinks(publicContact({...saved,instagram:'',facebook:''})),[]);
+ assert.deepEqual(socialLinks(publicContact({...saved,instagram:'',facebook:'',socials:[]})),[]);
 });
 test('brand display changes preserve infrastructure identifiers and saved arrival keys',async()=>{
  assert.equal(BRAND_NAME,'Parinaya Sarees');const config=await readFile('src/services/firebase/config.ts','utf8'),seo=await readFile('src/content/Seo.tsx','utf8'),adapter=await readFile('src/products/adapter.ts','utf8');

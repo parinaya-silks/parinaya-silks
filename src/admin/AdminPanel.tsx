@@ -29,12 +29,16 @@ function unavailableWrite(): never { throw new Error('This module is not connect
 export function AdminPanel({ path, email, onSignOut }: { path: string; email: string; onSignOut: () => void }) {
   const [customersState,setCustomersState]=useState(()=>restoreCustomers(window.history.state,getAdminClients().auth.currentUser?.uid||''));
   const [ordersState,setOrdersState]=useState(initialOrderList);
+  const [,refreshNavigation]=useState(0);
   const [range,setRange]=useState(()=>periodRange('month'));
   const navigate = (destination: string) => {
     if (!window.dispatchEvent(new Event('parinaya:before-admin-navigation', { cancelable: true }))) return;
-    const next = destination === '/' ? '/' : safeAdminDestination(destination);
-    window.history.pushState({productsContext:window.history.state?.productsContext,customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
+    const target=new URL(destination,window.location.origin),status=target.searchParams.get('status');
+    if(target.pathname==='/admin/orders'&&['Placed','Confirmed','Processing','Shipped','Delivered'].includes(status||''))setOrdersState({...initialOrderList(),filters:{...initialOrderList().filters,statuses:[status as any]}});
+    const next = destination === '/' ? '/' : safeAdminDestination(target.pathname);
+    window.history.pushState({attentionQuery:target.search,productsContext:window.history.state?.productsContext,customersContext:{uid:getAdminClients().auth.currentUser?.uid,state:path==='/admin/customers'?{...customersState,scroll:window.scrollY}:customersState}}, '', next);
     window.dispatchEvent(new PopStateEvent('popstate', { state: { skipUnsaved: true } }));
+    refreshNavigation(n=>n+1);
     window.scrollTo(0, 0);
   };
   let content: React.ReactNode;
@@ -55,12 +59,12 @@ export function AdminPanel({ path, email, onSignOut }: { path: string; email: st
     content=uid?<CustomerDetails uid={uid} onNavigate={navigate}/>:<section><h1>Customer not found</h1><button onClick={()=>navigate('/admin/customers')}>Back to Customers</button></section>;
   } else if(path==='/admin/coupons'){content=<CouponsPage/>;
   } else if(path==='/admin/marketing'||path.startsWith('/admin/marketing/')){content=<CampaignManager key={path} path={path} onNavigate={navigate}/>;
-  } else if(path==='/admin/inventory'){content=<InventoryOverview onNavigate={navigate}/>;
+  } else if(path==='/admin/inventory'){content=<InventoryOverview key={window.history.state?.attentionQuery||'all'} initialAlerts={window.history.state?.attentionQuery==='?stock=alerts'} onNavigate={navigate}/>;
   } else if(path==='/admin/banners'){content=<BannersPage/>;
   } else if(path==='/admin/website-content'||path.startsWith('/admin/website-content/')){content=<WebsiteContent path={path} onNavigate={navigate}/>;
   } else if(path==='/admin/contact-information'){content=<ContactInformation/>;
   } else if(path==='/admin/about'){content=<AboutEditor/>;
-  } else if(path==='/admin/enquiries'){content=<EnquiriesPage/>;
+  } else if(path==='/admin/enquiries'){content=<EnquiriesPage key={window.history.state?.attentionQuery||'all'} initialStatus={window.history.state?.attentionQuery==='?status=New'?'New':'All'}/>;
   } else {
     const title = path.startsWith('/admin/orders/') ? 'Order Details' : path === '/admin/products/new' ? 'Add Product' : path.startsWith('/admin/products/edit/') ? 'Edit Product' : path === '/admin/coupons' ? 'Coupons & Loyalty' : 'Store Settings';
     content = <ModuleUnavailable title={title} />;

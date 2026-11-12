@@ -1,3 +1,4 @@
+import {assertStoreOpen} from './maintenance.ts';
 import {deliveryQuotes} from './deliveryQuotes.ts';
 import {distanceDeliveryEnabled} from './deliveryMode.ts';
 import {codAvailable} from '../src/shipping/distance.ts';
@@ -58,6 +59,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
     return db.runTransaction(async tx=>{
       const recorded=await tx.get(receipt);
       if(recorded.exists){if(recorded.data()?.hash!==hash||recorded.data()?.orderId!==orderId)throw new ProductError('conflict','This operation was used for a different request.');return {order:projection(present(await tx.get(ref)),false),recovered:true};}
+      await assertStoreOpen(db,tx);
       const paymentLock=await tx.get(db.doc('paymentCheckoutLocks/'+uid));
       if(paymentLock.exists)throw new ProductError('conflict','A previous online payment is unresolved. Open My Orders and check payment status before ordering again.');
       const {value:current,discount,loyal}=await review(tx,uid,addressId,body.couponCode,source,body.points===undefined?0:body.points,body.deliveryQuoteId);
@@ -142,7 +144,7 @@ export function ordersService(db:Firestore,access:(tx:Transaction,uid:string)=>P
         const delivery=deliveryRecord(old,body,old.status);if(!deliveryChanged(old,delivery))throw new ProductError('invalid','No delivery details have changed.');
         Object.assign(update,delivery);history.action='Delivery details updated';
       }else if(command==='collect'){
-        if(old.status!=='Delivered'||old.paymentStatus!=='due')throw new ProductError('conflict','COD collection can be recorded once after delivery.');update.paymentStatus='collected';update.collectedPaise=Number(old.totalPaise);update.collection={actor:uid,at:now(),reference:text(body.reference,150,true),note};
+         throw new ProductError('permission','New COD collection records are no longer supported. Historical records are preserved.');
       }else if(command==='note'){if(!note)throw new ProductError('invalid','Enter an internal note.');update.internalNotes=note;history.action='Note';}
       else if(command==='approve-request'||command==='reject-request'){
         if(old.request?.status!=='pending')throw new ProductError('conflict','There is no pending request.');if(!note)throw new ProductError('invalid','Record the review reason.');update.request={...old.request,status:command==='approve-request'?'approved':'rejected'};

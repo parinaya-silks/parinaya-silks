@@ -12,6 +12,12 @@ For developers/integrators. Baseline: inspected local source, 11 November 2026. 
 
 Catalog POSTs use `Content-Type: application/json` and a body with `action`. Except anonymous enquiry submission, they require `Authorization: Bearer <Firebase ID token>`. The server obtains UID/permissions from the verified token; a body UID is not an authorization substitute. Responses are private/no-store. Catalog bodies are bounded to 100,000 bytes, with a narrower enquiry limit.
 
+## Availability and safe administration
+
+`GET /api/catalog?availability=store` exposes only enabled/revision and the approved public support email. `maintenance:get` and `maintenance:save` require dual Admin access; saves use expectedRevision and operationId. `categories:normalize` requires an exact expected ID/timestamp snapshot. `records:delete` requires kind, id, expectedRevision, confirmation (`DELETE`) and operationId; dependency checks are transactional and fail closed. New COD `collect` commands reject; historical operation recovery and saved financial records remain.
+
+Maintenance blocks normal public catalog/content/appearance/campaign/offers reads, enquiry submission, customer shopping/address/profile/review actions and new order acceptance. Payment capabilities/verification/status/resume, signed webhooks, worker/reconciliation, accepted order recovery and Admin operations remain independent.
+
 ## Public catalog reads
 
 | Query | Purpose |

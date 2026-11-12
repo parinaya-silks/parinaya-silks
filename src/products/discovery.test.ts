@@ -15,9 +15,9 @@ test('catalog matching combines groups with OR colours, literal substring search
 test('server discovery filters before pagination with exact counts, facets and query/version-bound cursors',()=>{
  const rows=Array.from({length:240},(_,i)=>({...emptyProduct(),id:String(i),revision:1,categoryName:'Cotton',name:i<210?'Red':'Blue',colorName:i<210?'Red':'Blue',colorHex:'#123456',pricePaise:i+1}));
  const all=discoveryFilters({}),first=discoveryPage(rows,all,undefined,'all');assert.equal(first.total,240);assert.equal(first.items.length,50);assert.equal(first.facets.colors.length,2);
- const next=discoveryPage(rows,all,first.nextCursor!,'all');assert.equal(next.items[0].id,'50');assert.equal(new Set([...first.items,...next.items].map(i=>i.id)).size,100);
+ const next=discoveryPage(rows,all,first.nextCursor!,'all');assert.equal(next.items[0].id,[...rows].sort((a,b)=>b.id.localeCompare(a.id))[50].id);assert.equal(new Set([...first.items,...next.items].map(i=>i.id)).size,100);
  assert.throws(()=>discoveryPage(rows,all,Buffer.from('null').toString('base64url'),'all'),{code:'invalid'});
- const blue=discoveryPage(rows,discoveryFilters({q:'blue'}),undefined,'all');assert.equal(blue.total,30);assert.equal(blue.items[0].id,'210');assert.equal(blue.nextCursor,null);
+ const blue=discoveryPage(rows,discoveryFilters({q:'blue'}),undefined,'all');assert.equal(blue.total,30);assert.equal(blue.items[0].id,'239');assert.equal(blue.nextCursor,null);
  assert.throws(()=>discoveryPage(rows,discoveryFilters({q:'blue'}),first.nextCursor!,'all'),{code:'conflict'});assert.throws(()=>discoveryPage([...rows,{...rows[0],id:'new'}],all,first.nextCursor!,'all'),{code:'conflict'});
 });
 test('banner timing defaults safely while writes require 2-15 whole seconds',()=>{

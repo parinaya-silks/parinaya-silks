@@ -1,2 +1,2 @@
-import {contactUrl,type PublicContact} from './model.ts';
-export function socialLinks(contact:Pick<PublicContact,'instagram'|'facebook'>){return (['instagram','facebook'] as const).flatMap(kind=>{try{const href=contactUrl(contact[kind],kind);return href?[{kind,href,label:kind==='instagram'?'Instagram':'Facebook'}]:[];}catch{return [];}});}
+import {legacySocials,validateSocials,type PublicContact} from './model.ts';
+export function socialLinks(contact:Pick<PublicContact,'instagram'|'facebook'|'socials'>){try{return validateSocials(contact.socials??legacySocials(contact)).filter(s=>s.enabled).sort((a,b)=>a.displayOrder-b.displayOrder||a.id.localeCompare(b.id)).map(s=>({kind:s.id,icon:s.icon,href:s.url,label:s.name}));}catch{return [];}}

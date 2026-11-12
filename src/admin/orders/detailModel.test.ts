@@ -10,8 +10,8 @@ test('detail finance matches current active COD semantics including partial, can
  assert.throws(()=>orderFinance({...base,collectedPaise:2000000}));assert.throws(()=>orderFinance({...base,subtotalPaise:'unknown'}));
 });
 test('detail actions retain the real state machine and request/refund prerequisites',()=>{
- assert.ok(orderCommands(base).includes('collect'));assert.ok(!orderCommands({...base,status:'Shipped'}).includes('collect'));
- assert.ok(orderCommands({...base,status:'Confirmed'}).includes('Processing'));assert.ok(!orderCommands({...base,status:'Confirmed'}).includes('Shipped'));
+ assert.ok(!orderCommands(base).includes('collect'));assert.ok(!orderCommands({...base,status:'Shipped'}).includes('collect'));
+ assert.ok(orderCommands({...base,status:'Confirmed'}).includes('Processing'));assert.ok(orderCommands({...base,status:'Confirmed'}).includes('Shipped'));
  assert.ok(orderCommands({...base,status:'Processing'}).includes('Shipped'));
  assert.ok(!orderCommands(base).includes('manual-refund'));
  assert.ok(orderCommands({...base,paymentStatus:'collected',request:{status:'resolved'} as never}).includes('manual-refund'));

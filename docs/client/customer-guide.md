@@ -8,7 +8,7 @@ For customers and store support. Describes the inspected local application on 11
 
 Register with name, email, mobile number, password and confirmation. The phone field normalizes country-code contact information. Registration signs the customer in; the application does not require or send a customer email-verification step. Password reset uses Firebase email actions and a neutral confirmation message.
 
-Sign in with email/password. Remember me determines persistent versus session sign-in. If account creation succeeds but profile saving fails, use the recovery screen rather than registering again. Account details and saved addresses belong to the signed-in account. The email is the sign-in identity; the profile editor is not an email-change tool. Sign out before switching accounts on a shared device.
+Sign in with email/password. Login artwork uses only the saved image for the current device; an unconfigured or failed image leaves a blank background. Remember me determines persistent versus session sign-in. If account creation succeeds but profile saving fails, use the recovery screen rather than registering again. Account details and saved addresses belong to the signed-in account. The email is the sign-in identity; the profile editor is not an email-change tool. Sign out before switching accounts on a shared device.
 
 ## Find and inspect a saree
 
@@ -60,3 +60,5 @@ Support links use the store's published phone, email or WhatsApp details. WhatsA
 Analytics is optional. Allow analytics/No thanks and footer preferences control the storefront's GA4 page views; declining does not prevent shopping.
 
 Sources: `src/customer/service.ts`, `src/views/`, `src/products/PublicProduct.tsx`, `src/shopping/`, `src/offers/AvailableCoupons.tsx`, `src/delivery/`, `src/orders/CustomerOrderPage.tsx`, `src/analytics/`. Detailed existing references: [authentication](../CUSTOMER_AUTH.md), [purchase journey](../PURCHASE_JOURNEY.md), [loyalty](../LOYALTY.md), [distance delivery](../DISTANCE_DELIVERY.md). Read the [index](../README.md) before using historical milestone statements.
+
+During Website Maintenance Mode normal customer pages are replaced by the maintenance notice. Existing orders and backend payment recovery remain preserved. When the store reopens, connected pages restore automatically.

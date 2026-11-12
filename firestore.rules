@@ -10,6 +10,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/adminAccess/$(request.auth.uid))
         && get(/databases/$(database)/documents/adminAccess/$(request.auth.uid)).data.enabled == true;
     }
+    function storeOpen() {
+      return !exists(/databases/$(database)/documents/siteSettings/maintenance)
+        || (get(/databases/$(database)/documents/siteSettings/maintenance).data.schemaVersion == 1
+          && get(/databases/$(database)/documents/siteSettings/maintenance).data.revision is int
+          && get(/databases/$(database)/documents/siteSettings/maintenance).data.revision >= 1
+          && get(/databases/$(database)/documents/siteSettings/maintenance).data.enabled == false);
+    }
     // The trusted provisioning script alone manages these records.
     // A user may check/listen to only their own permission status.
     match /adminAccess/{uid} {
@@ -18,12 +25,12 @@ service cloud.firestore {
     }
     // Private shopping references. Trusted API alone validates and writes items.
     match /customerShopping/{uid}/{kind}/{item} {
-      allow get, list: if signedIn() && request.auth.uid == uid && kind in ['bag','wishlist'];
+      allow get, list: if storeOpen() && signedIn() && request.auth.uid == uid && kind in ['bag','wishlist'];
       allow write: if false;
     }
     // Delivery addresses and the single default pointer are private, server-written.
     match /customerShopping/{uid}/addresses/{id} {
-      allow get, list: if signedIn() && request.auth.uid == uid;
+      allow get, list: if storeOpen() && signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
     match /customerShopping/{uid}/preferences/delivery {
@@ -35,7 +42,7 @@ service cloud.firestore {
     match /customerProfiles/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, update, delete: if false;
-      allow create: if signedIn() && request.auth.uid == uid
+      allow create: if storeOpen() && signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasAll(['uid','displayName','mobileNumber','createdAt','updatedAt'])
         && request.resource.data.keys().hasOnly(['uid','displayName','mobileNumber','createdAt','updatedAt'])
         && request.resource.data.mobileNumber is string
@@ -62,8 +69,9 @@ service cloud.firestore {
         && data.createdAt is timestamp && data.updatedAt is timestamp;
     }
     match /categories/{id} {
-      allow read: if administrator() || resource.data.enabled == true;
+      allow read: if administrator() || (storeOpen() && resource.data.enabled == true);
       allow create: if administrator() && id.matches('[A-Za-z0-9]{20}')
+        && !exists(/databases/$(database)/documents/deletedRecords/$("categories_" + id))
         && validCategory(request.resource.data)
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
         && !exists(/databases/$(database)/documents/categorySlugs/$(request.resource.data.slug))
@@ -92,7 +100,7 @@ service cloud.firestore {
     // Product mutations and listing use the trusted catalog API. Direct public
     // gets still enforce publication and the CURRENT category visibility.
     match /products/{id} {
-      allow get: if administrator() || (resource.data.schemaVersion == 1 && resource.data.status == 'Published'
+      allow get: if administrator() || (storeOpen() && resource.data.schemaVersion == 1 && resource.data.status == 'Published'
         && get(/databases/$(database)/documents/categories/$(resource.data.categoryId)).data.enabled == true);
       allow list: if administrator();
       allow write: if false;
@@ -101,6 +109,8 @@ service cloud.firestore {
     // media writes use the trusted API with both administrator checks.
     // Revision-only shipping invalidation; full settings/metadata stay private.
     match /siteSettings/shippingRevision { allow get: if signedIn(); allow list, write: if false; }
+    // Minimal availability signal contains no private settings or audit metadata.
+    match /storefrontAvailability/current { allow get: if true; allow list, write: if false; }
     match /siteSettings/{id} { allow read, write: if false; }
     match /loginAppearanceMedia/{id} { allow read, write: if false; }
     match /productSlugs/{slug} { allow read, write: if false; }

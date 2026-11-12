@@ -1,3 +1,6 @@
+import {safeDeletion} from './safeDeletion.ts';
+import {publicContact} from '../src/contact/model.ts';
+import {assertStoreOpen,maintenanceSettings} from './maintenance.ts';
 import type {RouteCalculator} from './routes.ts';
 import {publicPayment} from '../src/payments/model.ts';
 import {couponDiscoveryService} from './couponDiscovery.ts';
@@ -97,6 +100,7 @@ export function catalogService({database:db,auth,media,routeCalculator}:Dependen
     return {items,nextCursor:snapshot.size===50?snapshot.docs.at(-1)!.id:null};
   }
   async function publicGet(slug:unknown) {
+    await assertStoreOpen(db);
     if(typeof slug!=='string'||slug.length>100||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new ProductError('not-found','Product not found.');
     const reservation=await db.doc(`productSlugs/${slug}`).get();
     if(!reservation.exists)throw new ProductError('not-found','Product not found.');
@@ -114,6 +118,7 @@ export function catalogService({database:db,auth,media,routeCalculator}:Dependen
     const reference=db.doc(`products/${productId}`),slugRef=db.doc(`productSlugs/${input.slug}`);
     await db.runTransaction(async transaction=>{
       await transactionAccess(transaction,uid);
+      if((await transaction.get(db.doc('deletedRecords/products_'+productId))).exists)throw new ProductError('conflict','This product identity was permanently retired.');
       const previous=await transaction.get(reference);
       const old=previous.data();
       if(old && old.schemaVersion!==1)throw new ProductError('schema','This product needs an owner-reviewed schema migration.');
@@ -179,13 +184,16 @@ export function catalogService({database:db,auth,media,routeCalculator}:Dependen
   const shopping=shoppingService(db,async(document,name)=>publicProduct(await present(document,name)));
   return {
     paymentContext:{orders,authenticate,administrator},
-    submitEnquiry:enquiries.submit,publicCoupons:availableOffers.publicList,
-    sitemap:()=>sitemap(db),
-    publicCampaignList:campaigns.publicList,publicCampaignGet:campaigns.publicGet,publicCampaignBrowse:campaigns.browse,
-    publicBrowse:browseService(db,async(doc,name)=>publicProduct(await present(doc,name))),
-    publicAppearance:appearance.publicGet,publicContent:content.publicGet,
-    publicList:async(cursor?:unknown)=>{const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
+    publicAvailability:async()=>{const settings=maintenanceSettings((await db.doc('siteSettings/maintenance').get()).data());return {...settings,email:publicContact((await db.doc('siteSettings/storeContent').get()).data()?.contact).email};},
+    submitEnquiry:async(...args:Parameters<typeof enquiries.submit>)=>{await assertStoreOpen(db);return enquiries.submit(...args);},publicCoupons:async()=>{await assertStoreOpen(db);return availableOffers.publicList();},
+    sitemap:async()=>{await assertStoreOpen(db);return sitemap(db);},
+    publicCampaignList:async()=>{await assertStoreOpen(db);return campaigns.publicList();},publicCampaignGet:async(...args:Parameters<typeof campaigns.publicGet>)=>{await assertStoreOpen(db);return campaigns.publicGet(...args);},publicCampaignBrowse:async(...args:Parameters<typeof campaigns.browse>)=>{await assertStoreOpen(db);return campaigns.browse(...args);},
+    publicBrowse:async(parameters:Record<string,string>)=>{await assertStoreOpen(db);return browseService(db,async(doc,name)=>publicProduct(await present(doc,name)))(parameters);},
+    publicAppearance:async()=>{await assertStoreOpen(db);return appearance.publicGet();},publicContent:async()=>{await assertStoreOpen(db);return content.publicGet();},
+    publicList:async(cursor?:unknown)=>{await assertStoreOpen(db);const page=await list(false,cursor);return {...page,items:page.items.map(publicProduct)};},publicGet,
     async privileged(token:string,body:Record<string,unknown>) {
+      // Recovery and existing order/payment evidence remain accessible. All shopping and profile operations fail closed.
+      if(/^(shopping:|bag:|wishlist:|addresses:|checkout:|profile:)/.test(String(body.action))||['orders:review','coupons:available','loyalty:account','loyalty:customerHistory'].includes(String(body.action)))await assertStoreOpen(db);
       if(body.action==='coupons:available')return availableOffers.personal((await authenticate(token)).uid,body);
       if(['loyalty:account','loyalty:customerHistory'].includes(String(body.action)))return loyalty.action((await authenticate(token)).uid,body);
       if(body.action==='profile:syncDirectory'){keys(body,['action']);return customers.sync((await authenticate(token)).uid);}
@@ -194,6 +202,12 @@ export function catalogService({database:db,auth,media,routeCalculator}:Dependen
       if(typeof body.action==='string'&&/^(addresses:|checkout:)/.test(body.action))return delivery.action((await authenticate(token)).uid,body);
       if(typeof body.action==='string'&&/^(shopping:|bag:|wishlist:)/.test(body.action))return shopping.action((await authenticate(token)).uid,body);
       const uid=await administrator(token);
+      if(body.action==='records:delete')return safeDeletion(db,transactionAccess)(uid,body);
+      if(body.action==='maintenance:get'){keys(body,['action']);return maintenanceSettings((await db.doc('siteSettings/maintenance').get()).data());}
+      if(body.action==='maintenance:save'){
+       keys(body,['action','enabled','expectedRevision','operationId']);if(typeof body.enabled!=='boolean'||!Number.isSafeInteger(body.expectedRevision)||Number(body.expectedRevision)<0||typeof body.operationId!=='string'||!/^[a-f0-9]{32}$/.test(body.operationId))throw new ProductError('invalid','Invalid availability update.');
+       await db.runTransaction(async tx=>{await transactionAccess(tx,uid);const ref=db.doc('siteSettings/maintenance'),old=(await tx.get(ref)).data();if(old&&old.operationId===body.operationId){if(old.enabled!==body.enabled||old.updatedBy!==uid)throw new ProductError('conflict','Operation already used.');return;}const current=maintenanceSettings(old);if(current.revision!==body.expectedRevision)throw new ProductError('conflict','Store availability changed. Reload before saving.');tx.set(ref,{schemaVersion:1,enabled:body.enabled,revision:current.revision+1,operationId:body.operationId,updatedBy:uid,updatedAt:FieldValue.serverTimestamp()});tx.set(db.doc('storefrontAvailability/current'),{schemaVersion:1,enabled:body.enabled,revision:current.revision+1});});return maintenanceSettings((await db.doc('siteSettings/maintenance').get()).data());
+      }
       if(['loyalty:adminAccount','loyalty:adminHistory'].includes(String(body.action)))return loyalty.action(uid,body,true);
       if(typeof body.action==='string'&&body.action.startsWith('enquiries:'))return enquiries.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('campaigns:'))return campaigns.admin(uid,body);
@@ -203,7 +217,7 @@ export function catalogService({database:db,auth,media,routeCalculator}:Dependen
       if(typeof body.action==='string'&&/^(dashboard:|coupons:|notifications:|customers:|inventory:|reports:)/.test(body.action))return business.admin(uid,body);
       if(typeof body.action==='string'&&body.action.startsWith('adminOrders:'))return orders.admin(uid,body);
       switch(body.action) {
-        case 'categories:save':return saveCategory(uid,body);
+        case 'categories:normalize':case 'categories:save':return saveCategory(uid,body);
         case 'categories:sign':case 'categories:verify':if(body.device!=='desktop')throw new ProductError('invalid','Choose the category thumbnail.');return body.action==='categories:sign'?categoryMedia.sign(uid,body):categoryMedia.verify(uid,body);
         case 'about:get':keys(body,['action']);return about.get();
         case 'about:save':return about.save(uid,body);

@@ -4,13 +4,13 @@ For fulfilment, customer support and authorized store operators. Baseline: inspe
 
 ## Dashboard and work queue
 
-Dashboard shows New Orders in the selected creation-date period, current Confirmed orders to pack, current Processing backlog and outstanding COD. The selected dates do not redefine all backlog metrics. Processing does not prove packing or dispatch readiness. Visible Admin data refreshes periodically; use the displayed freshness and recovery controls.
+Dashboard cards show current New (Placed), To Pack (Confirmed), To Dispatch (Processing), Out for Delivery (Shipped) and Delivered counts across all dates. Click a card to filter Orders. Each order has one saved status; Shipped is the stored status behind the Out for Delivery label. The selected-period new-order count remains separate. Visible Admin data refreshes about every 30 seconds and after supported changes.
 
 Orders supports its existing search, status/payment/date filters and pagination. Open details to confirm items, saved address, totals, payment and request history before changing an order. A cancelled/rejected order can retain a historical order value; that is not collected revenue.
 
 ## Delivery updates
 
-Use the order's **Update Delivery** panel. Select a valid next status, optionally add shipment information, review the proposed change and confirm. Status transitions remain restricted by the workflow; making shipment fields optional does not permit arbitrary status jumps.
+Use the order's **Update Delivery** panel. Select a valid next status, optionally add shipment information, review the proposed change and confirm. Status transitions remain restricted: Placed → Confirmed; Confirmed may move to Processing, Shipped or Delivered; Processing may move to Shipped or Delivered; Shipped → Delivered. Cancellation/rejection checks remain. Courier fields are optional for these transitions.
 
 All these fields are optional, including when marking a valid order Shipped or Delivered:
 
@@ -32,7 +32,7 @@ Refresh after a conflict. For uncertain requests, use recovery of the original o
 
 ## COD and online money
 
-**COD collection:** record only actual external collection with the required reference. Delivered does not automatically mean paid. Collection and delivery are separate; a later collection must not award loyalty a second time.
+**COD:** the separate Record Collection action is removed for new operations. Saved payment method, payment status, collections and refund/audit history remain visible. Delivered does not automatically mean paid. Historical collected orders keep their supported refund handling.
 
 **Razorpay:** inspect the saved mode, provider order/payment identifiers, verified state, reservation, amount and provider-check time. Use **Reconcile with Razorpay** when authorized. CAPTURED/consumed evidence is materially different from an earlier failed attempt; timestamps can retain that history. A callback, screenshot or order reference alone is not sufficient payment evidence.
 

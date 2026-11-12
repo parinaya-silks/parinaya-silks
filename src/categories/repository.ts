@@ -15,7 +15,7 @@ export function categoryError(error: unknown): string {
 function problem(code: string): never { throw Object.assign(new Error(code), { code }); }
 function decode(id: string, data: Record<string, unknown>): Category {
   if (!(data.createdAt instanceof Timestamp) || !(data.updatedAt instanceof Timestamp)) throw new Error('Invalid category timestamps');
-  const raw = data as unknown as CategoryInput;
+  const raw = {...data,displayOrder:data.displayOrder??0} as unknown as CategoryInput;
   if (typeof raw.name !== 'string' || typeof raw.slug !== 'string' || (raw.description !== undefined && typeof raw.description !== 'string')) throw new Error('Invalid category fields');
   const valid = validateCategory(raw);
   return { ...valid, id, createdAt: data.createdAt.toMillis(), updatedAt: data.updatedAt.toMillis() };

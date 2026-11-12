@@ -20,7 +20,7 @@ test('delivery metadata validates resulting dispatch record, omission, clearing,
  assert.equal(deliveryRecord(old,{trackingNumber:'  BLR 123-45/IN_6  '},'Shipped',now).trackingNumber,'BLR 123-45/IN_6');
  assert.throws(()=>deliveryRecord(old,{trackingNumber:'<script>'},'Shipped',now));
  assert.equal(deliveryDateLabel('2026-10-24'),'24/10/2026');assert.equal(deliveryDateLabel(null),'Not provided');assert.equal(deliveryChanged({},deliveryValues({})),false);
- assert.deepEqual(deliveryTransitions('Processing'),['Shipped']);assert.deepEqual(deliveryTransitions('Shipped'),['Delivered']);
+ assert.deepEqual(deliveryTransitions('Processing'),['Shipped','Delivered']);assert.deepEqual(deliveryTransitions('Shipped'),['Delivered']);
  for(const state of ['Delivered','Cancelled','Rejected'] as const)assert.equal(deliveryEditable(state),false);
 });
 test('customer history failures use loading copy while uncertain order mutations retain safe recovery copy',()=>{

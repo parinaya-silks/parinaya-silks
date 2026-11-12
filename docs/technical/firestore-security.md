@@ -64,3 +64,9 @@ Do not delete payment attempts/events, order history, inventory audit or loyalty
 No automated backup/recovery deployment is established by this documentation. Confirm Firestore/Auth/media coverage, retention, restore ownership and recovery testing before describing backups as active.
 
 Sources: `firestore.rules`, `firestore.indexes.json`, `server/catalog.ts`, `server/firebase.ts`, `server/credentials.ts`, `server/orders.ts`, `server/customerDirectory.ts`, `server/loyalty.ts`, `server/payments/`, `server/deliveryQuotes.ts`. Further detail: [Admin access](../ADMIN_ACCESS.md), [loyalty](../LOYALTY.md), [payment cutover](../PAYMENT_LIVE_CUTOVER.md), [distance delivery](../DISTANCE_DELIVERY.md).
+
+## Local owner improvements — 12 November 2026
+
+Private `siteSettings/maintenance` v1 stores enabled/revision and audit/replay metadata (missing means OFF; malformed fails closed). Server saves atomically publish only enabled/schemaVersion/revision to `storefrontAvailability/current`. Anonymous clients can get that signal, never write/list it. Direct public category/product reads, customer shopping/address reads and profile creation enforce maintenance. Existing dual Admin checks remain. Category creation also rejects retired identities.
+
+`deletedRecords/{kind}_{id}` and `deletionOperations/{operationId}` remain server-only under default deny. They reserve deleted identities and preserve minimal deletion evidence. Existing permanent slug reservations and all historical business records remain. Contact social arrays are optional in the existing contact object. No production migration, rule/index publication or data change occurred; publish the reviewed rules together with an approved release.

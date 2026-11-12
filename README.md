@@ -1,3 +1,5 @@
+> Latest local Admin/storefront changes: [implementation and acceptance](docs/OWNER_IMPROVEMENTS.md), 12 November 2026. No deployment or production data migration.
+
 > **Current consolidated documentation:** [Parinaya Sarees documentation index](docs/README.md). The index separates the inspected local implementation, existing delivery changes, historical milestone notes and items pending Production/account confirmation. The earlier README below is retained as historical setup context; do not use its obsolete feature-status statements as a current completion report.
 
 See [COD completion, security, schema and local acceptance](docs/COMPLETION.md) for the current business implementation. No production deployment or data changes are included.

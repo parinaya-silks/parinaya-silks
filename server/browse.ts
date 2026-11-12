@@ -5,9 +5,8 @@ import {discoveryPage} from './discovery.ts';
 export const MAX_DISCOVERY_PRODUCTS=5000;
 export function browseService(db:Firestore,present:(doc:DocumentSnapshot,categoryName?:string)=>Promise<PublicProductRecord>){return async(parameters:Record<string,string>)=>{
  const filters=discoveryFilters(parameters);let query:Query=db.collection('products').where('status','==','Published');
- if(filters.category){const categories=await db.collection('categories').where('slug','==',filters.category).where('enabled','==',true).limit(2).get();if(categories.size!==1)throw new ProductError('not-found','Category unavailable.');query=query.where('categoryId','==',categories.docs[0].id);}
- if(filters.sort.startsWith('price-'))query=query.orderBy('pricePaise',filters.sort==='price-asc'?'asc':'desc');else if(filters.sort==='featured')query=query.orderBy('featured','desc');
- query=query.orderBy('createdAt','desc').orderBy(FieldPath.documentId(),'desc');
+ if(filters.category){const categories=await db.collection('categories').where('slug','==',filters.category).limit(2).get();if(categories.size!==1||categories.docs[0].data().enabled!==true)throw new ProductError('not-found','Category unavailable.');query=query.where('categoryId','==',categories.docs[0].id);}
+ query=query.orderBy(FieldPath.documentId());
  // Bounded server-only scan: never return a partial page/count as a complete result.
  // A readonly transaction pins source/category eligibility across scan batches.
  const docs:DocumentSnapshot[]=[],categoryMap=new Map<string,FirebaseFirestore.DocumentData>();

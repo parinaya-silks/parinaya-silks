@@ -1,12 +1,12 @@
 import {socialLinks} from './socialLinks.ts';
-import {Instagram,Facebook} from 'lucide-react';
+import {Instagram,Facebook,Youtube,Linkedin,Link2,MessageCircle} from 'lucide-react';
 import {usePublicContact} from '../content/public.tsx';
 import {whatsappLink} from './model.ts';
 
 // Only the existing public projection is consumed; private/hidden settings never
 // enter hrefs, names or data attributes. Empty saved links are the social off state.
 export function SocialLinks({links}:{links:ReturnType<typeof socialLinks>}){
- return <div className="social-follow-links">{links.map(({kind,href,label})=><a key={kind} href={href} target="_blank" rel="noopener noreferrer" aria-label={'Follow us on '+label}>{kind==='instagram'?<Instagram size={21}/>:<Facebook size={21}/>}<span>{label}</span></a>)}</div>;
+ return <div className="social-follow-links">{links.map(({kind,icon,href,label})=><a key={kind} href={href} target="_blank" rel="noopener noreferrer" aria-label={'Follow us on '+label}>{icon==='instagram'?<Instagram size={21}/>:icon==='facebook'?<Facebook size={21}/>:icon==='youtube'?<Youtube size={21}/>:icon==='linkedin'?<Linkedin size={21}/>:icon==='whatsapp'?<MessageCircle size={21}/>:<Link2 size={21}/>}<span>{label}</span></a>)}</div>;
 }
 export function FloatingSocial({path}:{path:string}){
  const contact=usePublicContact(),links=socialLinks(contact);

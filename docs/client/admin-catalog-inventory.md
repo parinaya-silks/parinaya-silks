@@ -4,7 +4,7 @@ For authorized catalog operators. Baseline: local application, 11 November 2026.
 
 ## Categories
 
-Open **Categories** to create/edit a collection name, description, display order and visibility. Review the generated link before creation: a saved slug is permanent. Lower display orders appear first; visibility controls public availability without deleting referenced history.
+Open **Categories** to create/edit a collection name, description, display order and visibility. Review the generated link before creation: a saved slug is permanent. Lower display orders appear first. Legacy zero/missing/duplicate values display as sequential positions using the existing stable order (stored rank, name, then ID). Save displayed order persists this explicit correction with concurrency checks; no automatic production migration occurs. A new category suggests maximum displayed order + 1; editing preserves the stored order unless changed. Visibility controls public availability without deleting referenced history.
 
 Use the category image workflow when supplying a homepage collection image. Upload and verify the image, review its focal/alternative-text fields where offered, and save the category. An upload alone does not publish a category image. Disabling a category can hide its products publicly even if those products remain Published.
 
@@ -42,6 +42,10 @@ Dashboard low-stock cards show a bounded scan, not necessarily the entire catalo
 ## Saving and conflicts
 
 Changes are accepted only after a successful server response. If another session edited the same record, review/reload the latest version; do not overwrite unseen changes. If a response is uncertain, use the existing recovery/retry behaviour instead of assuming success or repeating a stock movement with a new identity.
+
+## Permanent deletion
+
+Delete permanently requires a named confirmation and typing DELETE. The server checks dependencies and the current revision. Disable a category first; referenced categories cannot be deleted. Products can be deleted only as untouched initial Drafts with no references; otherwise Archive preserves publication and history. Retired identities/links and a minimal deletion audit remain reserved. See [deletion limits](../OWNER_IMPROVEMENTS.md).
 
 ## Routine publishing checklist
 

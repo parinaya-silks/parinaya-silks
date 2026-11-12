@@ -2,6 +2,8 @@
 
 # Parinaya Sarees documentation
 
+> Local improvements dated 12 November 2026: [Admin and storefront improvements](OWNER_IMPROVEMENTS.md). This update adds maintenance controls, safe deletion and operator/storefront fixes. Production parity remains Pending confirmation.
+
 Documentation date: **11 November 2026**. Audience: client operators, developers and service owners.
 
 This index and the linked guides describe the inspected local checkout at Git HEAD `405716c`, including the uncommitted distance-delivery implementation. They are not evidence that those changes are deployed. Current Production commit, provider settings and account ownership are **Pending confirmation**. Earlier owner-reported payment acceptance is useful context, but is not a new independent verification.

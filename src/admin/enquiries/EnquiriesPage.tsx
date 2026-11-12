@@ -5,8 +5,8 @@ import {catalogAction} from '../../products/client.ts';
 import {enquiryDate,type Enquiry,type EnquiryPage,type EnquiryRow,type EnquiryStatus} from '../../enquiries/model.ts';
 import {EnquiryDetails} from './EnquiryDetails.tsx';
 import './enquiries.css';
-export function EnquiriesPage(){
- const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState('All'),[page,setPage]=useState<EnquiryPage>({items:[],nextCursor:null}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[attempt,setAttempt]=useState(0),[selected,setSelected]=useState<string>(),active=useRef(true),flight=useRef<AbortController|null>(null),generation=useRef(0),lock=useRef(false);
+export function EnquiriesPage({initialStatus='All'}:{initialStatus?:string}){
+ const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState(initialStatus),[page,setPage]=useState<EnquiryPage>({items:[],nextCursor:null}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[attempt,setAttempt]=useState(0),[selected,setSelected]=useState<string>(),active=useRef(true),flight=useRef<AbortController|null>(null),generation=useRef(0),lock=useRef(false);
  useEffect(()=>{active.current=true;return()=>{active.current=false;generation.current++;flight.current?.abort();};},[]);
  useEffect(()=>{void load(false);return()=>{generation.current++;flight.current?.abort();lock.current=false;};},[query,status,attempt]);
  async function load(more:boolean){if(more&&lock.current)return;const n=++generation.current;flight.current?.abort();const c=new AbortController();flight.current=c;lock.current=true;setLoading(true);setError('');if(!more)setPage({items:[],nextCursor:null});

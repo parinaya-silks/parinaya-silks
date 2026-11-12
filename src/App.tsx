@@ -26,6 +26,7 @@ import {
 
 // Customer Shell Components
 import {Seo} from './content/Seo.tsx';
+import {MaintenanceGate} from './maintenance/MaintenanceGate.tsx';
 import {StoreContentProvider,useStoreContent} from './content/public.tsx';
 import { Header } from './components/Header.tsx';
 import {FloatingSocial} from './contact/FloatingSocial.tsx';
@@ -91,7 +92,7 @@ export default function App() {
   }, []);
   if (adminPath) return <React.Suspense fallback={<main className="min-h-screen bg-[#FBF7F0] p-8"><PageLoader label="Loading administrator access…"/></main>}><SecureAdmin requestedPath={adminPath} /></React.Suspense>;
 
-  return <Storefront />;
+  return <MaintenanceGate><Storefront /></MaintenanceGate>;
 }
 
 function customerLocation() {
